@@ -7,7 +7,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from services.firebase_service import verify_firebase_token, get_user_from_token
 from services.cloudinary_service import upload_file
 from models import User, Company
-from app import db
+from database import db
 from utils.helpers import log_activity
 import logging
 

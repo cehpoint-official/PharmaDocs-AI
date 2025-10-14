@@ -116,11 +116,13 @@
 
     // Firebase configuration
     const firebaseConfig = {
-        apiKey: "{{ firebase_api_key }}",
-        authDomain: "{{ firebase_project_id }}.firebaseapp.com",
-        projectId: "{{ firebase_project_id }}",
-        storageBucket: "{{ firebase_project_id }}.appspot.com",
-        appId: "{{ firebase_app_id }}"
+       apiKey: "{{ firebase_api_key }}",
+       authDomain: "{{ firebase_project_id }}.firebaseapp.com",
+       projectId: "{{ firebase_project_id }}",
+       storageBucket: "{{ firebase_project_id }}.firebasestorage.app",
+       messagingSenderId: "87076913561",
+       appId: "{{ firebase_app_id }}",
+       measurementId: "G-HLS4G21GW1"
     };
 
     // Initialize Firebase

@@ -1,8 +1,9 @@
-# Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in>
+ # Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in>
 # All Rights Reserved.
 
+import json
 from datetime import datetime
-from app import db
+from database import db
 from sqlalchemy import String, Text, DateTime, Boolean, Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -80,6 +81,7 @@ class Document(db.Model):
     status: Mapped[str] = mapped_column(String(20), default='draft')  # draft, generated, completed
     stp_file_url: Mapped[str] = mapped_column(String(500), nullable=True)
     raw_data_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    method_analysis_file_url: Mapped[str] = mapped_column(String(500), nullable=True)  # Added for AMV
     generated_doc_url: Mapped[str] = mapped_column(String(500), nullable=True)
     generated_excel_url: Mapped[str] = mapped_column(String(500), nullable=True)
     document_metadata: Mapped[str] = mapped_column(Text, nullable=True)  # JSON string for additional data
@@ -127,3 +129,81 @@ class Equipment(db.Model):
     @property
     def is_calibrated(self):
         return self.next_calibration_due and self.next_calibration_due >= datetime.now()
+
+class AMVDocument(db.Model):
+    """Specific model for AMV documents with detailed parameters"""
+    __tablename__ = 'amv_documents'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    document_id: Mapped[int] = mapped_column(Integer, ForeignKey('documents.id'), nullable=False)
+    
+    # Basic Information
+    product_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    label_claim: Mapped[str] = mapped_column(String(100), nullable=False)
+    active_ingredient: Mapped[str] = mapped_column(String(200), nullable=False)
+    strength: Mapped[str] = mapped_column(String(100), nullable=True)
+    
+    # Instrument Information
+    instrument_type: Mapped[str] = mapped_column(String(50), nullable=False)  # uv, hplc, gc, titration, ir, aas
+    
+    # Instrument-specific Parameters (stored as JSON)
+    instrument_params: Mapped[str] = mapped_column(Text, nullable=True)
+    
+    # Validation Parameters
+    validation_params: Mapped[str] = mapped_column(Text, nullable=True)  # JSON array of selected parameters
+    parameters_to_validate: Mapped[str] = mapped_column(Text, nullable=True)  # JSON array of parameters to validate
+    
+    # File References
+    stp_filename: Mapped[str] = mapped_column(String(500), nullable=True)
+    method_filename: Mapped[str] = mapped_column(String(500), nullable=True)
+    raw_data_filename: Mapped[str] = mapped_column(String(500), nullable=True)
+    
+    # Status and Metadata
+    validation_status: Mapped[str] = mapped_column(String(20), default='pending')  # pending, in_progress, completed, failed
+    protocol_generated: Mapped[bool] = mapped_column(Boolean, default=False)
+    report_generated: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(), onupdate=datetime.now())
+
+    # Relationships
+    document: Mapped["Document"] = relationship("Document", backref="amv_details")
+
+    def get_instrument_params(self):
+        """Get instrument parameters as dictionary"""
+        if self.instrument_params:
+            try:
+                return json.loads(self.instrument_params)
+            except:
+                return {}
+        return {}
+
+    def set_instrument_params(self, params):
+        """Set instrument parameters from dictionary"""
+        self.instrument_params = json.dumps(params)
+
+    def get_validation_params(self):
+        """Get validation parameters as list"""
+        if self.validation_params:
+            try:
+                return json.loads(self.validation_params)
+            except:
+                return []
+        return []
+
+    def set_validation_params(self, params):
+        """Set validation parameters from list"""
+        self.validation_params = json.dumps(params)
+
+    def get_parameters_to_validate(self):
+        """Get parameters to validate as list"""
+        if self.parameters_to_validate:
+            try:
+                return json.loads(self.parameters_to_validate)
+            except:
+                return []
+        return []
+
+    def set_parameters_to_validate(self, params):
+        """Set parameters to validate from list"""
+        self.parameters_to_validate = json.dumps(params)

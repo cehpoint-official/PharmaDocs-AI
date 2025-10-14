@@ -3,7 +3,7 @@
 
 from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify
 from models import User, Company, Document, ActivityLog
-from app import db
+from database import db
 from utils.helpers import log_activity
 from sqlalchemy import desc, func
 from datetime import datetime, timedelta
@@ -164,3 +164,39 @@ def analytics():
     except Exception as e:
         logging.error(f"Analytics error: {str(e)}")
         return jsonify({'error': 'Failed to fetch analytics'}), 500
+
+@bp.route('/cleanup-files', methods=['POST'])
+def bulk_cleanup_files():
+    """Bulk cleanup of old uploaded files."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    user = User.query.get(session['user_id'])
+    if not user or not user.is_admin:
+        return jsonify({'error': 'Admin access required'}), 403
+
+    try:
+        data = request.get_json()
+        days_old = data.get('days_old', 7)
+        
+        # Import cleanup function
+        from services.document_service import cleanup_old_files
+        
+        # Perform bulk cleanup
+        results = cleanup_old_files(days_old)
+        
+        if 'error' in results:
+            return jsonify({'error': results['error']}), 500
+        
+        log_activity(user.id, 'bulk_file_cleanup', 
+                    f'Bulk cleanup performed: {results["total_files_deleted"]} files deleted from {results["total_documents"]} documents')
+        
+        return jsonify({
+            'success': True,
+            'message': 'Bulk cleanup completed successfully',
+            'results': results
+        })
+        
+    except Exception as e:
+        logging.error(f"Bulk cleanup error: {str(e)}")
+        return jsonify({'error': 'Failed to perform bulk cleanup'}), 500

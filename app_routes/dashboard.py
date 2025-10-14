@@ -3,7 +3,7 @@
 
 from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify
 from models import User, Company, Document, ActivityLog
-from app import db
+from database import db
 from utils.helpers import log_activity
 from sqlalchemy import desc
 import logging

@@ -6,11 +6,13 @@ import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvide
 
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: "{{ firebase_api_key }}",
-    authDomain: "{{ firebase_project_id }}.firebaseapp.com",
-    projectId: "{{ firebase_project_id }}",
-    storageBucket: "{{ firebase_project_id }}.appspot.com",
-    appId: "{{ firebase_app_id }}"
+  apiKey: "AIzaSyA8TfBxXwYe_QQealT_OVFEzd1kShZUSbM",
+  authDomain: "pharmadocsai.firebaseapp.com",
+  projectId: "pharmadocsai",
+  storageBucket: "pharmadocsai.firebasestorage.app",
+  messagingSenderId: "87076913561",
+  appId: "1:87076913561:web:f930e4e46e436481811308",
+  measurementId: "G-HLS4G21GW1"
 };
 
 // Initialize Firebase

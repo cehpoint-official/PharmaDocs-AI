@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 from flask import request
 from models import ActivityLog
-from app import db
+from database import db
 
 def log_activity(user_id, action, details=None):
     """

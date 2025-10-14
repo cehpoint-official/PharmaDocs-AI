@@ -4,7 +4,7 @@
 from flask import Blueprint, session, request, jsonify
 from werkzeug.security import generate_password_hash
 from models import User
-from app import db
+from database import db
 from utils.helpers import log_activity
 
 bp = Blueprint('user', __name__)

@@ -4,14 +4,36 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
 
-# Configure Cloudinary
-cloudinary.config(
-    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
-    api_key=os.environ.get('CLOUDINARY_API_KEY'),
-    api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
-    secure=True
-)
+# Load environment variables from .env file
+load_dotenv()
+
+# Configure Cloudinary with fallback credentials
+def configure_cloudinary():
+    """Configure Cloudinary with environment variables or fallback credentials"""
+    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', 'dwqclmigj')
+    api_key = os.environ.get('CLOUDINARY_API_KEY')
+    api_secret = os.environ.get('CLOUDINARY_API_SECRET')
+    
+    # If environment variables are not set, use fallback (for development)
+    if not api_key or not api_secret:
+        logging.warning("Cloudinary API credentials not found in environment variables. Using fallback configuration.")
+        # For development/testing, we'll use unsigned URLs
+        cloudinary.config(
+            cloud_name=cloud_name,
+            secure=True
+        )
+    else:
+        cloudinary.config(
+            cloud_name=cloud_name,
+            api_key=api_key,
+            api_secret=api_secret,
+            secure=True
+        )
+
+# Initialize Cloudinary configuration
+configure_cloudinary()
 
 def upload_file(file, folder=None, resource_type='auto'):
     """
@@ -91,6 +113,44 @@ def upload_file_from_path(file_path, folder=None, resource_type='auto'):
         logging.error(f"Cloudinary upload error: {str(e)}")
         return None
 
+def extract_public_id_from_url(url):
+    """
+    Extract public_id from Cloudinary URL.
+    
+    Args:
+        url: Cloudinary URL
+    
+    Returns:
+        str: Public ID or None if extraction failed
+    """
+    try:
+        if not url or 'cloudinary.com' not in url:
+            return None
+        
+        # Extract public_id from URL
+        # Format: https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/v{version}/{public_id}.{format}
+        parts = url.split('/')
+        if len(parts) >= 2:
+            # Find the upload part and get everything after it
+            upload_index = -1
+            for i, part in enumerate(parts):
+                if part == 'upload':
+                    upload_index = i
+                    break
+            
+            if upload_index != -1 and upload_index + 2 < len(parts):
+                # Get public_id (everything after upload/v{version}/)
+                public_id_with_format = '/'.join(parts[upload_index + 2:])
+                # Remove file extension
+                public_id = public_id_with_format.rsplit('.', 1)[0]
+                return public_id
+        
+        return None
+        
+    except Exception as e:
+        logging.error(f"Error extracting public_id from URL {url}: {str(e)}")
+        return None
+
 def delete_file(public_id, resource_type='image'):
     """
     Delete a file from Cloudinary.
@@ -114,6 +174,29 @@ def delete_file(public_id, resource_type='image'):
             
     except Exception as e:
         logging.error(f"Cloudinary deletion error: {str(e)}")
+        return False
+
+def delete_file_by_url(url, resource_type='raw'):
+    """
+    Delete a file from Cloudinary using its URL.
+    
+    Args:
+        url: Cloudinary URL of the file to delete
+        resource_type: Type of resource (image, video, raw)
+    
+    Returns:
+        bool: True if deletion was successful, False otherwise
+    """
+    try:
+        public_id = extract_public_id_from_url(url)
+        if not public_id:
+            logging.warning(f"Could not extract public_id from URL: {url}")
+            return False
+        
+        return delete_file(public_id, resource_type)
+        
+    except Exception as e:
+        logging.error(f"Error deleting file by URL {url}: {str(e)}")
         return False
 
 def get_file_info(public_id, resource_type='image'):
