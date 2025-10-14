@@ -1,0 +1,208 @@
+<!--Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in> -->
+<!--All Rights Reserved-->
+
+{% extends "base.html" %}
+{% block title %}Document History - PharmaDocs AI Platform{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold">Document History</h1>
+      <p class="text-gray-500">View and manage all your created documents.</p>
+    </div>
+    <a href="{{ url_for('documents.create_document') }}"
+       class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700">
+      <i class="fas fa-plus mr-2"></i> Create New Document
+    </a>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white shadow rounded-lg p-4 mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div>
+        <label for="filterType" class="block text-sm font-medium text-gray-700">Document Type</label>
+        <select id="filterType" name="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <option value="">All Types</option>
+          <option value="AMV" {{ 'selected' if request.args.get('type') == 'AMV' }}>AMV</option>
+          <option value="PV" {{ 'selected' if request.args.get('type') == 'PV' }}>PV</option>
+          <option value="Stability" {{ 'selected' if request.args.get('type') == 'Stability' }}>Stability</option>
+          <option value="Degradation" {{ 'selected' if request.args.get('type') == 'Degradation' }}>Degradation</option>
+        </select>
+      </div>
+      <div>
+        <label for="filterStatus" class="block text-sm font-medium text-gray-700">Status</label>
+        <select id="filterStatus" name="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <option value="">All Status</option>
+          <option value="draft" {{ 'selected' if request.args.get('status') == 'draft' }}>Draft</option>
+          <option value="generated" {{ 'selected' if request.args.get('status') == 'generated' }}>Generated</option>
+          <option value="completed" {{ 'selected' if request.args.get('status') == 'completed' }}>Completed</option>
+        </select>
+      </div>
+      <div>
+        <label for="filterCompany" class="block text-sm font-medium text-gray-700">Company</label>
+        <select id="filterCompany" name="company" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <option value="">All Companies</option>
+          {% for company in companies %}
+            <option value="{{ company.id }}" {{ 'selected' if request.args.get("company") == company.id|string }}>
+              {{ company.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex items-end gap-2">
+        <button type="submit" class="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+          <i class="fas fa-filter mr-1"></i> Filter
+        </button>
+        <a href="{{ url_for('dashboard.document_history') }}"
+           class="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">
+          <i class="fas fa-times mr-1"></i> Clear
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Documents Table -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="p-4">
+      {% if documents.items %}
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-600">Document</th>
+                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-600">Type</th>
+                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-600">Company</th>
+                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-600">Status</th>
+                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-600">Created</th>
+                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-600">Updated</th>
+                <th class="px-4 py-2 text-center text-sm font-semibold text-gray-600">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              {% for doc in documents.items %}
+                <tr>
+                  <td class="px-4 py-2">
+                    <div class="font-semibold">{{ doc.title }}</div>
+                    {% if doc.document_number %}<div class="text-sm text-gray-500">{{ doc.document_number }}</div>{% endif %}
+                  </td>
+                  <td class="px-4 py-2">
+                    <span class="px-2 py-1 text-xs rounded bg-gray-200">{{ doc.document_type }}</span>
+                  </td>
+                  <td class="px-4 py-2 flex items-center">
+                    {% if doc.company.logo_url %}
+                      <img src="{{ doc.company.logo_url }}" alt="Logo" class="h-6 w-6 rounded-full mr-2">
+                    {% else %}
+                      <i class="fas fa-building text-gray-400 mr-2"></i>
+                    {% endif %}
+                    <span>{{ doc.company.name }}</span>
+                  </td>
+                  <td class="px-4 py-2">
+                    {% if doc.status == 'completed' %}
+                      <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800"><i class="fas fa-check mr-1"></i>Completed</span>
+                    {% elif doc.status == 'generated' %}
+                      <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800"><i class="fas fa-file-export mr-1"></i>Generated</span>
+                    {% else %}
+                      <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800"><i class="fas fa-edit mr-1"></i>Draft</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-500">{{ doc.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
+                  <td class="px-4 py-2 text-sm text-gray-500">{{ doc.updated_at.strftime("%d/%m/%Y %H:%M") }}</td>
+                  <td class="px-4 py-2 text-center">
+                    <div class="flex justify-center space-x-2">
+                      <a href="{{ url_for('documents.view_document', document_id=doc.id) }}" class="p-2 text-blue-600 hover:bg-blue-50 rounded" title="View">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                      {% if doc.generated_doc_url %}
+                        <a href="{{ url_for('documents.download_document', document_id=doc.id, file_type='doc') }}" class="p-2 text-green-600 hover:bg-green-50 rounded" title="Download Word">
+                          <i class="fas fa-file-word"></i>
+                        </a>
+                      {% endif %}
+                      {% if doc.generated_excel_url %}
+                        <a href="{{ url_for('documents.download_document', document_id=doc.id, file_type='excel') }}" class="p-2 text-green-600 hover:bg-green-50 rounded" title="Download Excel">
+                          <i class="fas fa-file-excel"></i>
+                        </a>
+                      {% endif %}
+                      <button onclick="deleteDocument('{{ doc.id }}')" class="p-2 text-red-600 hover:bg-red-50 rounded" title="Delete">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if documents.pages > 1 %}
+          <div class="flex justify-center mt-4 space-x-2">
+            {% if documents.has_prev %}
+              <a href="{{ url_for('dashboard.document_history', page=documents.prev_num, **request.args) }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">
+                <i class="fas fa-chevron-left"></i>
+              </a>
+            {% endif %}
+            {% for page_num in documents.iter_pages() %}
+              {% if page_num %}
+                {% if page_num != documents.page %}
+                  <a href="{{ url_for('dashboard.document_history', page=page_num, **request.args) }}" class="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200">{{ page_num }}</a>
+                {% else %}
+                  <span class="px-3 py-1 bg-blue-600 text-white rounded">{{ page_num }}</span>
+                {% endif %}
+              {% else %}
+                <span class="px-3 py-1 text-gray-500">...</span>
+              {% endif %}
+            {% endfor %}
+            {% if documents.has_next %}
+              <a href="{{ url_for('dashboard.document_history', page=documents.next_num, **request.args) }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">
+                <i class="fas fa-chevron-right"></i>
+              </a>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-10">
+          <i class="fas fa-file-alt fa-3x text-gray-400 mb-3"></i>
+          <h5 class="text-gray-500 font-medium">No Documents Found</h5>
+          {% if request.args %}
+            <p class="text-gray-400">No documents match your current filters.</p>
+            <a href="{{ url_for('dashboard.document_history') }}"
+               class="inline-flex items-center px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+              <i class="fas fa-times mr-1"></i> Clear Filters
+            </a>
+          {% else %}
+            <p class="text-gray-400">You haven't created any documents yet.</p>
+          {% endif %}
+          <a href="{{ url_for('documents.create_document') }}"
+             class="inline-flex items-center mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700">
+            <i class="fas fa-plus mr-2"></i> Create First Document
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- TODO: Fix Delete Confirmation Modal -->
+<div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+    <div class="px-4 py-3 border-b">
+      <h5 class="text-lg font-semibold">Confirm Deletion</h5>
+    </div>
+    <div class="px-4 py-3">
+      <p>Are you sure you want to delete this document? This action cannot be undone.</p>
+    </div>
+    <div class="px-4 py-3 border-t flex justify-end gap-2">
+      <button onclick="closeDeleteModal()" class="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+      <button id="confirmDeleteBtn" class="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+        <i class="fas fa-trash mr-1"></i> Delete
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/document/history.js') }}"></script>
+{% endblock %}
