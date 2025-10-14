@@ -1,0 +1,163 @@
+<!--Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in> -->
+<!--All Rights Reserved-->
+
+{% extends "base.html" %}
+{% block title %}Document Management - PharmaDocs AI Platform{% endblock %}
+{% block content %}
+  <div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+      <div class="col">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+              <a href="{{ url_for("admin.dashboard") }}">Admin</a>
+            </li>
+            <li class="breadcrumb-item active">Document Management</li>
+          </ol>
+        </nav>
+        <h1 class="h3 mb-0">Document Management</h1>
+        <p class="text-muted">View and manage all documents across the platform.</p>
+      </div>
+    </div>
+    <!-- Documents Table -->
+    <div class="card shadow">
+      <div class="card-body">
+        {% if documents.items %}
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Document</th>
+                  <th>Type</th>
+                  <th>User</th>
+                  <th>Company</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for doc in documents.items %}
+                  <tr>
+                    <td>
+                      <div class="fw-bold">{{ doc.title }}</div>
+                      {% if doc.document_number %}<small class="text-muted">{{ doc.document_number }}</small>{% endif %}
+                    </td>
+                    <td>
+                      <span class="badge bg-secondary">{{ doc.document_type }}</span>
+                    </td>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <i class="fas fa-user-circle text-muted me-2"></i>
+                        <div>
+                          <div class="fw-bold">{{ doc.user.name }}</div>
+                          <small class="text-muted">{{ doc.user.email }}</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        {% if doc.company.logo_url %}
+                          <img src="{{ doc.company.logo_url }}"
+                               alt="Logo"
+                               class="company-logo-small me-2">
+                        {% else %}
+                          <i class="fas fa-building text-muted me-2"></i>
+                        {% endif %}
+                        <span>{{ doc.company.name }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      {% if doc.status == 'completed' %}
+                        <span class="badge bg-success">
+                          <i class="fas fa-check me-1"></i>Completed
+                        </span>
+                      {% elif doc.status == 'generated' %}
+                        <span class="badge bg-info">
+                          <i class="fas fa-file-export me-1"></i>Generated
+                        </span>
+                      {% else %}
+                        <span class="badge bg-warning">
+                          <i class="fas fa-edit me-1"></i>Draft
+                        </span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <small>{{ doc.created_at.strftime("%d/%m/%Y %H:%M") }}</small>
+                    </td>
+                    <td>
+                      <div class="btn-group" role="group">
+                        <a href="{{ url_for('documents.view_document', document_id=doc.id) }}"
+                           class="btn btn-sm btn-outline-primary"
+                           title="View">
+                          <i class="fas fa-eye"></i>
+                        </a>
+                        {% if doc.generated_doc_url %}
+                          <a href="{{ doc.generated_doc_url }}"
+                             class="btn btn-sm btn-outline-success"
+                             title="Download"
+                             target="_blank">
+                            <i class="fas fa-download"></i>
+                          </a>
+                        {% endif %}
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <!-- Pagination -->
+          {% if documents.pages > 1 %}
+            <nav aria-label="Document pagination">
+              <ul class="pagination justify-content-center mt-4">
+                {% if documents.has_prev %}
+                  <li class="page-item">
+                    <a class="page-link"
+                       href="{{ url_for('admin.manage_documents', page=documents.prev_num) }}">
+                      <i class="fas fa-chevron-left"></i>
+                    </a>
+                  </li>
+                {% endif %}
+                {% for page_num in documents.iter_pages() %}
+                  {% if page_num %}
+                    {% if page_num != documents.page %}
+                      <li class="page-item">
+                        <a class="page-link"
+                           href="{{ url_for('admin.manage_documents', page=page_num) }}">{{ page_num }}</a>
+                      </li>
+                    {% else %}
+                      <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                      </li>
+                    {% endif %}
+                  {% else %}
+                    <li class="page-item disabled">
+                      <span class="page-link">...</span>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+                {% if documents.has_next %}
+                  <li class="page-item">
+                    <a class="page-link"
+                       href="{{ url_for('admin.manage_documents', page=documents.next_num) }}">
+                      <i class="fas fa-chevron-right"></i>
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+          {% endif %}
+        {% else %}
+          <!-- Empty State -->
+          <div class="text-center py-5">
+            <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No Documents Found</h5>
+            <p class="text-muted">No documents have been created yet.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

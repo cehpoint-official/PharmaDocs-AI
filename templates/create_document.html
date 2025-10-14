@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block title %}Create Document - PharmaDocs AI Platform{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+  <div class="bg-white rounded-lg shadow-xl p-6">
+    <h1 class="text-2xl font-semibold text-gray-900 mb-6">Create New Document</h1>
+
+    <form id="createDocumentForm" method="POST" action="{{ url_for('documents.create_document') }}" enctype="multipart/form-data" class="space-y-8">
+
+      <!-- Document Type -->
+      <div>
+        <label class="block mb-3 text-sm font-medium text-gray-900">Document Type *</label>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {% set types = {
+              "AMV": ["fas fa-microscope text-blue-600", "Analytical Method Validation"],
+              "PV": ["fas fa-cogs text-green-600", "Process Validation"],
+              "Stability": ["fas fa-chart-line text-yellow-600", "Stability Studies"],
+              "Degradation": ["fas fa-exclamation-triangle text-red-600", "Forced Degradation"],
+              "Compatibility": ["fas fa-vials text-cyan-600", "Drug–Excipient Study"]
+          } %}
+          {% for key, val in types.items() %}
+          <div>
+            <input type="radio" name="document_type" id="type_{{ key }}" value="{{ key }}" class="hidden peer" {% if loop.first %}checked{% endif %}>
+            <label for="type_{{ key }}" class="flex flex-col items-center justify-center border rounded-lg p-4 text-center cursor-pointer peer-checked:border-indigo-600 peer-checked:bg-indigo-50">
+              <i class="{{ val[0] }} text-2xl mb-2"></i>
+              <span class="font-semibold">{{ key }}</span>
+              <small class="text-gray-500">{{ val[1] }}</small>
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Basic Information -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="title" class="block mb-2 text-sm font-medium text-gray-900">Document Title *</label>
+          <input type="text" id="title" name="title" required placeholder="e.g., Clomipramine Hydrochloride Tablets 25mg"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+        </div>
+        <div>
+          <label for="company_id" class="block mb-2 text-sm font-medium text-gray-900">Company *</label>
+          <select id="company_id" name="company_id" required
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+            <option value="">Select Company</option>
+            {% for company in companies %}
+              <option value="{{ company.id }}">{{ company.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="document_number" class="block mb-2 text-sm font-medium text-gray-900">Document Number</label>
+          <input type="text" id="document_number" name="document_number" placeholder="Auto-generated if left empty"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+        </div>
+        <div>
+          <label for="product_name" class="block mb-2 text-sm font-medium text-gray-900">Product Name *</label>
+          <input type="text" id="product_name" name="product_name" required
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+        </div>
+      </div>
+
+      <!-- Report Info -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="report_no" class="block mb-2 text-sm font-medium text-gray-900">Report Number *</label>
+          <input type="text" id="report_no" name="report_no" required
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+        </div>
+        <div>
+          <label for="superseded_report_no" class="block mb-2 text-sm font-medium text-gray-900">Superseded Report No.</label>
+          <input type="text" id="superseded_report_no" name="superseded_report_no"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+        </div>
+        <div>
+          <label for="effective_date" class="block mb-2 text-sm font-medium text-gray-900">Effective Date *</label>
+          <input type="date" id="effective_date" name="effective_date" required
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+        </div>
+        <div>
+          <label for="total_pages" class="block mb-2 text-sm font-medium text-gray-900">Total Number of Pages *</label>
+          <input type="number" id="total_pages" name="total_pages" required min="1"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+        </div>
+      </div>
+
+      <!-- Test Type -->
+      <div>
+        <label for="test_type" class="block mb-2 text-sm font-medium text-gray-900">Test Type *</label>
+        <input type="text" id="test_type" name="test_type" required placeholder="e.g., Assay by UV, HPLC"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+      </div>
+
+      <!-- Verification Study Data -->
+      <div>
+        <label for="verification_data" class="block mb-2 text-sm font-medium text-gray-900">Verification Study Data *</label>
+        <textarea id="verification_data" name="verification_data" rows="4" required
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"></textarea>
+      </div>
+
+      <!-- Instruments -->
+      <div>
+        <label for="equipment_ids" class="block mb-2 text-sm font-medium text-gray-900">Select Instruments *</label>
+        <select id="equipment_ids" name="equipment_ids" multiple required
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus-border-indigo-500 block w-full p-2.5 h-40">
+          {% for eq in equipments %}
+          <option value="{{ eq.id }}">
+            {{ eq.name }} ({{ eq.make or 'Unknown Make' }}) — Calib: {{ eq.calibration_date.strftime('%d-%m-%Y') if eq.calibration_date else 'N/A' }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Chemicals -->
+      <div>
+        <label class="block mb-2 text-sm font-medium text-gray-900">Chemicals *</label>
+        <div id="chemicalsSection" class="space-y-3"></div>
+        <button type="button" onclick="addRow('chemicalsSection','chemicals')"
+          class="mt-2 text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 rounded-lg text-sm px-4 py-2">
+          + Add Chemical
+        </button>
+      </div>
+
+      <!-- Standards -->
+      <div>
+        <label class="block mb-2 text-sm font-medium text-gray-900">Standards *</label>
+        <div id="standardsSection" class="space-y-3"></div>
+        <button type="button" onclick="addRow('standardsSection','standards')"
+          class="mt-2 text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 rounded-lg text-sm px-4 py-2">
+          + Add Standard
+        </button>
+      </div>
+
+      <!-- Analysts -->
+      <div>
+        <label class="block mb-2 text-sm font-medium text-gray-900">Analysts *</label>
+        <div id="analystsSection" class="space-y-3"></div>
+        <button type="button" onclick="addRow('analystsSection','analysts')"
+          class="mt-2 text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 rounded-lg text-sm px-4 py-2">
+          + Add Analyst
+        </button>
+      </div>
+
+      <!-- Glassware -->
+      <div>
+        <label class="block mb-2 text-sm font-medium text-gray-900">Glassware *</label>
+        <div id="glasswareSection" class="space-y-3"></div>
+        <button type="button" onclick="addRow('glasswareSection','glassware')"
+          class="mt-2 text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 rounded-lg text-sm px-4 py-2">
+          + Add Glassware
+        </button>
+      </div>
+
+      <!-- Absorbance / Concentration / Recovery -->
+      <div>
+        <label class="block mb-2 text-sm font-medium text-gray-900">Absorbance Values, Concentrations, Recoveries *</label>
+        <table class="min-w-full border border-gray-300 text-sm text-gray-900" id="absorbanceTable">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="px-3 py-2 border">Absorbance</th>
+              <th class="px-3 py-2 border">Concentration</th>
+              <th class="px-3 py-2 border">Recovery</th>
+              <th class="px-3 py-2 border">Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <button type="button" onclick="addAbsorbanceRow()" class="mt-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm px-4 py-2">+ Add Row</button>
+      </div>
+
+      <!-- Experimental Results -->
+      <div>
+        <label class="block mb-2 text-sm font-medium text-gray-900">Experimental Results *</label>
+        <table class="min-w-full border border-gray-300 text-sm text-gray-900" id="experimentTable">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="px-3 py-2 border">Parameter</th>
+              <th class="px-3 py-2 border">Value</th>
+              <th class="px-3 py-2 border">Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <button type="button" onclick="addExperimentRow()" class="mt-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm px-4 py-2">+ Add Row</button>
+      </div>
+
+      <!-- Assay Results -->
+      <div>
+        <label class="block mb-2 text-sm font-medium text-gray-900">Assay Results *</label>
+        <table class="min-w-full border border-gray-300 text-sm text-gray-900" id="assayTable">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="px-3 py-2 border">% Assay</th>
+              <th class="px-3 py-2 border">% RSD</th>
+              <th class="px-3 py-2 border">Linearity</th>
+              <th class="px-3 py-2 border">Accuracy</th>
+              <th class="px-3 py-2 border">Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <button type="button" onclick="addAssayRow()" class="mt-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm px-4 py-2">+ Add Row</button>
+      </div>
+
+      <!-- Acceptance Criteria -->
+      <div>
+        <label for="acceptance_criteria" class="block mb-2 text-sm font-medium text-gray-900">Acceptance Criteria Outcomes *</label>
+        <textarea id="acceptance_criteria" name="acceptance_criteria" rows="3" required
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"></textarea>
+      </div>
+
+      <!-- Signatures -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for field in ['Prepared By','Reviewed By','Approved By','Authorized By'] %}
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-900">{{ field }} (Name, Dept, Date, Signature) *</label>
+          <input type="text" name="{{ field|lower|replace(' ','_') }}" required
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Form Actions -->
+      <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+        <a href="{{ url_for('dashboard.user_dashboard') }}"
+          class="text-gray-500 bg-white hover:bg-gray-100 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 flex items-center">
+          <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+        </a>
+        <div class="flex space-x-3">
+          <button type="button" onclick="saveAsDraft()" class="text-indigo-600 bg-white border border-indigo-500 rounded-lg text-sm font-medium px-5 py-2.5 flex items-center">
+            <i class="fas fa-save mr-2"></i> Save as Draft
+          </button>
+          <button type="submit" class="text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm px-5 py-2.5 flex items-center">
+            <i class="fas fa-magic mr-2"></i> Create Document
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addRow(sectionId, prefix) {
+  const container = document.getElementById(sectionId);
+  const index = container.children.length;
+  const row = document.createElement("div");
+  row.classList.add("bg-gray-50", "border", "rounded-lg", "p-4", "flex", "items-center", "gap-4");
+  row.innerHTML = `
+    <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="text" name="${prefix}[${index}][name]" placeholder="Name" class="bg-white border rounded-lg p-2.5 w-full">
+      <input type="text" name="${prefix}[${index}][details]" placeholder="Details" class="bg-white border rounded-lg p-2.5 w-full">
+    </div>
+    <button type="button" onclick="removeRow(this)" class="text-red-600">✖ Remove</button>
+  `;
+  container.appendChild(row);
+}
+function removeRow(button){ button.closest("div").remove(); }
+
+function addAbsorbanceRow() {
+  const tbody = document.getElementById("absorbanceTable").querySelector("tbody");
+  const idx = tbody.children.length;
+  const row = `<tr>
+    <td class="border px-2"><input type="text" name="absorbance[${idx}][value]" class="w-full border rounded p-1"></td>
+    <td class="border px-2"><input type="text" name="absorbance[${idx}][concentration]" class="w-full border rounded p-1"></td>
+    <td class="border px-2"><input type="text" name="absorbance[${idx}][recovery]" class="w-full border rounded p-1"></td>
+    <td class="border px-2"><button type="button" onclick="this.closest('tr').remove()" class="text-red-600">✖</button></td>
+  </tr>`;
+  tbody.insertAdjacentHTML("beforeend", row);
+}
+
+function addExperimentRow() {
+  const tbody = document.getElementById("experimentTable").querySelector("tbody");
+  const idx = tbody.children.length;
+  const row = `<tr>
+    <td class="border px-2"><input type="text" name="experiment[${idx}][parameter]" class="w-full border rounded p-1"></td>
+    <td class="border px-2"><input type="text" name="experiment[${idx}][value]" class="w-full border rounded p-1"></td>
+    <td class="border px-2"><button type="button" onclick="this.closest('tr').remove()" class="text-red-600">✖</button></td>
+  </tr>`;
+  tbody.insertAdjacentHTML("beforeend", row);
+}
+
+function addAssayRow() {
+  const tbody = document.getElementById("assayTable").querySelector("tbody");
+  const idx = tbody.children.length;
+  const row = `<tr>
+    <td class="border px-2"><input type="text" name="assay[${idx}][percent_assay]" class="w-full border rounded p-1"></td>
+    <td class="border px-2"><input type="text" name="assay[${idx}][percent_rsd]" class="w-full border rounded p-1"></td>
+    <td class="border px-2"><input type="text" name="assay[${idx}][linearity]" class="w-full border rounded p-1"></td>
+    <td class="border px-2"><input type="text" name="assay[${idx}][accuracy]" class="w-full border rounded p-1"></td>
+    <td class="border px-2"><button type="button" onclick="this.closest('tr').remove()" class="text-red-600">✖</button></td>
+  </tr>`;
+  tbody.insertAdjacentHTML("beforeend", row);
+}
+</script>
+{% endblock %}
