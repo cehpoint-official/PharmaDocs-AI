@@ -344,6 +344,9 @@ def create_amv_form():
     
     if request.method == 'POST':
         try:
+            current_app.logger.info("=== AMV FORM SUBMITTED ===")
+            current_app.logger.info(f"Form files received: {list(request.files.keys())}")
+            
             # Validate method PDF upload
             if 'method_pdf' not in request.files:
                 flash('Method PDF is required. Please upload a method analysis PDF.', 'error')
@@ -466,7 +469,47 @@ def create_amv_form():
             # Process method PDF upload
             method_pdf_filename = secure_filename(method_pdf.filename)
             method_pdf_path = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), method_pdf_filename)
+           
+             # FOR SIGNATURES ````````````````````````````````
+            prepared_sig_file = request.files.get('prepared_signature')
+            checked_sig_file = request.files.get('checked_signature')
+            approved_sig_file = request.files.get('approved_signature')
             
+            # DEBUG: Log what files were received
+            current_app.logger.info(f"Signature files received:")
+            current_app.logger.info(f"  prepared_signature: {prepared_sig_file}")
+            current_app.logger.info(f"  checked_signature: {checked_sig_file}")
+            current_app.logger.info(f"  approved_signature: {approved_sig_file}")
+            
+            # Define a folder to store signature uploads
+            UPLOAD_FOLDER = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'signatures')
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True) # Create folder if it doesn't exist
+
+            signature_paths = {} # Dictionary to store the file paths
+
+            if prepared_sig_file:
+                filename = secure_filename(prepared_sig_file.filename)
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
+                prepared_sig_file.save(filepath)
+                signature_paths['prepared_by_sig'] = filepath
+                current_app.logger.info(f"Saved prepared signature to: {filepath}")
+
+            if checked_sig_file:
+                filename = secure_filename(checked_sig_file.filename)
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
+                checked_sig_file.save(filepath)
+                signature_paths['checked_by_sig'] = filepath
+                current_app.logger.info(f"Saved checked signature to: {filepath}")
+
+            if approved_sig_file:
+                filename = secure_filename(approved_sig_file.filename)
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
+                approved_sig_file.save(filepath)
+                signature_paths['approved_by_sig'] = filepath
+                current_app.logger.info(f"Saved approved signature to: {filepath}")
+
+            current_app.logger.info(f"Final signature_paths: {signature_paths}")
+
             # Ensure upload directory exists
             os.makedirs(os.path.dirname(method_pdf_path), exist_ok=True)
             
@@ -533,7 +576,9 @@ def create_amv_form():
             current_app.logger.info(f"Company data being passed: {company_data}")
             
             generator = AMVReportGenerator(form_data, company_data=company_data)
-            report_path = generator.generate_report(output_path)
+            report_path = generator.generate_report(
+                output_path,
+                signature_paths=signature_paths)
             
             session_db.close()
             
@@ -632,9 +677,10 @@ def generate_amv_number():
         document_number = f"{company_prefix}/AMV/{current_year}/{count + 1:04d}"
         
         return jsonify({'document_number': document_number})
-        
+    
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 @amv_bp.route('/api/extract-method', methods=['POST'])
 def extract_method_parameters():
@@ -706,8 +752,28 @@ def generate_amv_report(document_id):
     """Generate AMV report for a document"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    
     try:
+        engineer_signature = request.files.get('engineer_signature')
+        manager_signature = request.files.get('manager_signature')
+        approved_signature = request.files.get('approved_signature') 
+        engineer_sig_path: str | None = None
+        manager_sig_path: str | None = None
+        approved_sig_path: str | None = None
+
+        # Create folder to store signature images
+        sig_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'signatures')
+        os.makedirs(sig_folder, exist_ok=True)
+        # Save uploaded files if present
+        if engineer_signature:
+            engineer_sig_path = os.path.join(sig_folder, secure_filename(engineer_signature.filename))
+            engineer_signature.save(engineer_sig_path)
+        if manager_signature:
+            manager_sig_path = os.path.join(sig_folder, secure_filename(manager_signature.filename))
+            manager_signature.save(manager_sig_path)
+        if approved_signature:
+            approved_sig_path = os.path.join(sig_folder, secure_filename(approved_signature.filename))
+            approved_signature.save(approved_sig_path)
+
         # Get document and validate ownership
         document = Document.query.filter_by(id=document_id, user_id=session['user_id']).first()
         if not document or document.document_type != 'AMV':
@@ -734,7 +800,10 @@ def generate_amv_report(document_id):
             'document_number': document.document_number,
             'val_params': amv_details.get_validation_params(),
             'parameters_to_validate': amv_details.get_parameters_to_validate(),
-            'instrument_params': amv_details.get_instrument_params()
+            'instrument_params': amv_details.get_instrument_params(),
+            'prepared_by_sign': engineer_sig_path,
+            'checked_by_sign': manager_sig_path,
+            'approved_by_sign': approved_sig_path,
         }
         
         # Generate report using MATHEMATICAL CALCULATIONS (NO AI)

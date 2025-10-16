@@ -496,29 +496,78 @@
 
         <!-- Approval Section -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                <i class="fas fa-signature text-red-600 mr-3"></i>
-                Approval Details
+          <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+              <i class="fas fa-signature text-red-600 mr-3"></i>
+               Approval Details
             </h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <!-- Prepared By -->
+            <div>
+               <label class="block text-sm font-medium text-gray-700 mb-2">Prepared By *</label>
+               <input type="text" name="prepared_by" required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-2">
+      
+                <label class="block text-xs font-medium text-gray-600 mb-1">Upload Signature</label>
+                <input type="file" name="prepared_signature" accept="image/*"
+                    class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    onchange="previewSignature(event, 'prepared_preview')">
+
+                 <img id="prepared_preview" src="" alt="Prepared Signature Preview"
+                     class="mt-2 max-h-20 rounded border border-gray-300 hidden">
+             </div>
+
+             <!-- Checked By -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Prepared By *</label>
-                    <input type="text" name="prepared_by" required
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Checked By *</label>
-                    <input type="text" name="checked_by" required
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Approved By *</label>
-                    <input type="text" name="approved_by" required
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            </div>
-                        </div>
-                    </div>
+                 <label class="block text-sm font-medium text-gray-700 mb-2">Checked By *</label>
+                 <input type="text" name="checked_by" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-2">
+
+                 <label class="block text-xs font-medium text-gray-600 mb-1">Upload Signature</label>
+                 <input type="file" name="checked_signature" accept="image/*"
+                   class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                   onchange="previewSignature(event, 'checked_preview')">
+
+                 <img id="checked_preview" src="" alt="Checked Signature Preview"
+                    class="mt-2 max-h-20 rounded border border-gray-300 hidden">
+                </div>
+
+             <!-- Approved By -->
+                 <div>
+                     <label class="block text-sm font-medium text-gray-700 mb-2">Approved By *</label>
+                     <input type="text" name="approved_by" required
+                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-2">
+
+                     <label class="block text-xs font-medium text-gray-600 mb-1">Upload Signature</label>
+                     <input type="file" name="approved_signature" accept="image/*"
+                         class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                          onchange="previewSignature(event, 'approved_preview')">
+
+                       <img id="approved_preview" src="" alt="Approved Signature Preview"
+                            class="mt-2 max-h-20 rounded border border-gray-300 hidden">
+                 </div>
+
+            </div>
+        </div>
+
+        <!-- Signature Preview Script -->
+         <script>
+             function previewSignature(event, previewId) {
+                 const file = event.target.files[0];
+                 const preview = document.getElementById(previewId);
+                if (file) {
+                     const reader = new FileReader();
+                     reader.onload = e => {
+                         preview.src = e.target.result;
+                          preview.classList.remove('hidden');
+                        };
+                        reader.readAsDataURL(file);
+                    }
+             }
+            </script>
+
+        
                     
         <!-- Submit Button -->
         <div class="flex justify-center pt-6">
@@ -1465,6 +1514,7 @@ function validateAutoFilledValues() {
 
 // Form validation to ensure method PDF is uploaded
 function validateForm() {
+    console.log("=== VALIDATE FORM CALLED ===");
     const methodPdfInput = document.getElementById('method_pdf');
     if (!methodPdfInput.files || methodPdfInput.files.length === 0) {
         alert('Method PDF is required. Please upload a method analysis PDF file.');
@@ -1474,9 +1524,11 @@ function validateForm() {
     
     // Validate auto-filled values
     const validation = validateAutoFilledValues();
+    console.log('Validation results:', validation);
     
     if (validation.errors.length > 0) {
         alert('Please fix the following errors:\n' + validation.errors.join('\n'));
+        console.log("VALIDATION FAILED: Errors found", validation.errors);
         return false;
     }
     

@@ -1369,20 +1369,20 @@ class AMVReportGenerator:
         self.doc.add_paragraph(range_text)
         
         self.add_page_break()
-    
-    def add_conclusion_section(self):
+
+    def add_conclusion_section(self, signature_paths={}):
         """Add conclusion and approval section"""
         self.add_header_section()
-        
+
         self.doc.add_heading('Conclusions', level=1)
-        
+
         product_name = self.form_data.get('product_name', '')
         active_ingredient = self.form_data.get('active_ingredient', '')
         instrument = self.form_data.get('instrument_type', 'HPLC').upper()
-        
+
         val_params = self.form_data.get('val_params', [])
         param_names = ', '.join([p.replace('_', ' ').title() for p in val_params])
-        
+
         conclusion_text = (
             f"All the Results comply with the acceptance criteria. Hence the Analytical method "
             f"validation for Assay of {product_name} by {instrument} has been successfully "
@@ -1391,64 +1391,79 @@ class AMVReportGenerator:
             f"{active_ingredient}, we can indicate there is no significant change in the "
             f"concentration of the analyte, so the product is considered stable."
         )
-        
+
         para = self.doc.add_paragraph(conclusion_text)
         para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        
+
         # Post-Approval Section
         self.doc.add_heading('Post-Approval:', level=1)
-        
+
         self.doc.add_paragraph(
             f"This is a specific Report for analytical method validation for Assay of "
             f"{product_name} by {instrument}."
         )
-        
+
         self.doc.add_paragraph("This Report has been approved by the following:")
-        
+
         # Get dates
         date_option = self.form_data.get('date_option', 'auto')
-        
+
         if date_option == 'auto':
             report_date = datetime.now()
-            protocol_date = report_date - timedelta(days=random.randint(25, 28))
+
         else:
             report_date = datetime.strptime(self.form_data.get('report_date'), '%Y-%m-%d')
-            protocol_date = datetime.strptime(self.form_data.get('protocol_date'), '%Y-%m-%d')
-        
+
         report_date_str = report_date.strftime('%d/%m/%Y')
-        protocol_date_str = protocol_date.strftime('%d/%m/%Y')
-        
+
         # Approval table
         approval_table = self.doc.add_table(rows=4, cols=5)
         approval_table.style = 'Table Grid'
-        
+
         # Headers
         headers = ['', 'Name', 'Department', 'Signature', 'Date']
         for idx, header in enumerate(headers):
             cell = approval_table.rows[0].cells[idx]
             run = cell.paragraphs[0].add_run(header)
             run.bold = True
-        
+
         # Get signatory details
         prepared_by = self.form_data.get('prepared_by', '[Analyst Name]')
         checked_by = self.form_data.get('checked_by', '[Manager Name]')
         approved_by = self.form_data.get('approved_by', '[Head Name]')
-        
+
+        signature_mapping = {
+            'Prepared By': 'prepared_by_sig',
+            'Checked By': 'checked_by_sig',
+            'Approved By': 'approved_by_sig'
+        }
+
         # Roles
         approval_data = [
-            ('Prepared By', prepared_by, 'Analyst Q.C', '[Signature]', report_date_str),
-            ('Checked By', checked_by, 'Asst. Manager Q.C', '[Signature]', report_date_str),
-            ('Approved By', approved_by, 'Manager Q.C', '[Signature]', report_date_str)
+            ('Prepared By', prepared_by, 'Analyst Q.C', report_date_str),
+            ('Checked By', checked_by, 'Asst. Manager Q.C', report_date_str),
+            ('Approved By', approved_by, 'Manager Q.C', report_date_str)
         ]
-        
-        for idx, (role, name, dept, sig, date) in enumerate(approval_data, 1):
+
+        # Fill approval rows and signatures
+        for idx, (role, name, dept, date) in enumerate(approval_data, 1):
             approval_table.rows[idx].cells[0].text = role
             approval_table.rows[idx].cells[1].text = name
             approval_table.rows[idx].cells[2].text = dept
-            approval_table.rows[idx].cells[3].text = sig
             approval_table.rows[idx].cells[4].text = date
-        
-        # Store total pages for replacement
+
+            sig_cell = approval_table.rows[idx].cells[3]
+            sig_key = signature_mapping.get(role)
+            image_path = signature_paths.get(sig_key)
+
+            # Check if an image path was provided and if the file exists
+            if image_path and os.path.exists(image_path):
+                sig_cell.text = ''
+                run = sig_cell.paragraphs[0].add_run()
+                run.add_picture(image_path, width=Inches(1.0))
+            else:
+                sig_cell.text = '[Signature]'
+
         # self.total_pages will be set in generate_report method
     
     def update_page_numbers(self, filename):
@@ -1464,7 +1479,7 @@ class AMVReportGenerator:
         
         doc.save(filename)
     
-    def generate_report(self, output_filename):
+    def generate_report(self, output_filename, signature_paths={}):
         """Generate the complete AMV report with mathematically generated results"""
         # Cover page
         self.add_header_section(1)
@@ -1497,7 +1512,7 @@ class AMVReportGenerator:
         self.add_discussion_section()
         
         # Conclusion
-        self.add_conclusion_section()
+        self.add_conclusion_section(signature_paths=signature_paths)
         
         # Save document
         self.doc.save(output_filename)
