@@ -11,10 +11,16 @@
       <h1 class="text-2xl font-bold text-gray-900">Welcome back, {{ user.name }}!</h1>
       <p class="text-gray-600">Manage your pharmaceutical documentation efficiently.</p>
     </div>
-    <a href="{{ url_for('amv_bp.create_amv_form') }}"
-       class="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow">
-      <i class="fas fa-plus mr-2"></i>Create AMV Document
-    </a>
+    <div class="flex gap-3 mt-4 md:mt-0">
+      <a href="{{ url_for('amv_bp.create_amv_form') }}"
+         class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow">
+        <i class="fas fa-plus mr-2"></i>Create AMV Document
+      </a>
+      <a href="{{ url_for('amv_bp.amv_verification_page') }}"
+         class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow">
+        <i class="fas fa-file-word mr-2"></i>AMV Verification
+      </a>
+    </div>
   </div>
 
   <!-- Statistics Cards -->
@@ -77,10 +83,16 @@
           </div>
           <h6 class="font-semibold">Analytical Method Validation</h6>
           <p class="text-gray-500 text-sm mt-1">Create AMV protocols and reports with automated calculations.</p>
-          <a href="{{ url_for('amv_bp.create_amv_form') }}"
-             class="mt-3 inline-flex items-center px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded">
-            <i class="fas fa-plus mr-1"></i>Create AMV
-          </a>
+          <div class="mt-3 flex items-center justify-center gap-2">
+            <a href="{{ url_for('amv_bp.create_amv_form') }}"
+               class="inline-flex items-center px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded">
+              <i class="fas fa-plus mr-1"></i>Create AMV
+            </a>
+            <a href="{{ url_for('amv_bp.amv_verification_page') }}"
+               class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded">
+              <i class="fas fa-file-word mr-1"></i>Verification
+            </a>
+          </div>
         </div>
 
         <!-- PV -->
