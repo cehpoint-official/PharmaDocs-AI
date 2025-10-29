@@ -41,6 +41,7 @@ class Company(db.Model):
     address: Mapped[str] = mapped_column(Text, nullable=True)
     logo_url: Mapped[str] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    glass_materials: Mapped[str] = mapped_column(Text, nullable=True) # JSON string for glass materials
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="companies")

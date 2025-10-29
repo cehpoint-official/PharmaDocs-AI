@@ -1214,7 +1214,22 @@ def test_extract_route():
 def amv_verification_page():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    return render_template('amv_verification_protocol.html')
+    
+    session_db = Session()
+    company_id = session.get('user_id', 1)
+
+    equipment_list = session_db.query(Equipment).filter_by(company_id=company_id).all()
+    glass_materials_list = session_db.query(GlassMaterial).filter_by(company_id=company_id).all()
+    reagents_list = session_db.query(Reagent).filter_by(company_id=company_id).all()
+    references_list = session_db.query(ReferenceProduct).filter_by(company_id=company_id).all()
+    
+    session_db.close()
+    
+    return render_template('amv_verification_protocol.html',
+                           equipment_list=equipment_list,
+                           glass_materials_list=glass_materials_list,
+                           reagents_list=reagents_list,
+                           references_list=references_list)
 
 # Protocol Generator UI and APIs
 @amv_bp.route('/protocol', methods=['GET'])
@@ -1228,7 +1243,22 @@ def amv_verification_protocol_page():
     """Render the AMV Verification Protocol form page"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    return render_template('amv_verification_protocol.html')
+    
+    session_db = Session()
+    company_id = session.get('user_id', 1)
+
+    equipment_list = session_db.query(Equipment).filter_by(company_id=company_id).all()
+    glass_materials_list = session_db.query(GlassMaterial).filter_by(company_id=company_id).all()
+    reagents_list = session_db.query(Reagent).filter_by(company_id=company_id).all()
+    references_list = session_db.query(ReferenceProduct).filter_by(company_id=company_id).all()
+    
+    session_db.close()
+    
+    return render_template('amv_verification_protocol.html',
+                           equipment_list=equipment_list,
+                           glass_materials_list=glass_materials_list,
+                           reagents_list=reagents_list,
+                           references_list=references_list)
 
 @amv_bp.route('/generate-verification-protocol', methods=['POST'])
 def generate_verification_protocol():

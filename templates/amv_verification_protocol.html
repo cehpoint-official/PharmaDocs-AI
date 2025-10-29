@@ -295,6 +295,77 @@
                 </div>
             </div>
         </div>
+        <!-- Equipment Selection -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                <i class="fas fa-tools text-blue-600 mr-3"></i>
+                Equipment Selection
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for equipment in equipment_list %}
+                    <div class="flex items-center">
+                        <input type="checkbox" name="selected_equipment" value="{{ equipment.id }}"
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <label class="ml-3 text-sm font-medium text-gray-700">{{ equipment.name }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- Glass Materials Selection -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                <i class="fas fa-flask text-green-600 mr-3"></i>
+                Glass Materials Selection
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for glass in glass_materials_list %}
+                    <div class="flex items-center">
+                        <input type="checkbox" name="selected_glass_materials" value="{{ glass.id }}"
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <label class="ml-3 text-sm font-medium text-gray-700">{{ glass.name }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- Reagents Selection -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                <i class="fas fa-vial text-purple-600 mr-3"></i>
+                Reagents Selection
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for reagent in reagents_list %}
+                    <div class="flex items-center">
+                        <input type="checkbox" name="selected_reagents" value="{{ reagent.id }}"
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <label class="ml-3 text-sm font-medium text-gray-700">{{ reagent.name }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- Reference Product Selection -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                <i class="fas fa-certificate text-orange-600 mr-3"></i>
+                Reference Product Selection
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for reference in references_list %}
+                    <div class="flex items-center">
+                        <input type="radio" name="selected_reference" value="{{ reference.id }}"
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <label class="ml-3 text-sm font-medium text-gray-700">{{ reference.standard_name }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+
+
+
+
+
+
 
         <!-- Verification Parameters Selection -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
