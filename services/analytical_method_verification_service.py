@@ -20,30 +20,65 @@ import numpy as np
 import random
 import io
 
+
 class AMVProtocolGenerator:
+    # In the AMVProtocolGenerator class __init__ method, add proper JSON parsing:
+
     def __init__(self, form_data, company_data=None):
         if not form_data:
-            # Provide default form data to prevent empty initialization
             form_data = {
                 'product_name': 'Test Product',
                 'active_ingredient': 'Test Ingredient', 
-                'label_claim': '100mg',
-                'protocol_number': 'AMV/P/TEST/001',
-                'company_name': 'Test Pharmaceuticals Ltd.',
-                'company_address': 'Test Address',
-                'methodology_code': 'TEST/METHOD/001',
-                'standard_potency': '99.5%',
-                'prepared_by': 'Test Analyst',
-                'checked_by': 'Test Manager',
-                'approved_by': 'Test Head'
+                # ... other defaults
             }
         
         self.form_data = form_data
         self.company_data = company_data or {}
         self.doc = Document()
         self.current_page = 1
-        self.total_pages = 20  # Fixed as per template
+        self.total_pages = 20
         self.setup_document_margins()
+        
+
+        
+        # Parse JSON data from form
+        self.selected_equipment = self._parse_json_data(form_data.get('selected_equipment_json'))
+        self.selected_glass_materials = self._parse_json_data(form_data.get('selected_glass_materials_json'))
+        self.selected_reagents = self._parse_json_data(form_data.get('selected_reagents_json'))
+        self.selected_reference = self._parse_json_data(form_data.get('selected_reference_json'))
+
+
+    def _parse_json_data(self, data):
+        """Handle nested Flask/JSON data safely"""
+        print("🔥 RAW DATA RECEIVED =>", repr(data))
+
+        import json
+
+        if not data or str(data).lower() in ['none', 'null', '']:
+            return []
+
+
+        # ✅ Case 1: Flask ImmutableMultiDict (from request.form)
+        try:
+            # If data is a string like "[{'id': 1, ...}]" or '{"id":1,...}'
+            if isinstance(data, str):
+                parsed = json.loads(data.replace("'", '"'))
+                return parsed if isinstance(parsed, list) else [parsed]
+        except Exception as e:
+            print(f"⚠️ JSON decode failed | error={e} | raw={repr(data)}")
+
+        # ✅ Case 2: Already list or dict
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            return [data]
+
+        # ✅ Case 3: Fallback
+        print(f"⚠️ Unknown data type: {type(data)} | Value: {data}")
+        return []
+
+
+
     
     def setup_document_margins(self):
         """Set document margins safely"""
@@ -72,7 +107,7 @@ class AMVProtocolGenerator:
             left_para = left_cell.paragraphs[0]
             
             company_name = self.form_data.get('company_name', 'KWALITY PHARMACEUTICALS. LTD.')
-            company_address = self.form_data.get('company_address', '1-A, INDUSTRIAL AREA, RAJA KA BAGH TEHSIL NURPUR, KANGRA-176201 (INDIA)')
+            company_address = self.form_data.get('company_location', '1-A, INDUSTRIAL AREA, RAJA KA BAGH TEHSIL NURPUR, KANGRA-176201 (INDIA)')
             
             company_run = left_para.add_run(f"{company_name}\n")
             company_run.bold = True
@@ -215,9 +250,10 @@ class AMVProtocolGenerator:
             # Description
             desc_para = self.doc.add_paragraph()
             product_name = self.form_data.get('product_name', 'LEUCOVORIN CALCIUM FOR INJECTION 50MG/VIAL')
+            method_name = self.form_data.get('test_method')
             desc_text = (
                 f"This is a specific protocol for analytical method validation for Assay of "
-                f"{product_name} by High Performance Liquid Chromatography.\n"
+                f"{product_name} by {method_name}.\n"
                 f"This protocol has been approved by the following:"
             )
             desc_para.add_run(desc_text)
@@ -248,17 +284,17 @@ class AMVProtocolGenerator:
             # Approval data
             approval_data = [
                 ('Prepared By', 
-                 self.form_data.get('prepared_by', 'Sachin Kumar'), 
+                 self.form_data.get('prepared_by_name', 'Sachin Kumar'), 
                  'Analyst Q.C', 
                  '[Signature]', 
                  date_str),
                 ('Checked By', 
-                 self.form_data.get('checked_by', 'Naresh'), 
+                 self.form_data.get('reviewed_by_name', 'Naresh'), 
                  'Asst. Manager Q.C', 
                  '[Signature]', 
                  date_str),
                 ('Approved By', 
-                 self.form_data.get('approved_by', 'Ajay Bhatia'), 
+                 self.form_data.get('approved_by_name', 'Ajay Bhatia'), 
                  'Manager Q.C', 
                  '[Signature]', 
                  date_str)
@@ -291,7 +327,7 @@ class AMVProtocolGenerator:
             objective_text = (
                 f"To establish the methodology for the analytical method validation for Assay of "
                 f"{self.form_data.get('product_name', 'LEUCOVORIN CALCIUM FOR INJECTION 50MG/VIAL')} "
-                f"by High Performance Liquid Chromatography."
+                f"by {self.form_data.get('test_method')}."
             )
             self.doc.add_paragraph(objective_text)
             
@@ -300,7 +336,7 @@ class AMVProtocolGenerator:
             scope_text = (
                 f"This Validation is applicable for the determination of Assay of "
                 f"{self.form_data.get('product_name', 'LEUCOVORIN CALCIUM FOR INJECTION 50MG/VIAL')} "
-                f"by High Performance Liquid Chromatography."
+                f"by {self.form_data.get('test_method')}."
             )
             self.doc.add_paragraph(scope_text)
             
@@ -325,79 +361,134 @@ class AMVProtocolGenerator:
             
             # Equipment list
             self.doc.add_paragraph("3.1 List of Equipment and Instrument Used:")
-            equip_text = (
-                "The following apparatus / equipment shall be used for validation studies:\n"
-                "a) Analytical Balance\n"
-                "b) High Performance Liquid Chromatography\n"
-                "c) Ultra-sonic Bath\n"
-                "d) Vacuum Pump"
-            )
+    
+            if self.selected_equipment and len(self.selected_equipment) > 0:
+                equip_text = "The following apparatus / equipment shall be used for validation studies:\n"
+                for idx, equipment in enumerate(self.selected_equipment, 1):
+                    letter = chr(96 + idx)  # Convert 1->'a', 2->'b', etc.
+                    name = equipment.get('name', 'Unknown Equipment')
+                    code = equipment.get('code', '')
+                    brand = equipment.get('brand', '')
+                    
+                    equip_text += f"{letter}) {name}"
+                    if code:
+                        equip_text += f" (Code: {code})"
+                    if brand:
+                        equip_text += f" - {brand}"
+                    equip_text += "\n"
+            else:
+                # Default equipment if none selected
+                equip_text = "The following apparatus / equipment shall be used for validation studies:\n" \
+                            "a) Analytical Balance\n" \
+                            "b) High Performance Liquid Chromatography\n" \
+                            "c) Ultra-sonic Bath\n" \
+                            "d) Vacuum Pump"
+            
             self.doc.add_paragraph(equip_text)
             
-            # Glass materials
+            # Glass materials - USING ACTUAL SELECTED DATA
             self.doc.add_paragraph("3.2 List of Glass or Other Materials")
-            glass_text = (
-                "The following glass or other materials shall be used for Validation studies:\n"
-                "a) Beaker: 1000ml\n"
-                "b) Glass Volumetric Flask: 50ml, 100ml\n"
-            )
+
+            if self.selected_glass_materials and len(self.selected_glass_materials) > 0:
+                glass_text = "The following glass or other materials shall be used for Validation studies:\n"
+                for idx, material in enumerate(self.selected_glass_materials, 1):
+                    letter = chr(96 + idx)
+                    name = material.get('name', 'Unknown')
+                    characteristics = material.get('characteristics', '')
+                    glass_text += f"{letter}) {name}"
+                    if characteristics:
+                        glass_text += f" - {characteristics}"
+                    glass_text += "\n"
+            else:
+                # Default materials if none selected
+                glass_text = "The following glass or other materials shall be used for Validation studies:\n" \
+                            "a) Beaker: 1000ml\n" \
+                            "b) Glass Volumetric Flask: 50ml, 100ml\n" \
+                            "c) Pipette: 2ml, 2.5ml, 5ml\n" \
+                            "d) Graduated Cylinders: 500ml\n" \
+                            "e) Glass jars: 1000ml"
+
             self.doc.add_paragraph(glass_text)
-            
+
             self.add_page_break()
-            self.add_header_section(5)
             
-            # Continue glass materials
-            glass_cont_text = (
-                "c) Pipette: 2ml, 2.5ml, 5ml\n"
-                "d) Graduated Cylinders: 500ml\n"
-                "e) Glass jars: 1000ml"
-            )
-            self.doc.add_paragraph(glass_cont_text)
-            
-            # Reagents
+            # Reagents - USING ACTUAL SELECTED DATA
             self.doc.add_paragraph("3.3 List of Reagents and Prepared Solutions:")
-            reagents_text = (
-                "The following reagents and chemicals shall be used for Validation studies:"
-            )
+            reagents_text = "The following reagents and chemicals shall be used for Validation studies:"
             self.doc.add_paragraph(reagents_text)
-            
-            # Reagents table - SAFE VERSION
+
             try:
-                reagents_table = self.doc.add_table(rows=1, cols=2)
+                reagents_table = self.doc.add_table(rows=1, cols=3)
                 reagents_table.style = 'Table Grid'
-                reagents_table.rows[0].cells[0].text = "Reagent Name"
-                reagents_table.rows[0].cells[1].text = "Brand"
                 
-                reagents_data = self.form_data.get('reagents', [
-                    {'name': 'Tetrabutylammonium hydroxide solution', 'brand': 'Merck'},
-                    {'name': 'Methanol', 'brand': 'Merck'},
-                    {'name': 'Disodium Hydrogen Phosphate', 'brand': 'Merck'}
-                ])
+                # Add headers
+                header_cells = reagents_table.rows[0].cells
+                header_cells[0].text = "Reagent Name"
+                header_cells[1].text = "Batch Number"
+                header_cells[2].text = "Expiry Date"
+                
+                # Use selected reagents or defaults
+                if self.selected_reagents and len(self.selected_reagents) > 0:
+                    reagents_data = self.selected_reagents
+                else:
+                    reagents_data = [
+                        {
+                            'name': 'Tetrabutylammonium hydroxide solution', 
+                            'batch': 'TBH-001',
+                            'expiry_date': '2025-10-31'
+                        },
+                        {
+                            'name': 'Methanol', 
+                            'batch': 'MTH-002',
+                            'expiry_date': '2026-05-15'
+                        }
+                    ]
                 
                 for reagent in reagents_data:
                     row = reagents_table.add_row()
-                    if len(row.cells) >= 2:  # Safety check
-                        row.cells[0].text = reagent.get('name', '')
-                        row.cells[1].text = reagent.get('brand', '')
+                    cells = row.cells
+                    cells[0].text = reagent.get('name', '')
+                    cells[1].text = reagent.get('batch', '')
+                    
+                    # Format expiry date
+                    expiry_date = reagent.get('expiry_date', '')
+                    if expiry_date:
+                        try:
+                            date_obj = datetime.strptime(expiry_date, '%Y-%m-%d')
+                            cells[2].text = date_obj.strftime('%d/%m/%Y')
+                        except:
+                            cells[2].text = expiry_date
+                    else:
+                        cells[2].text = 'N/A'
+                        
             except Exception as e:
                 print(f"Error creating reagents table: {e}")
                 self.doc.add_paragraph("Reagents: As per methodology")
             
-            # Working standard
+            # Working standard - USING ACTUAL SELECTED REFERENCE
             self.doc.add_paragraph("3.4 Working Standard Details:")
             try:
                 standard_table = self.doc.add_table(rows=1, cols=2)
                 standard_table.style = 'Table Grid'
-                standard_table.rows[0].cells[0].text = "Name of Working Standard"
-                standard_table.rows[0].cells[1].text = "Potency"
                 
-                standard_name = self.form_data.get('active_ingredient', 'Leucovorin Calcium')
-                standard_potency = self.form_data.get('standard_potency', '90.8%')
+                # Add headers
+                header_cells = standard_table.rows[0].cells
+                header_cells[0].text = "Name of Working Standard"
+                header_cells[1].text = "Potency"
+                
+                # Use selected reference or defaults
+                if self.selected_reference and isinstance(self.selected_reference, dict):
+                    standard_name = self.selected_reference.get('standard_name', self.form_data.get('active_ingredient', 'Unknown Standard'))
+                    standard_potency = self.selected_reference.get('potency', self.form_data.get('standard_potency', '99.5%'))
+                else:
+                    standard_name = self.form_data.get('active_ingredient', 'Unknown Standard')
+                    standard_potency = self.form_data.get('standard_potency', '99.5%')
                 
                 row = standard_table.add_row()
-                if len(row.cells) >= 2:  # Safety check
-                    row.cells[0].text = standard_name
-                    row.cells[1].text = standard_potency
+                cells = row.cells
+                cells[0].text = standard_name
+                cells[1].text = standard_potency
+                    
             except Exception as e:
                 print(f"Error creating standard table: {e}")
             
@@ -597,7 +688,7 @@ class AMVProtocolGenerator:
             
             # Calculation
             self.doc.add_paragraph("Calculation:")
-# Calculation formulas based on test method
+            # Calculation formulas based on test method
             if self.form_data.get('test_method', '').upper() in ['HPLC', 'LC', 'UPLC']:
                 calc_text = (
                     f"Analysis Samples: Standard solution and Sample Solution\n\n"
@@ -985,11 +1076,22 @@ class AnalyticalMethodVerificationService:
                 'prepared_by': protocol_data.get('preparedByName', 'Test Analyst'),
                 'checked_by': protocol_data.get('reviewedByName', 'Test Manager'),
                 'approved_by': protocol_data.get('approvedByName', 'Test Head'),
+                'glass_materials': protocol_data.get('selected_glass_materials', []),
+                'reagents_list': protocol_data.get('selected_reagents', []),
+                'equipment_list': protocol_data.get('selected_equipment', []),
+                'reference_list': protocol_data.get('selected_reference', []),
                 'date_option': 'auto'
+
             }
+            protocol_data.update({
+                'selected_equipment_json': json.dumps(protocol_data.get('selected_equipment', [])),
+                'selected_glass_materials_json': json.dumps(protocol_data.get('selected_glass_materials', [])),
+                'selected_reagents_json': json.dumps(protocol_data.get('selected_reagents', [])),
+                'selected_reference_json': json.dumps(protocol_data.get('selected_reference', [])),
+            })
             
             # Generate document using the main protocol generator
-            generator = AMVProtocolGenerator(method_info_formatted)
+            generator = AMVProtocolGenerator(protocol_data)
             buffer = io.BytesIO()
             generator.generate_protocol(buffer)
             buffer.seek(0)

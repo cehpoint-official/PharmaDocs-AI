@@ -25,14 +25,14 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
-                    <input type="text" name="productName" required
+                    <input type="text" name="product_name" required
                            placeholder="e.g., Fluorouracil Injection BP 50mg/ml"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Active Ingredient *</label>
                     <div class="flex space-x-2">
-                        <input type="text" name="activeIngredient" id="active_ingredient" required
+                        <input type="text" name="active_ingredient" id="active_ingredient" required
                                placeholder="e.g., Fluorouracil"
                                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <button type="button" onclick="generateSMILES()" id="generate_smiles_btn"
@@ -44,7 +44,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Test Method *</label>
-                    <select name="testMethod" required
+                    <select name="test_method" required
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">Select Test Method</option>
                         <option value="UV">UV Spectroscopy</option>
@@ -57,17 +57,17 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Label Claim *</label>
-                    <input type="text" name="labelClaim" required placeholder="e.g., 25 mg"
+                    <input type="text" name="label_claim" required placeholder="e.g., 25 mg"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Molecular Weight</label>
-                    <input type="text" name="molecularWeight"
+                    <input type="text" name="molecular_weight"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Molecular Formula</label>
-                    <input type="text" name="molecularFormula"
+                    <input type="text" name="molecular_formula"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
@@ -97,27 +97,38 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Protocol Number *</label>
-                    <input type="text" name="protocolNumber" required
+                    <input type="text" name="protocol_number" required
                            placeholder="e.g., KPL/AMVN/P/21/001-00"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Company Name *</label>
-                    <input type="text" name="companyName" required
-                           placeholder="e.g., Kwality Pharmaceutical Ltd."
-                           value="{{ user.company.name if user and user.company else '' }}"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="text" name="company_name" required
+                        placeholder="e.g., Kwality Pharmaceutical Ltd."
+                        list="company_options"
+                        value="{{ user.company.name if user and user.company else '' }}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+
+                    <datalist id="company_options">
+                        {% if user and user.company %}
+                            <option value="{{ user.company.name }}"></option>
+                        {% endif %}
+                        {% for company in companies %}
+                            <option value="{{ company.name }}"></option>
+                        {% endfor %}
+                    </datalist>
+
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Company Location *</label>
-                    <input type="text" name="companyLocation" required
+                    <input type="text" name="company_location" required
                            placeholder="e.g., Raja ka Bagh H.P."
                            value="{{ user.company.location if user and user.company else '' }}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Specification Range *</label>
-                    <input type="text" name="specificationRange" required
+                    <input type="text" name="specification_range" required
                            placeholder="e.g., 90.0% to 110.0%"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
@@ -160,7 +171,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Weight of Standard (mg)</label>
                     <div class="relative">
-                        <input type="number" step="0.001" name="weightStandard"
+                        <input type="number" step="0.001" name="weight_standard"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                             <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon" title="Auto-filled from PDF"></i>
@@ -170,7 +181,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Weight of Sample (mg)</label>
                     <div class="relative">
-                        <input type="number" step="0.001" name="weightSample"
+                        <input type="number" step="0.001" name="weight_sample"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                             <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon" title="Auto-filled from PDF"></i>
@@ -180,7 +191,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Final Concentration of Standard (mg/ml)</label>
                     <div class="relative">
-                        <input type="number" step="0.001" name="finalConcentrationStandard"
+                        <input type="number" step="0.001" name="final_concentration_standard"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                             <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon" title="Auto-filled from PDF"></i>
@@ -190,7 +201,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Final Concentration of Sample (mg/ml)</label>
                     <div class="relative">
-                        <input type="number" step="0.001" name="finalConcentrationSample"
+                        <input type="number" step="0.001" name="final_concentration_sample"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                             <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon" title="Auto-filled from PDF"></i>
@@ -210,7 +221,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Average Weight (mg)</label>
                     <div class="relative">
-                        <input type="number" step="0.001" name="averageWeight"
+                        <input type="number" step="0.001" name="average_weight"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                             <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon" title="Auto-filled from PDF"></i>
@@ -220,7 +231,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Weight per ml (mg)</label>
                     <div class="relative">
-                        <input type="number" step="0.001" name="weightPerMl"
+                        <input type="number" step="0.001" name="weight_per_ml"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                             <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon" title="Auto-filled from PDF"></i>
@@ -245,7 +256,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Reference Absorbance of Standard</label>
-                        <input type="number" step="0.001" name="referenceAbsorbanceStandard"
+                        <input type="number" step="0.001" name="reference_absorbance_standard"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                 </div>
@@ -257,17 +268,17 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Reference Area of Standard</label>
-                        <input type="number" step="0.001" name="referenceAreaStandard"
+                        <input type="number" step="0.001" name="reference_area_standard"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Flow Rate (ml/min)</label>
-                        <input type="number" step="0.1" name="flowRate"
+                        <input type="number" step="0.1" name="flow_rate"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Injection Volume (μL)</label>
-                        <input type="number" step="0.1" name="injectionVolume"
+                        <input type="number" step="0.1" name="injection_volume"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                 </div>
@@ -279,86 +290,124 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Reference Volume (ml)</label>
-                        <input type="number" step="0.1" name="referenceVolume"
+                        <input type="number" step="0.1" name="reference_volume"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Weight of Sample (gm)</label>
-                        <input type="number" step="0.001" name="weightSampleGm"
+                        <input type="number" step="0.001" name="weight_sample_gm"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Standard Factor (gm)</label>
-                        <input type="number" step="0.001" name="standardFactor"
+                        <input type="number" step="0.001" name="standard_factor"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                 </div>
             </div>
         </div>
-        <!-- Equipment Selection -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                <i class="fas fa-tools text-blue-600 mr-3"></i>
-                Equipment Selection
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {% for equipment in equipment_list %}
-                    <div class="flex items-center">
-                        <input type="checkbox" name="selected_equipment" value="{{ equipment.id }}"
-                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <label class="ml-3 text-sm font-medium text-gray-700">{{ equipment.name }}</label>
-                    </div>
-                {% endfor %}
+            <!-- Equipment Selection - UPDATED -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                    <i class="fas fa-tools text-blue-600 mr-3"></i>
+                    Equipment Selection
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {% for equipment in equipment_list %}
+                        <div class="flex items-start">
+                            <input type="checkbox" 
+                                name="selected_equipment" 
+                                value="{{ equipment.id }}"
+                                data-code="{{ equipment.code }}"
+                                data-brand="{{ equipment.brand }}"
+                                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1">
+                            <div class="ml-3">
+                                <label class="text-sm font-medium text-gray-700">{{ equipment.name }}</label>
+                                {% if equipment.code %}
+                                    <p class="text-xs text-gray-500">Code: {{ equipment.code }}</p>
+                                {% endif %}
+                                {% if equipment.brand %}
+                                    <p class="text-xs text-gray-500">Brand: {{ equipment.brand }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
-        </div>
-        <!-- Glass Materials Selection -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                <i class="fas fa-flask text-green-600 mr-3"></i>
-                Glass Materials Selection
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {% for glass in glass_materials_list %}
-                    <div class="flex items-center">
-                        <input type="checkbox" name="selected_glass_materials" value="{{ glass.id }}"
-                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <label class="ml-3 text-sm font-medium text-gray-700">{{ glass.name }}</label>
-                    </div>
-                {% endfor %}
+
+            <!-- Glass Materials Selection - UPDATED -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                    <i class="fas fa-flask text-green-600 mr-3"></i>
+                    Glass Materials Selection
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {% for glass in glass_materials_list %}
+                        <div class="flex items-start">
+                            <input type="checkbox" 
+                                name="selected_glass_materials" 
+                                value="{{ glass.id }}"
+                                data-characteristics="{{ glass.characteristics }}"
+                                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1">
+                            <div class="ml-3">
+                                <label class="text-sm font-medium text-gray-700">{{ glass.name }}</label>
+                                {% if glass.characteristics %}
+                                    <p class="text-xs text-gray-500">{{ glass.characteristics }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
-        </div>
-        <!-- Reagents Selection -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                <i class="fas fa-vial text-purple-600 mr-3"></i>
-                Reagents Selection
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {% for reagent in reagents_list %}
-                    <div class="flex items-center">
-                        <input type="checkbox" name="selected_reagents" value="{{ reagent.id }}"
-                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <label class="ml-3 text-sm font-medium text-gray-700">{{ reagent.name }}</label>
-                    </div>
-                {% endfor %}
+
+            <!-- Reagents Selection - UPDATED -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                    <i class="fas fa-vial text-purple-600 mr-3"></i>
+                    Reagents Selection
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {% for reagent in reagents_list %}
+                        <div class="flex items-start">
+                            <input type="checkbox" 
+                                name="selected_reagents" 
+                                value="{{ reagent.id }}"
+                                data-batch="{{ reagent.batch }}"
+                                data-expiry="{{ reagent.expiry_date }}"
+                                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1">
+                            <div class="ml-3">
+                                <label class="text-sm font-medium text-gray-700">{{ reagent.name }}</label>
+                                <p class="text-xs text-gray-500">Batch: {{ reagent.batch }}</p>
+                                <p class="text-xs text-gray-500">Expiry: {{ reagent.expiry_date }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
-        </div>
-        <!-- Reference Product Selection -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                <i class="fas fa-certificate text-orange-600 mr-3"></i>
-                Reference Product Selection
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {% for reference in references_list %}
-                    <div class="flex items-center">
-                        <input type="radio" name="selected_reference" value="{{ reference.id }}"
-                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <label class="ml-3 text-sm font-medium text-gray-700">{{ reference.standard_name }}</label>
-                    </div>
-                {% endfor %}
+
+            <!-- Reference Product Selection - UPDATED -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                    <i class="fas fa-certificate text-orange-600 mr-3"></i>
+                    Reference Product Selection
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {% for reference in references_list %}
+                        <div class="flex items-start">
+                            <input type="radio" 
+                                name="selected_reference" 
+                                value="{{ reference.id }}"
+                                data-standard-name="{{ reference.standard_name }}"
+                                data-potency="{{ reference.potency }}"
+                                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1">
+                            <div class="ml-3">
+                                <label class="text-sm font-medium text-gray-700">{{ reference.standard_name }}</label>
+                                <p class="text-xs text-gray-500">Potency: {{ reference.potency }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
-        </div>
 
 
 
@@ -454,49 +503,56 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Prepared By - Name</label>
-                    <input type="text" name="preparedByName"
+                    <input type="text" name="prepared_by_name"
                            placeholder="Officer/Executive/Sr. Executive QC"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Prepared By - Department</label>
-                    <input type="text" name="preparedByDept" value="Quality Control"
+                    <input type="text" name="prepared_by_dept" value="Quality Control"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Reviewed By - Name</label>
-                    <input type="text" name="reviewedByName"
+                    <input type="text" name="reviewed_by_name"
                            placeholder="Manager QC/Designee"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Reviewed By - Department</label>
-                    <input type="text" name="reviewedByDept" value="Quality Control"
+                    <input type="text" name="reviewed_by_dept" value="Quality Control"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Approved By - Name</label>
-                    <input type="text" name="approvedByName"
+                    <input type="text" name="approved_by_name"
                            placeholder="Assistant Manager/Designee"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Approved By - Department</label>
-                    <input type="text" name="approvedByDept" value="Quality Assurance"
+                    <input type="text" name="approved_by_dept" value="Quality Assurance"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Authorized By - Name</label>
-                    <input type="text" name="authorizedByName"
+                    <input type="text" name="authorized_by_name"
                            placeholder="Head QA/Designee"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Authorized By - Department</label>
-                    <input type="text" name="authorizedByDept" value="Quality Assurance"
+                    <input type="text" name="authorized_by_dept" value="Quality Assurance"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
             </div>
+        </div>
+
+        <div class="hidden">
+            <input type="hidden" name="selected_equipment_json" id="selected_equipment_json">
+            <input type="hidden" name="selected_glass_materials_json" id="selected_glass_materials_json">
+            <input type="hidden" name="selected_reagents_json" id="selected_reagents_json">
+            <input type="hidden" name="selected_reference_json" id="selected_reference_json">
         </div>
 
         <!-- Submit Button -->
@@ -510,6 +566,134 @@
 </div>
 
 <script>
+
+// Add this script to your form
+// Update the form submission handler in amv_verification_protocol.html
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[action="/amv/generate-verification-protocol"]');
+    
+    if (!form) {
+        console.error('Form not found!');
+        return;
+    }
+    
+    form.addEventListener('submit', function(e) {
+        console.log('=== FORM SUBMISSION STARTED ===');
+        
+        // Capture equipment selections
+        const equipmentCheckboxes = document.querySelectorAll('input[name="selected_equipment"]:checked');
+        const selectedEquipment = Array.from(equipmentCheckboxes).map(cb => {
+            const label = cb.nextElementSibling;
+            return {
+                id: cb.value,
+                name: label ? label.textContent.trim() : 'Unknown',
+                code: cb.dataset.code || '',
+                brand: cb.dataset.brand || ''
+            };
+        });
+        
+        console.log('Selected Equipment:', selectedEquipment);
+        document.getElementById('selected_equipment_json').value = JSON.stringify(selectedEquipment);
+        console.log('Equipment JSON set to:', document.getElementById('selected_equipment_json').value);
+        
+        // Capture glass materials selections
+        const glassCheckboxes = document.querySelectorAll('input[name="selected_glass_materials"]:checked');
+        const selectedGlassMaterials = Array.from(glassCheckboxes).map(cb => {
+            const label = cb.nextElementSibling;
+            const charElement = label ? label.nextElementSibling : null;
+            return {
+                id: cb.value,
+                name: label ? label.textContent.trim() : 'Unknown',
+                characteristics: charElement ? charElement.textContent.trim() : ''
+            };
+        });
+        
+        console.log('Selected Glass Materials:', selectedGlassMaterials);
+        document.getElementById('selected_glass_materials_json').value = JSON.stringify(selectedGlassMaterials);
+        console.log('Glass JSON set to:', document.getElementById('selected_glass_materials_json').value);
+        
+        // Capture reagents selections
+        const reagentCheckboxes = document.querySelectorAll('input[name="selected_reagents"]:checked');
+        const selectedReagents = Array.from(reagentCheckboxes).map(cb => {
+            const label = cb.nextElementSibling;
+            const batchElement = label ? label.nextElementSibling : null;
+            const expiryElement = batchElement ? batchElement.nextElementSibling : null;
+            
+            return {
+                id: cb.value,
+                name: label ? label.textContent.trim() : 'Unknown',
+                batch: batchElement ? batchElement.textContent.trim() : '',
+                expiry_date: expiryElement ? expiryElement.textContent.trim() : ''
+            };
+        });
+        
+        console.log('Selected Reagents:', selectedReagents);
+        document.getElementById('selected_reagents_json').value = JSON.stringify(selectedReagents);
+        console.log('Reagents JSON set to:', document.getElementById('selected_reagents_json').value);
+        
+        // Capture reference selection
+        const referenceRadio = document.querySelector('input[name="selected_reference"]:checked');
+        const selectedReference = referenceRadio ? {
+            id: referenceRadio.value,
+            standard_name: referenceRadio.nextElementSibling ? referenceRadio.nextElementSibling.textContent.trim() : 'Unknown'
+        } : null;
+        
+        console.log('Selected Reference:', selectedReference);
+        document.getElementById('selected_reference_json').value = selectedReference ? JSON.stringify(selectedReference) : '{}';
+        console.log('Reference JSON set to:', document.getElementById('selected_reference_json').value);
+        
+        console.log('=== FORM SUBMISSION COMPLETE ===');
+        
+        // Optional: Prevent submission for debugging
+        // e.preventDefault();
+        // return false;
+    });
+});
+
+
+// IMPROVED version using data attributes
+form.addEventListener('submit', function(e) {
+    // Equipment
+    const selectedEquipment = Array.from(document.querySelectorAll('input[name="selected_equipment"]:checked')).map(cb => ({
+        id: cb.value,
+        name: cb.closest('.flex').querySelector('label').textContent.trim(),
+        code: cb.dataset.code || '',
+        brand: cb.dataset.brand || ''
+    }));
+    document.getElementById('selected_equipment_json').value = JSON.stringify(selectedEquipment);
+    
+    // Glass Materials
+    const selectedGlass = Array.from(document.querySelectorAll('input[name="selected_glass_materials"]:checked')).map(cb => ({
+        id: cb.value,
+        name: cb.closest('.flex').querySelector('label').textContent.trim(),
+        characteristics: cb.dataset.characteristics || ''
+    }));
+    document.getElementById('selected_glass_materials_json').value = JSON.stringify(selectedGlass);
+    
+    // Reagents
+    const selectedReagents = Array.from(document.querySelectorAll('input[name="selected_reagents"]:checked')).map(cb => ({
+        id: cb.value,
+        name: cb.closest('.flex').querySelector('label').textContent.trim(),
+        batch: cb.dataset.batch || '',
+        expiry_date: cb.dataset.expiry || ''
+    }));
+    document.getElementById('selected_reagents_json').value = JSON.stringify(selectedReagents);
+    
+    // Reference
+    const referenceRadio = document.querySelector('input[name="selected_reference"]:checked');
+    const selectedReference = referenceRadio ? {
+        id: referenceRadio.value,
+        standard_name: referenceRadio.dataset.standardName || '',
+        potency: referenceRadio.dataset.potency || ''
+    } : null;
+    document.getElementById('selected_reference_json').value = selectedReference ? JSON.stringify(selectedReference) : '{}';
+});
+
+
+
+
+
 // Copy all JavaScript functions from create_amv.html
 function extractMethodData() {
     const formData = new FormData();
@@ -584,23 +768,23 @@ function displayExtractedData(data) {
     
     // Field mappings for form fields
     const fieldMappings = {
-        'weight_standard': 'weightStandard',
-        'weight_sample': 'weightSample', 
-        'final_concentration_standard': 'finalConcentrationStandard',
-        'final_concentration_sample': 'finalConcentrationSample',
+        'weight_standard': 'weight_standard',
+        'weight_sample': 'weight_sample', 
+        'final_concentration_standard': 'final_concentration_standard',
+        'final_concentration_sample': 'final_concentration_sample',
         'potency': 'potency',
-        'average_weight': 'averageWeight',
-        'weight_per_ml': 'weightPerMl',
+        'average_weight': 'average_weight',
+        'weight_per_ml': 'weight_per_ml',
         'wavelength': 'wavelength',
-        'molecular_weight': 'molecularWeight',
-        'molecular_formula': 'molecularFormula',
-        'reference_absorbance_standard': 'referenceAbsorbanceStandard',
-        'reference_area_standard': 'referenceAreaStandard',
-        'flow_rate': 'flowRate',
-        'injection_volume': 'injectionVolume',
-        'reference_volume': 'referenceVolume',
-        'weight_sample_gm': 'weightSampleGm',
-        'standard_factor': 'standardFactor'
+        'molecular_weight': 'molecular_weight',
+        'molecular_formula': 'molecular_formula',
+        'reference_absorbance_standard': 'reference_absorbance_standard',
+        'reference_area_standard': 'reference_area_standard',
+        'flow_rate': 'flow_rate',
+        'injection_volume': 'injection_volume',
+        'reference_volume': 'reference_volume',
+        'weight_sample_gm': 'weight_sample_gm',
+        'standard_factor': 'standard_factor'
     };
     
     let filledFields = [];
@@ -711,8 +895,8 @@ function generateSMILES() {
     const ingredientInput = document.getElementById('active_ingredient');
     const smilesInput = document.getElementById('smiles_input');
     const generateBtn = document.getElementById('generate_smiles_btn');
-    const molecularFormulaInput = document.querySelector('input[name="molecularFormula"]');
-    const molecularWeightInput = document.querySelector('input[name="molecularWeight"]');
+    const molecularFormulaInput = document.querySelector('input[name="molecular_formula"]');
+    const molecularWeightInput = document.querySelector('input[name="molecular_weight"]');
     
     const ingredientName = ingredientInput.value.trim();
     
@@ -994,7 +1178,7 @@ function autoSelectValidationParameters(instrumentType) {
 // Add form validation on submit
 document.addEventListener('DOMContentLoaded', function() {
     // Handle instrument type change to show/hide specific parameters
-    const instrumentSelect = document.querySelector('select[name="testMethod"]');
+    const instrumentSelect = document.querySelector('select[name="test_method"]');
     if (instrumentSelect) {
         instrumentSelect.addEventListener('change', function() {
             const selectedType = this.value;
