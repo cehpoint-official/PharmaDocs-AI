@@ -8,6 +8,9 @@ from utils.helpers import log_activity
 from sqlalchemy import desc
 import logging
 
+# Import the AMV count functions
+from app_routes.amv_routes import get_amv_documents_count, get_amv_verification_count
+
 bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 
 @bp.route('/')
@@ -43,6 +46,10 @@ def user_dashboard():
         'compatibility': Document.query.filter_by(user_id=user.id, document_type='Compatibility').count()
     }
 
+    # Get AMV specific counts using the imported functions
+    amv_reports_count = get_amv_documents_count(user.id)
+    amv_protocols_count = get_amv_verification_count(user.id)
+
     # Log dashboard access
     log_activity(user.id, 'dashboard_accessed', 'User accessed dashboard')
 
@@ -51,7 +58,9 @@ def user_dashboard():
         user=user,
         companies=companies,
         recent_documents=recent_documents,
-        doc_stats=doc_stats
+        doc_stats=doc_stats,
+        amv_reports_count=amv_reports_count,
+        amv_protocols_count=amv_protocols_count
     )
 
 

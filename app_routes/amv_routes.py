@@ -5,7 +5,8 @@ import PyPDF2
 from flask import Blueprint, render_template, request, redirect, url_for, current_app, flash, jsonify, session, send_file
 import io
 from werkzeug.utils import secure_filename
-from models import Document, User, Company, AMVDocument
+# Add this import at the top with your other imports
+from models import Document, User, Company, AMVDocument, Equipment, GlassMaterial, Reagent, ReferenceProduct, OtherMaterial, AMVVerificationDocument
 from database import db
 from datetime import datetime
 from services.cloudinary_service import upload_file
@@ -15,65 +16,6 @@ from services.analytical_method_verification_service import analytical_method_ve
 import traceback
 from services.smiles_service import smiles_generator
 from utils.validators import validate_file_type
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-
-# Database models for company settings
-Base = declarative_base()
-
-class Equipment(Base):
-    __tablename__ = 'equipment'
-    id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
-    name = Column(String(200))
-    code = Column(String(100))
-    brand = Column(String(100))
-    verification_frequency = Column(String(200))
-    last_calibration = Column(String(50))
-    next_calibration = Column(String(50))
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-class GlassMaterial(Base):
-    __tablename__ = 'glass_materials'
-    id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
-    name = Column(String(200))
-    characteristics = Column(String(500))
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-class OtherMaterial(Base):
-    __tablename__ = 'other_materials'
-    id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
-    name = Column(String(200))
-    characteristics = Column(String(500))
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-class Reagent(Base):
-    __tablename__ = 'reagents'
-    id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
-    name = Column(String(200))
-    batch = Column(String(100))
-    expiry_date = Column(String(50))
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-class ReferenceProduct(Base):
-    __tablename__ = 'reference_products'
-    id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
-    standard_type = Column(String(100))
-    standard_name = Column(String(200))
-    code = Column(String(100))
-    potency = Column(String(50))
-    due_date = Column(String(50))
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-# Initialize database
-engine = create_engine('sqlite:///amv_company_settings.db')
-Base.metadata.create_all(engine)
-Session = sessionmaker(bind=engine)
 
 # PDF Method Extraction Class
 class MethodPDFExtractor:
@@ -342,7 +284,6 @@ def create_amv_form():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
-    session_db = Session()
     company_id = session.get('user_id', 1)
     
     if request.method == 'POST':
@@ -353,28 +294,27 @@ def create_amv_form():
             # Validate method PDF upload
             if 'method_pdf' not in request.files:
                 flash('Method PDF is required. Please upload a method analysis PDF.', 'error')
-                return redirect(url_for('amv.create_amv_form'))
+                return redirect(url_for('amv_bp.create_amv_form'))
             
             method_pdf = request.files['method_pdf']
             if method_pdf.filename == '':
                 flash('Method PDF is required. Please select a method analysis PDF file.', 'error')
-                return redirect(url_for('amv.create_amv_form'))
+                return redirect(url_for('amv_bp.create_amv_form'))
             
             if not method_pdf.filename.lower().endswith('.pdf'):
                 flash('Please upload a valid PDF file for method analysis.', 'error')
-                return redirect(url_for('amv.create_amv_form'))
+                return redirect(url_for('amv_bp.create_amv_form'))
             
-            # Get selected items from database
+            # Get selected items from database - USE DIRECT QUERIES
             selected_equipment_ids = request.form.getlist('selected_equipment')
             selected_glass_ids = request.form.getlist('selected_glass_materials')
-            selected_other_ids = request.form.getlist('selected_other_materials')
             selected_reagent_ids = request.form.getlist('selected_reagents')
             selected_reference_id = request.form.get('selected_reference')
             
-            # Fetch actual data from database
+            # Fetch actual data from database - USING DIRECT QUERIES
             equipment_data = []
             for eq_id in selected_equipment_ids:
-                equipment = session_db.query(Equipment).filter_by(id=eq_id).first()
+                equipment = Equipment.query.filter_by(id=eq_id).first()
                 if equipment:
                     equipment_data.append({
                         'name': equipment.name,
@@ -387,25 +327,16 @@ def create_amv_form():
             
             glass_materials = []
             for gm_id in selected_glass_ids:
-                glass = session_db.query(GlassMaterial).filter_by(id=gm_id).first()
+                glass = GlassMaterial.query.filter_by(id=gm_id).first()
                 if glass:
                     glass_materials.append({
                         'name': glass.name,
                         'characteristics': glass.characteristics
                     })
             
-            other_materials = []
-            for om_id in selected_other_ids:
-                other = session_db.query(OtherMaterial).filter_by(id=om_id).first()
-                if other:
-                    other_materials.append({
-                        'name': other.name,
-                        'characteristics': other.characteristics
-                    })
-            
             reagents = []
             for r_id in selected_reagent_ids:
-                reagent = session_db.query(Reagent).filter_by(id=r_id).first()
+                reagent = Reagent.query.filter_by(id=r_id).first()
                 if reagent:
                     reagents.append({
                         'name': reagent.name,
@@ -415,7 +346,7 @@ def create_amv_form():
             
             reference_product = None
             if selected_reference_id:
-                ref = session_db.query(ReferenceProduct).filter_by(id=selected_reference_id).first()
+                ref = ReferenceProduct.query.filter_by(id=selected_reference_id).first()
                 if ref:
                     reference_product = {
                         'standard_type': ref.standard_type,
@@ -464,7 +395,6 @@ def create_amv_form():
                 # Database retrieved data
                 'equipment_list': equipment_data or [],
                 'glass_materials': glass_materials or [],
-                'other_materials': other_materials or [],
                 'reagents': reagents or [],
                 'reference_product': reference_product or {}
             }
@@ -551,27 +481,66 @@ def create_amv_form():
                     raise ValueError(f"Required field '{field}' is missing")
             
             # Get company data for logo and address
-            # Try multiple approaches to find the company
+            # Get or create company
             company_name = form_data.get('company_name', '')
-            company = None
-            
-            # First try: exact name match
-            if company_name:
-                company = Company.query.filter_by(name=company_name, user_id=session.get('user_id')).first()
-            
-            # Second try: if not found, get the first company for this user
+            company = Company.query.filter_by(name=company_name, user_id=session.get('user_id')).first()
             if not company:
                 company = Company.query.filter_by(user_id=session.get('user_id')).first()
             
-            # Debug logging
-            current_app.logger.info(f"Company name from form: '{company_name}'")
-            current_app.logger.info(f"Found company: {company}")
-            if company:
-                current_app.logger.info(f"Company logo URL: {company.logo_url}")
-                current_app.logger.info(f"Company address: {company.address}")
+            # Generate document number if not provided
+            document_number = form_data.get('document_number')
+            if not document_number:
+                document_number = f"AMV-{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
             
+            # 1. Create main Document record for AMV Report
+            document = Document(
+                user_id=session.get('user_id'),
+                company_id=company.id if company else 1,
+                document_type='AMV',  # This is for AMV Reports
+                document_number=document_number,
+                title=f"AMV Report - {form_data.get('product_name', 'Unknown Product')}",
+                status='completed',
+                method_analysis_file_url=form_data.get('method_pdf_path'),
+                document_metadata=json.dumps(form_data),
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+            
+            db.session.add(document)
+            db.session.flush()  # Get the document ID
+            
+            # 2. Create AMVDocument record
+            amv_document = AMVDocument(
+                document_id=document.id,
+                product_name=form_data.get('product_name', ''),
+                label_claim=form_data.get('label_claim', ''),
+                active_ingredient=form_data.get('active_ingredient', ''),
+                instrument_type=form_data.get('instrument_type', ''),
+                validation_params=json.dumps(form_data.get('val_params', [])),
+                protocol_generated=True,
+                report_generated=True,
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+            
+            # Set instrument parameters
+            instrument_params = {
+                'weight_standard': form_data.get('weight_standard'),
+                'weight_sample': form_data.get('weight_sample'),
+                'final_concentration_standard': form_data.get('final_concentration_standard'),
+                'final_concentration_sample': form_data.get('final_concentration_sample'),
+                'potency': form_data.get('potency'),
+                'wavelength': form_data.get('wavelength'),
+                'reference_volume': form_data.get('reference_volume'),
+                'weight_sample_gm': form_data.get('weight_sample_gm'),
+                'standard_factor': form_data.get('standard_factor')
+            }
+            amv_document.set_instrument_params(instrument_params)
+            
+            db.session.add(amv_document)
+
             company_data = {
-                'name': company.name if company else company_name or 'Company',
+                'name': company.name if company else form_data.get('company_name', 'Company'),
                 'address': company.address if company else '',
                 'logo_url': company.logo_url if company else None
             }
@@ -579,11 +548,17 @@ def create_amv_form():
             current_app.logger.info(f"Company data being passed: {company_data}")
             
             generator = AMVReportGenerator(form_data, company_data=company_data)
-            report_path = generator.generate_report(
-                output_path,
-                signature_paths=signature_paths)
+            report_path = generator.generate_report(output_path)
             
-            session_db.close()
+            # 4. Update document with generated file path
+            document.generated_doc_url = report_path
+            
+            # 5. COMMIT TO DATABASE
+            db.session.commit()
+            
+            current_app.logger.info(f"AMV Report saved to database. Document ID: {document.id}")
+            
+            # ========== END DATABASE SAVING ==========
             
             flash('AMV Report generated successfully using mathematical calculations!', 'success')
             return send_file(
@@ -594,31 +569,26 @@ def create_amv_form():
             )
             
         except Exception as e:
-            session_db.close()
             current_app.logger.error(f"Error generating AMV report: {str(e)}")
             current_app.logger.error(f"Form data: {form_data}")
             flash(f'Error generating report: {str(e)}', 'error')
             return redirect(url_for('amv_bp.create_amv_form'))
 
-    # GET request - load data for selection
-    equipment_list = session_db.query(Equipment).filter_by(company_id=company_id).all()
-    glass_materials_list = session_db.query(GlassMaterial).filter_by(company_id=company_id).all()
-    other_materials_list = session_db.query(OtherMaterial).filter_by(company_id=company_id).all()
-    reagents_list = session_db.query(Reagent).filter_by(company_id=company_id).all()
-    references_list = session_db.query(ReferenceProduct).filter_by(company_id=company_id).all()
+    # GET request - load data for selection - USING DIRECT QUERIES
+    equipment_list = Equipment.query.filter_by(company_id=company_id).all()
+    glass_materials_list = GlassMaterial.query.filter_by(company_id=company_id).all()
+    reagents_list = Reagent.query.filter_by(company_id=company_id).all()
+    references_list = ReferenceProduct.query.filter_by(company_id=company_id).all()
     
     # Get user and companies for dropdown
     user = User.query.get(session.get('user_id'))
     companies = Company.query.filter_by(user_id=session.get('user_id')).all()
-    
-    session_db.close()
     
     return render_template('create_amv.html',
                          user=user,
                          companies=companies,
                          equipment_list=equipment_list,
                          glass_materials_list=glass_materials_list,
-                         other_materials_list=other_materials_list,
                          reagents_list=reagents_list,
                          references_list=references_list)
 
@@ -899,38 +869,57 @@ def list_amv_documents():
 
 @amv_bp.route('/<int:document_id>/delete', methods=['POST'])
 def delete_amv_document(document_id):
-    """Delete AMV document"""
+    """Delete AMV document with proper error handling and redirect"""
     if 'user_id' not in session:
+        flash('Please log in to continue', 'error')
         return redirect(url_for('auth.login'))
     
     try:
         # Get document and validate ownership
         document = Document.query.filter_by(id=document_id, user_id=session['user_id']).first()
-        if not document or document.document_type != 'AMV':
+        if not document:
             flash('Document not found', 'error')
             return redirect(url_for('amv_bp.list_amv_documents'))
         
+        # Store document type for flash message
+        doc_type = document.document_type
+        doc_title = document.title
+        
         # Delete generated file if exists
         if document.generated_doc_url and os.path.exists(document.generated_doc_url):
-            os.remove(document.generated_doc_url)
+            try:
+                os.remove(document.generated_doc_url)
+                current_app.logger.info(f"Deleted file: {document.generated_doc_url}")
+            except Exception as e:
+                current_app.logger.warning(f"Could not delete file {document.generated_doc_url}: {str(e)}")
         
-        # Delete AMV details
-        amv_details = AMVDocument.query.filter_by(document_id=document_id).first()
-        if amv_details:
-            db.session.delete(amv_details)
+        # Delete related records based on document type
+        if document.document_type == 'AMV':
+            # Delete AMV details first
+            amv_doc = AMVDocument.query.filter_by(document_id=document_id).first()
+            if amv_doc:
+                db.session.delete(amv_doc)
+        elif document.document_type == 'AMV_VERIFICATION':
+            # Delete AMV verification details first
+            amv_verification = AMVVerificationDocument.query.filter_by(document_id=document_id).first()
+            if amv_verification:
+                db.session.delete(amv_verification)
         
-        # Delete document
+        # Now delete the main document
         db.session.delete(document)
         db.session.commit()
         
-        flash('AMV document deleted successfully', 'success')
+        flash(f'{doc_type.replace("_", " ").title()} "{doc_title}" deleted successfully', 'success')
+        current_app.logger.info(f"Successfully deleted document {document_id} of type {doc_type}")
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error deleting AMV document: {str(e)}")
+        current_app.logger.error(f"Error deleting document {document_id}: {str(e)}")
         flash(f'Error deleting document: {str(e)}', 'error')
     
-    return redirect(url_for('amv_bp.list_amv_documents'))
+    # Redirect based on document type
+    return redirect(url_for('dashboard.user_dashboard'))
+
 
 @amv_bp.route('/api/test-mathematical-calculations', methods=['POST'])
 def test_mathematical_calculations():
@@ -1074,36 +1063,51 @@ def manage_equipment():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
-    session_db = Session()
-    company_id = session.get('user_id', 1)  # Get from current user session
+    company_id = session.get('user_id', 1)
     
     if request.method == 'POST':
         action = request.form.get('action')
         
         if action == 'add':
+            # ✅ QUICK FIX: Set date fields to None if empty
+            last_calibration = request.form.get('last_calibration') or None
+            next_calibration = request.form.get('next_calibration') or None
+            
+            # Convert to datetime if provided, else keep as None
+            if last_calibration:
+                try:
+                    last_calibration = datetime.strptime(last_calibration, '%Y-%m-%d')
+                except ValueError:
+                    last_calibration = None  # Invalid date, set to None
+            
+            if next_calibration:
+                try:
+                    next_calibration = datetime.strptime(next_calibration, '%Y-%m-%d')
+                except ValueError:
+                    next_calibration = None  # Invalid date, set to None
+            
             equipment = Equipment(
                 company_id=company_id,
                 name=request.form.get('name'),
                 code=request.form.get('code'),
                 brand=request.form.get('brand'),
                 verification_frequency=request.form.get('verification_frequency'),
-                last_calibration=request.form.get('last_calibration'),
-                next_calibration=request.form.get('next_calibration')
+                last_calibration=last_calibration,
+                next_calibration=next_calibration
             )
-            session_db.add(equipment)
-            session_db.commit()
+            db.session.add(equipment)
+            db.session.commit()
             flash('Equipment added successfully!', 'success')
         
         elif action == 'delete':
             equip_id = request.form.get('equipment_id')
-            equipment = session_db.query(Equipment).filter_by(id=equip_id).first()
+            equipment = Equipment.query.filter_by(id=equip_id).first()
             if equipment:
-                session_db.delete(equipment)
-                session_db.commit()
+                db.session.delete(equipment)
+                db.session.commit()
                 flash('Equipment deleted successfully!', 'success')
     
-    equipment_list = session_db.query(Equipment).filter_by(company_id=company_id).all()
-    session_db.close()
+    equipment_list = Equipment.query.filter_by(company_id=company_id).all()
     
     return render_template('manage_equipment.html', equipment_list=equipment_list)
 
@@ -1113,7 +1117,7 @@ def manage_materials():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
-    session_db = Session()
+
     company_id = session.get('user_id', 1)
     
     if request.method == 'POST':
@@ -1127,20 +1131,21 @@ def manage_materials():
                     name=request.form.get('name'),
                     characteristics=request.form.get('characteristics')
                 )
-                session_db.add(material)
+                db.session.add(material)
+                db.session.commit()
             elif material_type == 'other':
                 material = OtherMaterial(
                     company_id=company_id,
                     name=request.form.get('name'),
                     characteristics=request.form.get('characteristics')
                 )
-                session_db.add(material)
-            session_db.commit()
+                db.session.add(material)
+                db.session.commit()
             flash(f'{material_type.title()} material added successfully!', 'success')
     
-    glass_materials = session_db.query(GlassMaterial).filter_by(company_id=company_id).all()
-    other_materials = session_db.query(OtherMaterial).filter_by(company_id=company_id).all()
-    session_db.close()
+    glass_materials = GlassMaterial.query.filter_by(company_id=company_id).all()
+    other_materials = OtherMaterial.query.filter_by(company_id=company_id).all()
+    
     
     return render_template('manage_materials.html', 
                          glass_materials=glass_materials,
@@ -1152,7 +1157,7 @@ def manage_reagents():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
-    session_db = Session()
+
     company_id = session.get('user_id', 1)
     
     if request.method == 'POST':
@@ -1165,12 +1170,11 @@ def manage_reagents():
                 batch=request.form.get('batch'),
                 expiry_date=request.form.get('expiry_date')
             )
-            session_db.add(reagent)
-            session_db.commit()
+            db.session.add(reagent)
+            db.session.commit()
             flash('Reagent added successfully!', 'success')
     
-    reagents = session_db.query(Reagent).filter_by(company_id=company_id).all()
-    session_db.close()
+    reagents = Reagent.query.filter_by(company_id=company_id).all()
     
     return render_template('manage_reagents.html', reagents=reagents)
 
@@ -1180,7 +1184,7 @@ def manage_reference_products():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
-    session_db = Session()
+
     company_id = session.get('user_id', 1)
     
     if request.method == 'POST':
@@ -1195,12 +1199,11 @@ def manage_reference_products():
                 potency=request.form.get('potency'),
                 due_date=request.form.get('due_date')
             )
-            session_db.add(reference)
-            session_db.commit()
+            db.session.add(reference)
+            db.session.commit()
             flash('Reference product added successfully!', 'success')
     
-    references = session_db.query(ReferenceProduct).filter_by(company_id=company_id).all()
-    session_db.close()
+    references = ReferenceProduct.query.filter_by(company_id=company_id).all()
     
     return render_template('manage_reference_products.html', references=references)
 
@@ -1210,25 +1213,36 @@ def test_extract_route():
     return jsonify({'success': True, 'message': 'Route is working'})
 
 
+
+
+
 @amv_bp.route('/verification', methods=['GET'])
-def amv_verification_page():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    return render_template('amv_verification_protocol.html')
-
-# Protocol Generator UI and APIs
-@amv_bp.route('/protocol', methods=['GET'])
-def protocol_generator_page():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    return render_template('protocol_generator.html')
-
-@amv_bp.route('/verification-protocol', methods=['GET'])
 def amv_verification_protocol_page():
     """Render the AMV Verification Protocol form page"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    return render_template('amv_verification_protocol.html')
+
+  
+    company_id = session.get('user_id', 1)
+    user_id = session.get('user_id')
+    
+    # Get user from main database
+    user = User.query.get(user_id) if user_id else None
+    
+    # USE DIRECT QUERIES INSTEAD OF Session()
+    equipment_list = Equipment.query.filter_by(company_id=company_id).all()
+    glass_materials_list = GlassMaterial.query.filter_by(company_id=company_id).all()
+    reagents_list = Reagent.query.filter_by(company_id=company_id).all()
+    references_list = ReferenceProduct.query.filter_by(company_id=company_id).all()
+    companies = Company.query.filter_by(user_id=user_id).all() if user_id else []
+    
+    return render_template('amv_verification_protocol.html',
+                           equipment_list=equipment_list,
+                           glass_materials_list=glass_materials_list,
+                           reagents_list=reagents_list,
+                           references_list=references_list,
+                           user=user,
+                           companies=companies)
 
 @amv_bp.route('/generate-verification-protocol', methods=['POST'])
 def generate_verification_protocol():
@@ -1237,48 +1251,115 @@ def generate_verification_protocol():
         return redirect(url_for('auth.login'))
     
     try:
-        # Extract form data
         form_data = request.form
         
-        # Prepare data for protocol generation
+        # Get the actual selected IDs from form
+        equipment_ids = form_data.getlist('selected_equipment')
+        glass_ids = form_data.getlist('selected_glass_materials')
+        reagent_ids = form_data.getlist('selected_reagents')
+        reference_id = form_data.get('selected_reference')
+        
+        # Fetch actual data from database - USING DIRECT QUERIES
+        selected_equipment = []
+        for eq_id in equipment_ids:
+            if eq_id:
+                equipment = Equipment.query.filter_by(id=int(eq_id)).first()
+                if equipment:
+                    selected_equipment.append({
+                        'id': equipment.id,
+                        'name': equipment.name,
+                        'code': equipment.code or '',
+                        'brand': equipment.brand or '',
+                        'verification_frequency': equipment.verification_frequency or '',
+                        'last_calibration': equipment.last_calibration or '',
+                        'next_calibration': equipment.next_calibration or ''
+                    })
+        
+        selected_glass = []
+        for glass_id in glass_ids:
+            if glass_id:
+                glass = GlassMaterial.query.filter_by(id=int(glass_id)).first()
+                if glass:
+                    selected_glass.append({
+                        'id': glass.id,
+                        'name': glass.name,
+                        'characteristics': glass.characteristics or ''
+                    })
+        
+        selected_reagents = []
+        for reagent_id in reagent_ids:
+            if reagent_id:
+                reagent = Reagent.query.filter_by(id=int(reagent_id)).first()
+                if reagent:
+                    selected_reagents.append({
+                        'id': reagent.id,
+                        'name': reagent.name,
+                        'batch': reagent.batch or '',
+                        'expiry_date': reagent.expiry_date or ''
+                    })
+        
+        selected_reference = None
+        if reference_id:
+            reference = ReferenceProduct.query.filter_by(id=int(reference_id)).first()
+            if reference:
+                selected_reference = {
+                    'id': reference.id,
+                    'standard_name': reference.standard_name,
+                    'standard_type': reference.standard_type or '',
+                    'code': reference.code or '',
+                    'potency': reference.potency or '',
+                    'due_date': reference.due_date or ''
+                }
+        
+        # Prepare protocol data
         protocol_data = {
-            'productName': form_data.get('productName', ''),
-            'activeIngredient': form_data.get('activeIngredient', ''),
-            'testMethod': form_data.get('testMethod', ''),
-            'labelClaim': form_data.get('labelClaim', ''),
-            'protocolNumber': form_data.get('protocolNumber', ''),
-            'companyName': form_data.get('companyName', ''),
-            'companyLocation': form_data.get('companyLocation', ''),
-            'specificationRange': form_data.get('specificationRange', ''),
+            'product_name': form_data.get('product_name', ''),
+            'active_ingredient': form_data.get('active_ingredient', ''),
+            'test_method': form_data.get('test_method', ''),
+            'label_claim': form_data.get('label_claim', ''),
+            'protocol_number': form_data.get('protocol_number', ''),
+            'company_name': form_data.get('company_name', ''),
+            'company_location': form_data.get('company_location', ''),
+            'specification_range': form_data.get('specification_range', ''),
             'wavelength': form_data.get('wavelength', ''),
-            'molecularWeight': form_data.get('molecularWeight', ''),
-            'molecularFormula': form_data.get('molecularFormula', ''),
+            'molecular_weight': form_data.get('molecular_weight', ''),
+            'molecular_formula': form_data.get('molecular_formula', ''),
             'smiles': form_data.get('smiles', ''),
-            'weightStandard': form_data.get('weightStandard', ''),
-            'weightSample': form_data.get('weightSample', ''),
-            'finalConcentrationStandard': form_data.get('finalConcentrationStandard', ''),
-            'finalConcentrationSample': form_data.get('finalConcentrationSample', ''),
+            'weight_standard': form_data.get('weight_standard', ''),
+            'weight_sample': form_data.get('weight_sample', ''),
+            'final_concentration_standard': form_data.get('final_concentration_standard', ''),
+            'final_concentration_sample': form_data.get('final_concentration_sample', ''),
             'potency': form_data.get('potency', ''),
-            'averageWeight': form_data.get('averageWeight', ''),
-            'weightPerMl': form_data.get('weightPerMl', ''),
-            'referenceAbsorbanceStandard': form_data.get('referenceAbsorbanceStandard', ''),
-            'referenceAreaStandard': form_data.get('referenceAreaStandard', ''),
-            'flowRate': form_data.get('flowRate', ''),
-            'injectionVolume': form_data.get('injectionVolume', ''),
-            'referenceVolume': form_data.get('referenceVolume', ''),
-            'weightSampleGm': form_data.get('weightSampleGm', ''),
-            'standardFactor': form_data.get('standardFactor', ''),
-            'preparedByName': form_data.get('preparedByName', ''),
-            'preparedByDept': form_data.get('preparedByDept', 'Quality Control'),
-            'reviewedByName': form_data.get('reviewedByName', ''),
-            'reviewedByDept': form_data.get('reviewedByDept', 'Quality Control'),
-            'approvedByName': form_data.get('approvedByName', ''),
-            'approvedByDept': form_data.get('approvedByDept', 'Quality Assurance'),
-            'authorizedByName': form_data.get('authorizedByName', ''),
-            'authorizedByDept': form_data.get('authorizedByDept', 'Quality Assurance'),
+            'average_weight': form_data.get('average_weight', ''),
+            'weight_per_ml': form_data.get('weight_per_ml', ''),
+            'reference_absorbance_standard': form_data.get('reference_absorbance_standard', ''),
+            'reference_area_standard': form_data.get('reference_area_standard', ''),
+            'flow_rate': form_data.get('flow_rate', ''),
+            'injection_volume': form_data.get('injection_volume', ''),
+            'reference_volume': form_data.get('reference_volume', ''),
+            'weight_sample_gm': form_data.get('weight_sample_gm', ''),
+            'standard_factor': form_data.get('standard_factor', ''),
+            'prepared_by_name': form_data.get('prepared_by_name', ''),
+            'prepared_by_dept': form_data.get('prepared_by_dept', 'Quality Control'),
+            'reviewed_by_name': form_data.get('reviewed_by_name', ''),
+            'reviewed_by_dept': form_data.get('reviewed_by_dept', 'Quality Control'),
+            'approved_by_name': form_data.get('approved_by_name', ''),
+            'approved_by_dept': form_data.get('approved_by_dept', 'Quality Assurance'),
+            'authorized_by_name': form_data.get('authorized_by_name', ''),
+            'authorized_by_dept': form_data.get('authorized_by_dept', 'Quality Assurance'),
+            
+            # Add the fetched data as JSON strings for the protocol generator
+            'selected_equipment': selected_equipment,
+            'selected_glass_materials': selected_glass,
+            'selected_reagents': selected_reagents,
+            'selected_reference': selected_reference,
+            'selected_equipment_json': json.dumps(selected_equipment),
+            'selected_glass_materials_json': json.dumps(selected_glass),
+            'selected_reagents_json': json.dumps(selected_reagents),
+            'selected_reference_json': json.dumps(selected_reference)
         }
         
-        # Determine selected parameters
+        # Get validation parameters
         selected_params = []
         param_mapping = {
             'system_suitability': 'System Suitability',
@@ -1294,51 +1375,156 @@ def generate_verification_protocol():
             'lod_loq_precision': 'LOD and LOQ Precision'
         }
         
-        for param_key, param_name in param_mapping.items():
-            if form_data.get(param_key):
-                selected_params.append(param_name)
+        val_params = form_data.getlist('val_params')
+        for param_key in val_params:
+            if param_key in param_mapping:
+                selected_params.append(param_mapping[param_key])
         
-        # Generate protocol using the existing service
+        company_name = form_data.get('company_name', '')
+        company = Company.query.filter_by(name=company_name, user_id=session.get('user_id')).first()
+        if not company:
+            company = Company.query.filter_by(user_id=session.get('user_id')).first()
+
+        # Generate protocol number if not provided
+        protocol_number = form_data.get('protocol_number')
+        if not protocol_number:
+            protocol_number = f"AMV-PROTOCOL-{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+        
+        # 1. Create main Document record for AMV Verification
+        document = Document(
+            user_id=session.get('user_id'),
+            company_id=company.id if company else 1,
+            document_type='AMV_VERIFICATION',  # This is for AMV Verification Protocols
+            document_number=protocol_number,
+            title=f"AMV Verification Protocol - {form_data.get('product_name', 'Unknown Product')}",
+            status='completed',
+            document_metadata=json.dumps({
+                'product_name': form_data.get('product_name'),
+                'active_ingredient': form_data.get('active_ingredient'),
+                'test_method': form_data.get('test_method'),
+                'protocol_number': protocol_number
+            }),
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        db.session.add(document)
+        db.session.flush()  # Get the document ID
+        
+        # 2. Create AMVVerificationDocument record
+        amv_verification = AMVVerificationDocument(
+            document_id=document.id,
+            product_name=form_data.get('product_name', ''),
+            active_ingredient=form_data.get('active_ingredient', ''),
+            label_claim=form_data.get('label_claim', ''),
+            test_method=form_data.get('test_method', ''),
+            company_name=form_data.get('company_name', ''),
+            company_location=form_data.get('company_location', ''),
+            protocol_number=protocol_number,
+            specification_range=form_data.get('specification_range', ''),
+            wavelength=form_data.get('wavelength', ''),
+            molecular_weight=form_data.get('molecular_weight', ''),
+            molecular_formula=form_data.get('molecular_formula', ''),
+            smiles=form_data.get('smiles', ''),
+            prepared_by_name=form_data.get('prepared_by_name', ''),
+            prepared_by_dept=form_data.get('prepared_by_dept', 'Quality Control'),
+            reviewed_by_name=form_data.get('reviewed_by_name', ''),
+            reviewed_by_dept=form_data.get('reviewed_by_dept', 'Quality Control'),
+            protocol_generated=True,
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        # Set JSON data
+        method_params = {
+            'weight_standard': form_data.get('weight_standard'),
+            'weight_sample': form_data.get('weight_sample'),
+            'final_concentration_standard': form_data.get('final_concentration_standard'),
+            'final_concentration_sample': form_data.get('final_concentration_sample'),
+            'potency': form_data.get('potency'),
+            'wavelength': form_data.get('wavelength')
+        }
+        amv_verification.set_method_parameters(method_params)
+        
+        # Set selected items
+        amv_verification.set_selected_equipment(selected_equipment)
+        amv_verification.set_selected_glass_materials(selected_glass)
+        amv_verification.set_selected_reagents(selected_reagents)
+        amv_verification.set_selected_reference(selected_reference)
+        
+        # Set validation parameters
+        val_params = form_data.getlist('val_params')
+        amv_verification.set_validation_parameters(val_params)
+        
+        db.session.add(amv_verification)
+        
+        # 3. Generate the protocol document
         from services.analytical_method_verification_service import analytical_method_verification_service
         
-        # Create a mock method info for the service
-        # Use finalConcentrationStandard as concentration, or labelClaim as fallback
-        concentration_value = protocol_data.get('finalConcentrationStandard', '') or protocol_data.get('labelClaim', '')
-        
         method_info = {
-            'product_name': protocol_data['productName'],
-            'active_ingredient': protocol_data['activeIngredient'],
-            'concentration': concentration_value,
-            'test_method': protocol_data['testMethod'],
+            'product_name': protocol_data['product_name'],
+            'active_ingredient': protocol_data['active_ingredient'],
+            'concentration': protocol_data.get('final_concentration_standard', '') or protocol_data.get('label_claim', ''),
+            'test_method': protocol_data['test_method'],
             'wavelength': protocol_data['wavelength'],
-            'diluent': protocol_data.get('diluent', ''),
-            'specification_range': protocol_data['specificationRange'],
-            'company_name': protocol_data['companyName'],
-            'company_location': protocol_data['companyLocation'],
-            'protocol_number': protocol_data['protocolNumber']
+            'specification_range': protocol_data['specification_range'],
+            'company_name': protocol_data['company_name'],
+            'company_location': protocol_data['company_location'],
+            'protocol_number': protocol_data['protocol_number']
         }
         
-        # Generate the protocol document
+        # Generate the protocol
         protocol_buffer = analytical_method_verification_service.generate_verification_protocol(
             method_info, selected_params, protocol_data
         )
         
-        # Prepare filename
-        product_name = protocol_data['productName'].replace(' ', '_')
-        filename = f'AMV_Verification_Protocol_{product_name}.docx'
+        if protocol_buffer is None:
+            flash('Error generating verification protocol. Please try again.', 'error')
+            return redirect(url_for('amv_bp.amv_verification_protocol_page'))
         
-        # Return the generated document
+        # Save protocol to file
+        reports_dir = os.path.join(current_app.config.get('REPORTS_FOLDER', 'reports'), 'amv_verification')
+        os.makedirs(reports_dir, exist_ok=True)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"AMV_Verification_Protocol_{form_data.get('product_name', '').replace(' ', '_')}_{timestamp}.docx"
+        output_path = os.path.join(reports_dir, output_filename)
+        
+        # Save the buffer to file
+        with open(output_path, 'wb') as f:
+            f.write(protocol_buffer.getvalue())
+        
+        # 4. Update document with generated file path
+        document.generated_doc_url = output_path
+        
+        # 5. COMMIT TO DATABASE
+        db.session.commit()
+        
+        current_app.logger.info(f"AMV Verification Protocol saved to database. Document ID: {document.id}")
+        
+        flash('AMV Verification Protocol generated and saved successfully!', 'success')
+
+        # ✅ FIXED: Use the correct filename variable
         return send_file(
-            io.BytesIO(protocol_buffer.getvalue()),
+            protocol_buffer,
             as_attachment=True,
-            download_name=filename,
+            download_name=output_filename,  # ✅ This was the fix
             mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         )
         
     except Exception as e:
         current_app.logger.error(f"Error generating verification protocol: {str(e)}")
+        import traceback
+        traceback.print_exc()
         flash('Error generating verification protocol. Please try again.', 'error')
         return redirect(url_for('amv_bp.amv_verification_protocol_page'))
+
+# Protocol Generator UI and APIs
+@amv_bp.route('/protocol', methods=['GET'])
+def protocol_generator_page():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    return render_template('protocol_generator.html')
 
 @amv_bp.route('/protocol/api/methods', methods=['GET'])
 def protocol_methods():
@@ -1780,7 +1966,6 @@ def extract_method_from_pdf():
         current_app.logger.error(f"Error in PDF extraction: {str(e)}")
         return jsonify({'error': f'PDF extraction failed: {str(e)}'}), 500
 
-
 @amv_bp.route('/verification/upload', methods=['POST'])
 def upload_verification_files():
     """Upload Excel + PDF, process and stream AMV Verification Protocol DOCX"""
@@ -1841,3 +2026,228 @@ def upload_verification_files():
         current_app.logger.error(f"Error generating verification protocol: {str(e)}")
         current_app.logger.error(traceback.format_exc())
         return jsonify({'error': f"Server error: {str(e)}"}), 500
+
+@amv_bp.route('/verification/create', methods=['POST'])
+def create_amv_verification():
+    """Create new AMV Verification document"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        data = request.get_json()
+        
+        # Create main document
+        document = Document(
+            user_id=session['user_id'],
+            company_id=data.get('company_id'),
+            document_type='AMV_VERIFICATION',
+            document_number=data.get('protocol_number'),
+            title=f"AMV Verification - {data.get('product_name')}",
+            status='draft'
+        )
+        db.session.add(document)
+        db.session.flush()  # Get the document ID
+        
+        # Create AMV Verification details
+        amv_verification = AMVVerificationDocument(
+            document_id=document.id,
+            product_name=data.get('product_name'),
+            active_ingredient=data.get('active_ingredient'),
+            label_claim=data.get('label_claim'),
+            test_method=data.get('test_method'),
+            company_name=data.get('company_name'),
+            company_location=data.get('company_location'),
+            protocol_number=data.get('protocol_number'),
+            specification_range=data.get('specification_range'),
+            wavelength=data.get('wavelength'),
+            molecular_weight=data.get('molecular_weight'),
+            molecular_formula=data.get('molecular_formula'),
+            smiles=data.get('smiles'),
+            prepared_by_name=data.get('prepared_by_name'),
+            prepared_by_dept=data.get('prepared_by_dept'),
+            reviewed_by_name=data.get('reviewed_by_name'),
+            reviewed_by_dept=data.get('reviewed_by_dept')
+        )
+        
+        # Set JSON data
+        amv_verification.set_method_parameters(data.get('method_parameters', {}))
+        amv_verification.set_selected_equipment(data.get('selected_equipment', []))
+        amv_verification.set_selected_glass_materials(data.get('selected_glass_materials', []))
+        amv_verification.set_selected_reagents(data.get('selected_reagents', []))
+        amv_verification.set_selected_reference(data.get('selected_reference', {}))
+        amv_verification.set_validation_parameters(data.get('validation_parameters', []))
+        
+        db.session.add(amv_verification)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'document_id': document.id,
+            'message': 'AMV Verification created successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@amv_bp.route('/verification/<int:document_id>')
+def get_amv_verification(document_id):
+    """Get AMV Verification details"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        document = Document.query.filter_by(
+            id=document_id, 
+            user_id=session['user_id'],
+            document_type='AMV_VERIFICATION'
+        ).first()
+        
+        if not document:
+            return jsonify({'error': 'Document not found'}), 404
+        
+        amv_verification = document.amv_verification_details
+        
+        return jsonify({
+            'success': True,
+            'document': {
+                'id': document.id,
+                'document_number': document.document_number,
+                'title': document.title,
+                'status': document.status,
+                'created_at': document.created_at.isoformat()
+            },
+            'amv_verification': {
+                'product_name': amv_verification.product_name,
+                'active_ingredient': amv_verification.active_ingredient,
+                'label_claim': amv_verification.label_claim,
+                'test_method': amv_verification.test_method,
+                'company_name': amv_verification.company_name,
+                'protocol_number': amv_verification.protocol_number,
+                'specification_range': amv_verification.specification_range,
+                'wavelength': amv_verification.wavelength,
+                'molecular_weight': amv_verification.molecular_weight,
+                'molecular_formula': amv_verification.molecular_formula,
+                'smiles': amv_verification.smiles,
+                'method_parameters': amv_verification.get_method_parameters(),
+                'selected_equipment': amv_verification.get_selected_equipment(),
+                'selected_glass_materials': amv_verification.get_selected_glass_materials(),
+                'selected_reagents': amv_verification.get_selected_reagents(),
+                'selected_reference': amv_verification.get_selected_reference(),
+                'validation_parameters': amv_verification.get_validation_parameters(),
+                'prepared_by_name': amv_verification.prepared_by_name,
+                'prepared_by_dept': amv_verification.prepared_by_dept,
+                'reviewed_by_name': amv_verification.reviewed_by_name,
+                'reviewed_by_dept': amv_verification.reviewed_by_dept
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+def get_amv_documents_count(user_id):
+    """Get count of AMV documents for a user"""
+    return Document.query.filter_by(
+        user_id=user_id, 
+        document_type='AMV'
+    ).count()
+
+def get_amv_verification_count(user_id):
+    """Get count of AMV Verification documents for a user"""
+    return Document.query.filter_by(
+        user_id=user_id, 
+        document_type='AMV_VERIFICATION'
+    ).count()
+
+
+
+@amv_bp.route('/verification/<int:document_id>/download')
+def download_verification_protocol(document_id):
+    """Download AMV Verification Protocol"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    try:
+        # Get document and validate ownership
+        document = Document.query.filter_by(
+            id=document_id, 
+            user_id=session['user_id'],
+            document_type='AMV_VERIFICATION'
+        ).first()
+        
+        if not document:
+            flash('Document not found', 'error')
+            return redirect(url_for('dashboard.user_dashboard'))
+        
+        if not document.generated_doc_url or not os.path.exists(document.generated_doc_url):
+            flash('Protocol not generated yet.', 'error')
+            return redirect(url_for('amv_bp.view_amv_verification', document_id=document_id))
+        
+        # Get AMV verification details for filename
+        amv_verification = AMVVerificationDocument.query.filter_by(document_id=document_id).first()
+        filename = f"AMV_Verification_Protocol_{amv_verification.product_name.replace(' ', '_')}.docx" if amv_verification else "AMV_Verification_Protocol.docx"
+        
+        return send_file(
+            document.generated_doc_url,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"Error downloading verification protocol: {str(e)}")
+        flash(f'Error downloading protocol: {str(e)}', 'error')
+        return redirect(url_for('amv_bp.view_amv_verification', document_id=document_id))
+
+
+
+
+
+@amv_bp.route('/verification/list')
+def list_amv_verification_documents():
+    """List all AMV Verification documents for the user"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    user_id = session['user_id']
+    documents = Document.query.filter_by(
+        user_id=user_id, 
+        document_type='AMV_VERIFICATION'
+    ).order_by(Document.created_at.desc()).all()
+    
+    return render_template('amv_verification_list.html', documents=documents)
+
+
+@amv_bp.route('/verification/<int:document_id>')
+def view_amv_verification(document_id):
+    """View AMV Verification document details"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    document = Document.query.filter_by(id=document_id, user_id=session['user_id']).first()
+    if not document:
+        flash('Document not found', 'error')
+        return redirect(url_for('dashboard.user_dashboard'))
+    
+    if document.document_type != 'AMV_VERIFICATION':
+        flash('Document not found', 'error')
+        return redirect(url_for('dashboard.user_dashboard'))
+    
+    metadata = {}
+    if document.document_metadata:
+        try:
+            metadata = json.loads(document.document_metadata)
+        except:
+            metadata = {}
+    
+    # Get AMV verification details
+    amv_verification = AMVVerificationDocument.query.filter_by(document_id=document_id).first()
+    
+    return render_template('view_amv_verification.html', 
+                         document=document, 
+                         metadata=metadata, 
+                         amv_verification=amv_verification)
+
+
