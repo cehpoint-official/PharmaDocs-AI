@@ -25,7 +25,8 @@ class User(db.Model):
     companies: Mapped[List["Company"]] = relationship("Company", back_populates="user")
     documents: Mapped[List["Document"]] = relationship("Document", back_populates="user")
     activity_logs: Mapped[List["ActivityLog"]] = relationship("ActivityLog", back_populates="user")
-
+    pvp_templates: Mapped[List["PVP_Template"]] = relationship("PVP_Template", back_populates="user")
+    pvr_reports: Mapped[List["PVR_Report"]] = relationship("PVR_Report", back_populates="user")
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -207,3 +208,77 @@ class AMVDocument(db.Model):
     def set_parameters_to_validate(self, params):
         """Set parameters to validate from list"""
         self.parameters_to_validate = json.dumps(params)
+
+# --- PROCESS VALIDATION (PV) MODULE MODELS ---
+
+class PVP_Template(db.Model):
+    """
+    Stores the master PVP file (the 'template' uploaded by the user).
+    """
+    __tablename__ = 'pvp_template'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    template_name: Mapped[str] = mapped_column(String(200), nullable=False, unique=True)
+    original_filepath: Mapped[str] = mapped_column(String(300), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user: Mapped["User"] = relationship("User", back_populates="pvp_templates")
+    criteria: Mapped[List["PVP_Criteria"]] = relationship("PVP_Criteria", back_populates="template", cascade="all, delete-orphan")
+    reports: Mapped[List["PVR_Report"]] = relationship("PVR_Report", back_populates="template", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f'<PVP_Template {self.template_name}>'
+
+class PVP_Criteria(db.Model):
+    """
+    Stores the 'rules' (acceptance criteria) extracted from the PVP 
+    by our AI parser. This is the AI's 'memory'.
+    """
+    __tablename__ = 'pvp_criteria'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_template.id'), nullable=False)
+    test_id: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., 'bulk_ph'
+    test_name: Mapped[str] = mapped_column(String(200), nullable=True)  # e.g., 'Bulk Manufacturing pH'
+    acceptance_criteria: Mapped[str] = mapped_column(String(300), nullable=True)  # e.g., '8.5 to 9.1'
+
+    # Relationship
+    template: Mapped["PVP_Template"] = relationship("PVP_Template", back_populates="criteria")
+
+    def __repr__(self):
+        return f'<PVP_Criteria {self.test_name}>'
+
+class PVR_Report(db.Model):
+    """
+    Tracks the final PVR documents we generate.
+    """
+    __tablename__ = 'pvr_report'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_template.id'), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    generated_filepath: Mapped[str] = mapped_column(String(300), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), default='Draft')  # e.g., 'Draft', 'Approved'
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    template: Mapped["PVP_Template"] = relationship("PVP_Template", back_populates="reports")
+    user: Mapped["User"] = relationship("User", back_populates="pvr_reports")
+    data: Mapped[List["PVR_Data"]] = relationship("PVR_Data", back_populates="report", cascade="all, delete-orphan")
+
+class PVR_Data(db.Model):
+    """
+    Stores the actual batch data (the 'answers') for a report.
+    """
+    __tablename__ = 'pvr_data'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    pvr_report_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvr_report.id'), nullable=False)
+    batch_number: Mapped[str] = mapped_column(String(100), nullable=False)
+    test_id: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., 'bulk_ph'
+    test_result: Mapped[str] = mapped_column(String(200), nullable=True)  # e.g., '9.024'
+
+    # Relationship
+    report: Mapped["PVR_Report"] = relationship("PVR_Report", back_populates="data")

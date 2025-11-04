@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-8 offset-md-2">
+      <div class="card">
+        <div class="card-header">
+          <h3>Upload New Process Validation Protocol</h3>
+        </div>
+        <div class="card-body">
+          <p>Upload a master PVP (PDF). Our AI will parse it to create a new reusable template for generating reports.</p>
+
+          <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+              <label for="template_name"><strong>Template Name</strong></label>
+              <input type="text" class="form-control" id="template_name" name="template_name" 
+                     placeholder="e.g., Fluorouracil Injection 50mg/ml" required>
+              <small class="form-text text-muted">This is a unique name you'll use to find it later.</small>
+            </div>
+
+            <div class="form-group mt-3">
+              <label for="pvp_file"><strong>Protocol File (PDF only)</strong></label>
+              <input type="file" class="form-control-file" id="pvp_file" name="pvp_file" 
+                     accept=".pdf" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-4">Upload and Parse</button>
+          </form>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
