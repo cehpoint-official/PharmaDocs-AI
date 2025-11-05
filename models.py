@@ -260,8 +260,9 @@ class PVR_Report(db.Model):
     pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_template.id'), nullable=False)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
     generated_filepath: Mapped[str] = mapped_column(String(300), nullable=True)
-    status: Mapped[str] = mapped_column(String(50), default='Draft')  # e.g., 'Draft', 'Approved'
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    word_filepath: Mapped[str] = mapped_column(String(300), nullable=True)  
+    status: Mapped[str] = mapped_column(String(50), default='Draft')  
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
     # Relationships
     template: Mapped["PVP_Template"] = relationship("PVP_Template", back_populates="reports")

@@ -1,129 +1,231 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+# Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in>
+# All Rights Reserved.
+
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session, send_file, jsonify
 from werkzeug.utils import secure_filename
-import pdfplumber
-import re
 import os
+from datetime import datetime
 
-# Update these imports to match your project
 from database import db
-from models import PVP_Template, PVP_Criteria
-# from flask_login import current_user, login_required # Add auth later
+from models import PVP_Template, PVP_Criteria, PVR_Report, PVR_Data, User
+from services.pvp_ai_service import extract_pvp_criteria
+from services.pvr_generator_service import generate_pvr_pdf
 
-pv_bp = Blueprint('pv_bp', __name__)
+pv_bp = Blueprint('pv_bp', __name__, url_prefix='/pv')
 
-# --- DEFINE YOUR UPLOAD FOLDER ---
-# Make sure this 'uploads' folder exists in your project root
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+# Upload folder configuration
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads', 'pvp_templates')
+REPORT_FOLDER = os.path.join(os.getcwd(), 'uploads', 'pvr_reports')
 
-def simple_ai_parser(pdf_path):
-    """
-    This is our 'AI' parser. It reads the PDF text and uses
-    regular expressions (regex) to find specific rules.
-    """
-    extracted_rules = []
-    full_text = ""
+# Create folders if they don't exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(REPORT_FOLDER, exist_ok=True)
 
-    try:
-        with pdfplumber.open(pdf_path) as pdf:
-            for page in pdf.pages:
-                # Use x_tolerance=2 to keep text in paragraphs
-                full_text += page.extract_text(x_tolerance=2) or "" 
-    except Exception as e:
-        print(f"Error reading PDF {pdf_path}: {e}")
-        return []
+ALLOWED_EXTENSIONS = {'pdf'}
 
-    # --- AI Rule 1: Find Bulk pH ---
-    # Looks for "Bulk Manufacturing" then "pH" then "8.5 to 9.1"
-    ph_match = re.search(
-        r'Bulk Manufacturing.*?pH.*?(\d\.\d\s*to\s*\d\.\d)', 
-        full_text, 
-        re.DOTALL | re.IGNORECASE
-    )
-    if ph_match:
-        extracted_rules.append({
-            'test_id': 'bulk_ph',
-            'test_name': 'Bulk Manufacturing pH',
-            'acceptance_criteria': ph_match.group(1).replace('\n', ' ')
-        })
-
-    # --- AI Rule 2: Find Bulk Assay ---
-    assay_match = re.search(
-        r'Bulk Manufacturing.*?Assay.*?(\d{2,3}\.\d\s*%\s*to\s*\d{2,3}\.\d\s*%)', 
-        full_text, 
-        re.DOTALL | re.IGNORECASE
-    )
-    if assay_match:
-         extracted_rules.append({
-            'test_id': 'bulk_assay',
-            'test_name': 'Bulk Manufacturing Assay',
-            'acceptance_criteria': assay_match.group(1).replace('\n', ' ')
-        })
-
-    # --- AI Rule 3: Find Final pH ---
-    final_ph_match = re.search(
-        r'Quality Control Attributes.*?pH.*?(\d\.\d\s*to\s*\d\.\d)', 
-        full_text, 
-        re.DOTALL | re.IGNORECASE
-    )
-    if final_ph_match:
-         extracted_rules.append({
-            'test_id': 'final_ph',
-            'test_name': 'Final Product pH',
-            'acceptance_criteria': final_ph_match.group(1).replace('\n', ' ')
-        })
-
-    return extracted_rules
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-@pv_bp.route('/pv/upload-template', methods=['GET', 'POST'])
-# @login_required # Add this later
+# ==================== ROUTE 1: Upload PVP Template ====================
+@pv_bp.route('/upload-template', methods=['GET', 'POST'])
 def upload_pvp_template():
+    """
+    Upload PVP PDF, extract criteria using AI, save to database
+    """
     if request.method == 'POST':
-        pvp_file = request.files.get('pvp_file')
-        template_name = request.form.get('template_name')
-
-        if not pvp_file or not template_name:
-            flash('Template Name and File are required.', 'danger')
-            return redirect(request.url)
-
-        # Check for duplicate template name
-        existing = PVP_Template.query.filter_by(template_name=template_name).first()
-        if existing:
-            flash('A template with this name already exists.', 'danger')
-            return redirect(request.url)
-
-        # Save the file
-        filename = secure_filename(pvp_file.filename)
-        upload_path = os.path.join(UPLOAD_FOLDER, filename)
-        pvp_file.save(upload_path)
-
-        # Save to DB
-        new_template = PVP_Template(
-            template_name=template_name,
-            original_filepath=upload_path
-            # user_id=current_user.id # Add this
-        )
-        db.session.add(new_template)
-        db.session.commit() # Commit to get the new_template.id
-
-        # --- Run the AI Parser ---
-        extracted_rules = simple_ai_parser(upload_path)
-
-        # --- Save extracted rules to the DB ---
-        for rule in extracted_rules:
-            new_criterion = PVP_Criteria(
-                template=new_template, # Link to the template
-                test_id=rule['test_id'],
-                test_name=rule['test_name'],
-                acceptance_criteria=rule['acceptance_criteria']
+        try:
+            # Get form data
+            pvp_file = request.files.get('pvp_file')
+            template_name = request.form.get('template_name', '').strip()
+            
+            # Get user_id from session
+            user_id = session.get('user_id')
+            if not user_id:
+                flash('Please log in to upload templates.', 'danger')
+                return redirect(url_for('auth.login'))
+            
+            # Validation
+            if not pvp_file or not template_name:
+                flash('Template name and PDF file are required.', 'danger')
+                return redirect(request.url)
+            
+            if not allowed_file(pvp_file.filename):
+                flash('Only PDF files are allowed.', 'danger')
+                return redirect(request.url)
+            
+            # Check for duplicate template name
+            existing = PVP_Template.query.filter_by(template_name=template_name).first()
+            if existing:
+                flash(f'Template "{template_name}" already exists. Please use a different name.', 'danger')
+                return redirect(request.url)
+            
+            # Save file
+            filename = secure_filename(pvp_file.filename)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"{timestamp}_{filename}"
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            pvp_file.save(filepath)
+            
+            print(f"✅ PVP file saved: {filepath}")
+            
+            # Create template record
+            new_template = PVP_Template(
+                template_name=template_name,
+                original_filepath=filepath,
+                user_id=user_id
             )
-            db.session.add(new_criterion)
-
-        db.session.commit()
-
-        flash(f'Template "{template_name}" created. AI found {len(extracted_rules)} rules.', 'success')
-        return redirect(url_for('dashboard.bp.dashboard')) # Change 'dashboard.bp.dashboard' to your main dashboard route
-
+            db.session.add(new_template)
+            db.session.commit()
+            
+            print(f"✅ Template created with ID: {new_template.id}")
+            
+            # Extract criteria using AI
+            print("🤖 Starting AI extraction...")
+            extracted_criteria = extract_pvp_criteria(filepath)
+            
+            print(f"✅ AI extracted {len(extracted_criteria)} criteria")
+            
+            # Save criteria to database
+            for criterion in extracted_criteria:
+                new_criterion = PVP_Criteria(
+                    pvp_template_id=new_template.id,
+                    test_id=criterion['test_id'],
+                    test_name=criterion['test_name'],
+                    acceptance_criteria=criterion['acceptance_criteria']
+                )
+                db.session.add(new_criterion)
+            
+            db.session.commit()
+            
+            flash(f'✅ Template "{template_name}" uploaded successfully! AI extracted {len(extracted_criteria)} test criteria.', 'success')
+            return redirect(url_for('pv_bp.list_templates'))
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ Error uploading template: {str(e)}")
+            flash(f'Error uploading template: {str(e)}', 'danger')
+            return redirect(request.url)
+    
     return render_template('upload_pvp.html')
+
+
+# ==================== ROUTE 2: List PVP Templates ====================
+@pv_bp.route('/templates', methods=['GET'])
+def list_templates():
+    """
+    Show all uploaded PVP templates
+    """
+    templates = PVP_Template.query.order_by(PVP_Template.created_at.desc()).all()
+    return render_template('pvp_templates_list.html', templates=templates)
+
+
+# ==================== ROUTE 3: View Template Criteria ====================
+@pv_bp.route('/template/<int:template_id>', methods=['GET'])
+def view_template(template_id):
+    """
+    View a specific template and its extracted criteria
+    """
+    template = PVP_Template.query.get_or_404(template_id)
+    criteria = PVP_Criteria.query.filter_by(pvp_template_id=template_id).all()
+    return render_template('view_pvp_template.html', template=template, criteria=criteria)
+
+
+# ==================== ROUTE 4: Generate PVR Form ====================
+@pv_bp.route('/generate-pvr/<int:template_id>', methods=['GET', 'POST'])
+def generate_pvr(template_id):
+    """
+    Form to enter batch data and generate PVR report
+    """
+    template = PVP_Template.query.get_or_404(template_id)
+    criteria = PVP_Criteria.query.filter_by(pvp_template_id=template_id).all()
+    
+    if request.method == 'POST':
+        try:
+            user_id = session.get('user_id')
+            if not user_id:
+                flash('Please log in to generate reports.', 'danger')
+                return redirect(url_for('auth.login'))
+            
+            # Get form data
+            product_name = request.form.get('product_name')
+            batch_numbers = request.form.getlist('batch_number[]')  # Multiple batches
+            
+            # Create PVR Report record
+            pvr_report = PVR_Report(
+                pvp_template_id=template_id,
+                user_id=user_id,
+                status='Draft'
+            )
+            db.session.add(pvr_report)
+            db.session.commit()
+            
+            # Save batch data
+            for batch_no in batch_numbers:
+                for criterion in criteria:
+                    test_result = request.form.get(f'result_{criterion.test_id}_{batch_no}')
+                    
+                    if test_result:
+                        pvr_data = PVR_Data(
+                            pvr_report_id=pvr_report.id,
+                            batch_number=batch_no,
+                            test_id=criterion.test_id,
+                            test_result=test_result
+                        )
+                        db.session.add(pvr_data)
+            
+            db.session.commit()
+            
+            # Generate PDF
+            print("📄 Generating PVR PDF...")
+            pdf_path = generate_pvr_pdf(pvr_report.id, product_name, template, criteria)
+
+            print("Generating PVR Word document...")
+            from services.pvr_word_generator_service import generate_pvr_word
+            word_path = generate_pvr_word(pvr_report.id, product_name, template, criteria)
+            
+            # Update report with both file paths
+            pvr_report.generated_filepath = pdf_path
+            pvr_report_word_filepath = word_path 
+            pvr_report.status = 'Generated'
+            db.session.commit()
+            
+            flash('✅ PVR Report generated successfully! (PDF & Word)', 'success')
+            return redirect(url_for('pv_bp.view_pvr', report_id=pvr_report.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ Error generating PVR: {str(e)}")
+            flash(f'Error generating report: {str(e)}', 'danger')
+            return redirect(request.url)
+    
+    return render_template('generate_pvr.html', template=template, criteria=criteria)
+
+
+# ==================== ROUTE 5: View PVR Report ====================
+@pv_bp.route('/report/<int:report_id>', methods=['GET'])
+def view_pvr(report_id):
+    """
+    View generated PVR report details
+    """
+    report = PVR_Report.query.get_or_404(report_id)
+    return render_template('view_pvr.html', report=report)
+
+
+# ==================== ROUTE 6: Download PVR PDF ====================
+@pv_bp.route('/download/<int:report_id>', methods=['GET'])
+def download_pvr(report_id):
+    """
+    Download PVR PDF file
+    """
+    report = PVR_Report.query.get_or_404(report_id)
+    
+    if not report.generated_filepath or not os.path.exists(report.generated_filepath):
+        flash('PDF file not found.', 'danger')
+        return redirect(url_for('pv_bp.list_templates'))
+    
+    return send_file(
+        report.generated_filepath,
+        as_attachment=True,
+        download_name=f"PVR_Report_{report.id}.pdf"
+    )
