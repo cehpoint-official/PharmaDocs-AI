@@ -23,9 +23,8 @@ jobs:
 
       - name: Write service account key to file
         run: |
-          echo "${{ secrets.GCP_SA_KEY }}" > $HOME/gcloud-key.json
-          cat $HOME/gcloud-key.json | jq .type  # just to verify format
-        shell: bash
+          echo "${{ secrets.GCP_SA_KEY_BASE64 }}" | base64 --decode > $HOME/gcloud-key.json
+          cat $HOME/gcloud-key.json | jq .type  # verify JSON structure
 
       - name: Authenticate with Google Cloud
         run: |
