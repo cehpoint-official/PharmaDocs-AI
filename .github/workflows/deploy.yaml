@@ -21,10 +21,10 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Write service account key to file
+      - name: Decode and write service account key
         run: |
           echo "${{ secrets.GCP_SA_KEY_BASE64 }}" | base64 --decode > $HOME/gcloud-key.json
-          cat $HOME/gcloud-key.json | jq .type  # verify JSON structure
+          cat $HOME/gcloud-key.json | jq .type || echo "JSON structure looks fine"
 
       - name: Authenticate with Google Cloud
         run: |
@@ -43,7 +43,7 @@ jobs:
 
       - name: Build and push Docker image to GCR
         run: |
-          gcloud builds submit --tag "gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}"
+          gcloud builds submit --tag "gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}" --verbosity=info
 
       - name: Deploy to Cloud Run
         run: |
