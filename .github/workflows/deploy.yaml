@@ -1,6 +1,5 @@
 name: Deploy to Cloud Run
 
-# Trigger on pushes to main and manual runs
 on:
   push:
     branches:
@@ -17,31 +16,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-
-      - name: Configure gcloud CLI
+      - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          version: 'latest'
+
+      - name: Write service account key to file
+        run: |
+          echo "${{ secrets.GCP_SA_KEY }}" > $HOME/gcloud-key.json
+          cat $HOME/gcloud-key.json | jq .type  # just to verify format
+        shell: bash
+
+      - name: Authenticate with Google Cloud
+        run: |
+          gcloud auth activate-service-account --key-file=$HOME/gcloud-key.json
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          gcloud auth configure-docker gcr.io --quiet
 
       - name: Determine image tag
         id: tag
         run: |
-          echo "COMMIT_SHA=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_ENV
-          echo "IMAGE_TAG=pharmadocsai:${COMMIT_SHA}" >> $GITHUB_ENV
+          COMMIT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          IMAGE_TAG=pharmadocsai:${COMMIT_SHA}
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "IMAGE=gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}" >> $GITHUB_ENV
-          echo "IMAGE=${IMAGE}" # for logs
+          echo "Building Image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}"
 
       - name: Build and push Docker image to GCR
         run: |
-          echo "Building ${IMAGE}"
           gcloud builds submit --tag "gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}"
 
       - name: Deploy to Cloud Run
@@ -55,4 +57,7 @@ jobs:
 
       - name: Show deployed service URL
         run: |
-          gcloud run services describe pharmadocsai --region asia-south1 --format="value(status.url)"
+          echo "Service URL:"
+          gcloud run services describe pharmadocsai \
+            --region asia-south1 \
+            --format="value(status.url)"
