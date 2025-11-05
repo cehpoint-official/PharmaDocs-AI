@@ -1,11 +1,20 @@
-FROM python:3.11-slim
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim-buster
 
+# Set the working directory to /app
 WORKDIR /app
 
-COPY . /app
+# Copy the requirements file to /app
+COPY requirements.txt .
 
+# Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-EXPOSE 8080
+# Copy the application code into the container
+COPY . .
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
+# Make port 5000 available to the world outside this container
+EXPOSE 5000
+
+# Run main.py when the container launches
+CMD ["python", "main.py"]
