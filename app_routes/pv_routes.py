@@ -186,7 +186,7 @@ def generate_pvr(template_id):
             
             # Update report with both file paths
             pvr_report.generated_filepath = pdf_path
-            pvr_report_word_filepath = word_path 
+            pvr_report.word_filepath = word_path 
             pvr_report.status = 'Generated'
             db.session.commit()
             
@@ -228,4 +228,21 @@ def download_pvr(report_id):
         report.generated_filepath,
         as_attachment=True,
         download_name=f"PVR_Report_{report.id}.pdf"
+    )
+# ==================== ROUTE 7: Download PVR Word Document ====================
+@pv_bp.route('/download-word/<int:report_id>', methods=['GET'])
+def download_pvr_word(report_id):
+    """
+    Download PVR Word document
+    """
+    report = PVR_Report.query.get_or_404(report_id)
+
+    if not report.word_filepath or not os.path.exists(report.word_filepath):
+        flash('Word document not found.', 'danger')
+        return redirect(url_for('pv_bp.list_templates'))
+
+    return send_file(
+        report.word_filepath,
+        as_attachment=True,
+        download_name=f"PVR_Report_{report.id}.docx"
     )
