@@ -28,7 +28,7 @@
                     Download PDF
                 </a>
                 {% if report.word_filepath %}
-                <a href="{{ url_for('pv_bp.download_word', report_id=report.id) }}"
+                <a href="{{ url_for('pv_bp.download_pvr_word', report_id=report.id) }}"
                    class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center">
                     <i class="fas fa-file-word mr-2"></i>
                     Download Word

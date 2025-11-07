@@ -39,7 +39,8 @@ def generate_pvr_word(report_id, product_name, template, criteria):
     
     # Generate filename
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"PVR_{product_name.replace(' ', '_')}_{timestamp}.docx"
+    product_name_clean = product_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+    filename = f"PVR_{product_name_clean}_{timestamp}.docx"
     filepath = os.path.join(output_folder, filename)
     
     # Create document
