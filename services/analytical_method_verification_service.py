@@ -24,15 +24,16 @@ import io
 class AMVProtocolGenerator:
     # In the AMVProtocolGenerator class __init__ method, add proper JSON parsing:
 
-    def __init__(self, form_data, company_data=None):
+    def __init__(self, form_data, verification_parameters=None, company_data=None):
         if not form_data:
             form_data = {
                 'product_name': 'Test Product',
                 'active_ingredient': 'Test Ingredient', 
                 # ... other defaults
             }
-        
+
         self.form_data = form_data
+        self.verification_parameters = verification_parameters or {}
         self.company_data = company_data or {}
         self.doc = Document()
         self.current_page = 1
@@ -794,19 +795,32 @@ class AMVProtocolGenerator:
                 
                 params_table.rows[0].cells[0].text = "Sr.No."
                 params_table.rows[0].cells[1].text = "Validation Parameters"
-                
-                parameters = [
-                    ("6.1", "System Precision"),
-                    ("6.2", "Specificity"),
-                    ("6.3", "Method Precision"),
-                    ("6.4", "Intermediate Precision"),
-                    ("6.5", "Linearity and Range"),
-                    ("6.6", "Accuracy/Recovery"),
-                    ("6.7", "Robustness")
-                ]
-                
-                for idx, (sr_no, param) in enumerate(parameters, 1):
-                    if idx < len(params_table.rows):  # Safety check
+
+                parameters_to_display = []
+                index = 1  # Initialize index
+
+                for key, is_selected in self.verification_parameters.items():
+                    if is_selected:
+                        param_name = next((p[1] for p in [
+                            ("6.1", "System Suitability"),
+                            ("6.2", "Specificity"),
+                            ("6.3", "System Precision"),
+                            ("6.4", "Method Precision"),
+                            ("6.5", "Intermediate Precision"),
+                            ("6.6", "Linearity and Range"),
+                            ("6.7", "Accuracy/Recovery"),
+                            ("6.8", "Robustness"),
+                            ("6.9", "Range"),
+                            ("6.10", "LOD and LOQ"),
+                            ("6.11", "LOD and LOQ Precision")
+                        ] if p[0] == key), None)
+
+                        if param_name:
+                            parameters_to_display.append((str(index), param_name))
+                            index += 1
+
+                for idx, (sr_no, param) in enumerate(parameters_to_display, 1):
+                    if idx <= 7 and idx < len(params_table.rows):  # Safety check and limit to 7 rows
                         params_table.rows[idx].cells[0].text = sr_no
                         params_table.rows[idx].cells[1].text = param
             except Exception as e:
@@ -1055,6 +1069,40 @@ class AnalyticalMethodVerificationService:
         """Generate protocol from form data - SAFE VERSION"""
         try:
             # Ensure we have valid data
+            # Get selected validation parameters from the form
+            selected_val_params = protocol_data.get('val_params')
+
+            # Define the order of parameters as they appear in the form
+            parameters = [
+                ("6.1", "System Suitability"),
+                ("6.2", "Specificity"),
+                ("6.3", "System Precision"),
+                ("6.4", "Method Precision"),
+                ("6.5", "Intermediate Precision"),
+                ("6.6", "Linearity and Range"),
+                ("6.7", "Accuracy/Recovery"),
+                ("6.8", "Robustness"),
+                ("6.9", "Range"),
+                ("6.10", "LOD and LOQ"),
+                ("6.11", "LOD and LOQ Precision")
+            ]
+
+            # Create a dictionary to store the selected validation parameters
+            verification_parameters = {}
+
+            # Populate the dictionary based on the selected parameters from the form
+            for key, param_name in parameters:
+                # Convert the parameter name to a form-friendly value (lowercase and underscore)
+                form_value = param_name.lower().replace(" ", "_")
+                verification_parameters[key] = form_value in selected_val_params if selected_val_params else False
+
+            if not protocol_data:
+                protocol_data = {}
+            
+            if not method_info:
+                method_info = {}
+            
+            # Convert form data with all available information
             if not protocol_data:
                 protocol_data = {}
             
@@ -1091,7 +1139,7 @@ class AnalyticalMethodVerificationService:
             })
             
             # Generate document using the main protocol generator
-            generator = AMVProtocolGenerator(protocol_data)
+            generator = AMVProtocolGenerator(protocol_data, verification_parameters)
             buffer = io.BytesIO()
             generator.generate_protocol(buffer)
             buffer.seek(0)
