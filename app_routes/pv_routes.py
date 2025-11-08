@@ -1,248 +1,316 @@
 # Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in>
 # All Rights Reserved.
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for, session, send_file, jsonify
+"""
+Process Validation Routes - Enhanced with comprehensive extraction
+"""
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify
+from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
-
 from database import db
-from models import PVP_Template, PVP_Criteria, PVR_Report, PVR_Data, User
-from services.pvp_ai_service import extract_pvp_criteria
-from services.pvr_generator_service import generate_pvr_pdf
+from models import (
+    PVP_Template, PVP_Criteria, PVP_Equipment, PVP_Material, 
+    PVP_Extracted_Stage, PVR_Report, PVR_Data, PVR_Stage_Result,
+    PV_Stage_Template
+)
+from services.enhanced_pvp_extraction_service import EnhancedPVPExtractor
+from services.comprehensive_pvr_generator import ComprehensivePVRGenerator
+from services.comprehensive_pvr_word_generator import ComprehensivePVRWordGenerator
+import logging
 
-pv_bp = Blueprint('pv_bp', __name__, url_prefix='/pv')
+logger = logging.getLogger(__name__)
 
-# Upload folder configuration
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads', 'pvp_templates')
-REPORT_FOLDER = os.path.join(os.getcwd(), 'uploads', 'pvr_reports')
+pv_routes = Blueprint('pv', __name__, url_prefix='/pv')
 
-# Create folders if they don't exist
+UPLOAD_FOLDER = 'uploads/pvp'
+REPORT_FOLDER = 'uploads/pvr_reports'
+
+# Ensure folders exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(REPORT_FOLDER, exist_ok=True)
 
-ALLOWED_EXTENSIONS = {'pdf'}
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-# ==================== ROUTE 1: Upload PVP Template ====================
-@pv_bp.route('/upload-template', methods=['GET', 'POST'])
-def upload_pvp_template():
-    """
-    Upload PVP PDF, extract criteria using AI, save to database
-    """
-    if request.method == 'POST':
-        try:
-            # Get form data
-            pvp_file = request.files.get('pvp_file')
-            template_name = request.form.get('template_name', '').strip()
-            
-            # Get user_id from session
-            user_id = session.get('user_id')
-            if not user_id:
-                flash('Please log in to upload templates.', 'danger')
-                return redirect(url_for('auth.login'))
-            
-            # Validation
-            if not pvp_file or not template_name:
-                flash('Template name and PDF file are required.', 'danger')
-                return redirect(request.url)
-            
-            if not allowed_file(pvp_file.filename):
-                flash('Only PDF files are allowed.', 'danger')
-                return redirect(request.url)
-            
-            # Check for duplicate template name
-            existing = PVP_Template.query.filter_by(template_name=template_name).first()
-            if existing:
-                flash(f'Template "{template_name}" already exists. Please use a different name.', 'danger')
-                return redirect(request.url)
-            
-            # Save file
-            filename = secure_filename(pvp_file.filename)
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f"{timestamp}_{filename}"
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
-            pvp_file.save(filepath)
-            
-            print(f"✅ PVP file saved: {filepath}")
-            
-            # Create template record
-            new_template = PVP_Template(
-                template_name=template_name,
-                original_filepath=filepath,
-                user_id=user_id
-            )
-            db.session.add(new_template)
-            db.session.commit()
-            
-            print(f"✅ Template created with ID: {new_template.id}")
-            
-            # Extract criteria using AI
-            print("🤖 Starting AI extraction...")
-            extracted_criteria = extract_pvp_criteria(filepath)
-            
-            print(f"✅ AI extracted {len(extracted_criteria)} criteria")
-            
-            # Save criteria to database
-            for criterion in extracted_criteria:
-                new_criterion = PVP_Criteria(
-                    pvp_template_id=new_template.id,
-                    test_id=criterion['test_id'],
-                    test_name=criterion['test_name'],
-                    acceptance_criteria=criterion['acceptance_criteria']
-                )
-                db.session.add(new_criterion)
-            
-            db.session.commit()
-            
-            flash(f'✅ Template "{template_name}" uploaded successfully! AI extracted {len(extracted_criteria)} test criteria.', 'success')
-            return redirect(url_for('pv_bp.list_templates'))
-            
-        except Exception as e:
-            db.session.rollback()
-            print(f"❌ Error uploading template: {str(e)}")
-            flash(f'Error uploading template: {str(e)}', 'danger')
-            return redirect(request.url)
+@pv_routes.route('/upload', methods=['GET', 'POST'])
+@login_required
+def upload_pvp():
+    """Upload and extract PVP document"""
     
-    return render_template('upload_pvp.html')
+    if request.method == 'GET':
+        return render_template('upload_pvp.html')
+    
+    # Handle POST - file upload
+    if 'pvp_file' not in request.files:
+        flash('No file uploaded', 'error')
+        return redirect(request.url)
+    
+    file = request.files['pvp_file']
+    
+    if file.filename == '':
+        flash('No file selected', 'error')
+        return redirect(request.url)
+    
+    if not file.filename.lower().endswith('.pdf'):
+        flash('Only PDF files are allowed', 'error')
+        return redirect(request.url)
+    
+    try:
+        # Save uploaded file
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"{timestamp}_{filename}"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
+        
+        logger.info(f"PVP uploaded: {filepath}")
+        
+        # Extract data using AI
+        flash('Extracting data from PVP... This may take a minute.', 'info')
+        extractor = EnhancedPVPExtractor()
+        extracted_data = extractor.extract_all(filepath)
+        
+        # Create PVP Template record
+        product_name = extracted_data['product_info'].get('product_name', 'Unknown Product')
+        product_type = extracted_data['product_type']
+        batch_size = extracted_data['product_info'].get('batch_size', '')
+        
+        pvp_template = PVP_Template(
+            product_name=product_name,
+            product_type=product_type,
+            batch_size=batch_size,
+            filepath=filepath,
+            user_id=current_user.id
+        )
+        db.session.add(pvp_template)
+        db.session.flush()  # Get ID
+        
+        # Save equipment
+        equipment_count = 0
+        for eq_data in extracted_data.get('equipment', []):
+            equipment = PVP_Equipment(
+                pvp_template_id=pvp_template.id,
+                equipment_name=eq_data.get('equipment_name', ''),
+                equipment_id=eq_data.get('equipment_id', ''),
+                location=eq_data.get('location', ''),
+                calibration_status=eq_data.get('calibration_status', 'Valid')
+            )
+            db.session.add(equipment)
+            equipment_count += 1
+        
+        # Save materials
+        material_count = 0
+        for mat_data in extracted_data.get('materials', []):
+            material = PVP_Material(
+                pvp_template_id=pvp_template.id,
+                material_type=mat_data.get('material_type', 'Excipient'),
+                material_name=mat_data.get('material_name', ''),
+                specification=mat_data.get('specification', ''),
+                quantity=mat_data.get('quantity', '')
+            )
+            db.session.add(material)
+            material_count += 1
+        
+        # Save extracted stages
+        stage_count = 0
+        for stage_data in extracted_data.get('stages', []):
+            # Try to find matching template
+            stage_template = PV_Stage_Template.query.filter_by(
+                product_type=product_type,
+                stage_number=stage_data.get('stage_number', 0)
+            ).first()
+            
+            stage = PVP_Extracted_Stage(
+                pvp_template_id=pvp_template.id,
+                stage_template_id=stage_template.id if stage_template else None,
+                stage_number=stage_data.get('stage_number', 0),
+                stage_name=stage_data.get('stage_name', ''),
+                equipment_used=stage_data.get('equipment_used', ''),
+                specific_parameters=stage_data.get('parameters', ''),
+                acceptance_criteria=stage_data.get('acceptance_criteria', '')
+            )
+            db.session.add(stage)
+            stage_count += 1
+        
+        # Save test criteria
+        criteria_count = 0
+        for crit_data in extracted_data.get('test_criteria', []):
+            criteria = PVP_Criteria(
+                pvp_template_id=pvp_template.id,
+                test_id=crit_data.get('test_id', ''),
+                test_name=crit_data.get('test_name', ''),
+                acceptance_criteria=crit_data.get('acceptance_criteria', '')
+            )
+            db.session.add(criteria)
+            criteria_count += 1
+        
+        db.session.commit()
+        
+        flash(f'✅ PVP uploaded successfully!', 'success')
+        flash(f'✅ Extracted: {equipment_count} equipment, {material_count} materials, {stage_count} stages, {criteria_count} test criteria', 'info')
+        
+        return redirect(url_for('pv.view_pvp_template', template_id=pvp_template.id))
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error processing PVP: {e}", exc_info=True)
+        flash(f'Error processing PVP: {str(e)}', 'error')
+        return redirect(url_for('pv.upload_pvp'))
 
 
-# ==================== ROUTE 2: List PVP Templates ====================
-@pv_bp.route('/templates', methods=['GET'])
+@pv_routes.route('/templates')
+@login_required
 def list_templates():
-    """
-    Show all uploaded PVP templates
-    """
-    templates = PVP_Template.query.order_by(PVP_Template.created_at.desc()).all()
+    """List all uploaded PVP templates"""
+    
+    templates = PVP_Template.query.filter_by(user_id=current_user.id).order_by(
+        PVP_Template.created_at.desc()
+    ).all()
+    
     return render_template('pvp_templates_list.html', templates=templates)
 
 
-# ==================== ROUTE 3: View Template Criteria ====================
-@pv_bp.route('/template/<int:template_id>', methods=['GET'])
-def view_template(template_id):
-    """
-    View a specific template and its extracted criteria
-    """
+@pv_routes.route('/template/<int:template_id>')
+@login_required
+def view_pvp_template(template_id):
+    """View PVP template details"""
+    
     template = PVP_Template.query.get_or_404(template_id)
+    
+    # Get all related data
+    equipment = PVP_Equipment.query.filter_by(pvp_template_id=template_id).all()
+    materials = PVP_Material.query.filter_by(pvp_template_id=template_id).all()
+    stages = PVP_Extracted_Stage.query.filter_by(pvp_template_id=template_id).order_by(
+        PVP_Extracted_Stage.stage_number
+    ).all()
     criteria = PVP_Criteria.query.filter_by(pvp_template_id=template_id).all()
-    return render_template('view_pvp_template.html', template=template, criteria=criteria)
+    
+    return render_template('view_pvp_template.html',
+                         template=template,
+                         equipment=equipment,
+                         materials=materials,
+                         stages=stages,
+                         criteria=criteria)
 
 
-# ==================== ROUTE 4: Generate PVR Form ====================
-@pv_bp.route('/generate-pvr/<int:template_id>', methods=['GET', 'POST'])
+@pv_routes.route('/generate/<int:template_id>', methods=['GET', 'POST'])
+@login_required
 def generate_pvr(template_id):
-    """
-    Form to enter batch data and generate PVR report
-    """
+    """Generate PVR report from PVP template"""
+    
     template = PVP_Template.query.get_or_404(template_id)
-    criteria = PVP_Criteria.query.filter_by(pvp_template_id=template_id).all()
     
-    if request.method == 'POST':
-        try:
-            user_id = session.get('user_id')
-            if not user_id:
-                flash('Please log in to generate reports.', 'danger')
-                return redirect(url_for('auth.login'))
-            
-            # Get form data
-            product_name = request.form.get('product_name')
-            batch_numbers = request.form.getlist('batch_number[]')  # Multiple batches
-            
-            # Create PVR Report record
-            pvr_report = PVR_Report(
-                pvp_template_id=template_id,
-                user_id=user_id,
-                status='Draft'
-            )
-            db.session.add(pvr_report)
-            db.session.commit()
-            
-            # Save batch data
-            for batch_no in batch_numbers:
-                for criterion in criteria:
-                    test_result = request.form.get(f'result_{criterion.test_id}_{batch_no}')
-                    
-                    if test_result:
-                        pvr_data = PVR_Data(
-                            pvr_report_id=pvr_report.id,
-                            batch_number=batch_no,
-                            test_id=criterion.test_id,
-                            test_result=test_result
-                        )
-                        db.session.add(pvr_data)
-            
-            db.session.commit()
-            
-            # Generate PDF
-            print("📄 Generating PVR PDF...")
-            pdf_path = generate_pvr_pdf(pvr_report.id, product_name, template, criteria)
-
-            print("Generating PVR Word document...")
-            from services.pvr_word_generator_service import generate_pvr_word
-            word_path = generate_pvr_word(pvr_report.id, product_name, template, criteria)
-            
-            # Update report with both file paths
-            pvr_report.generated_filepath = pdf_path
-            pvr_report.word_filepath = word_path 
-            pvr_report.status = 'Generated'
-            db.session.commit()
-            
-            flash('✅ PVR Report generated successfully! (PDF & Word)', 'success')
-            return redirect(url_for('pv_bp.view_pvr', report_id=pvr_report.id))
-            
-        except Exception as e:
-            db.session.rollback()
-            print(f"❌ Error generating PVR: {str(e)}")
-            flash(f'Error generating report: {str(e)}', 'danger')
+    if request.method == 'GET':
+        # Get stages and criteria for form
+        stages = PVP_Extracted_Stage.query.filter_by(pvp_template_id=template_id).order_by(
+            PVP_Extracted_Stage.stage_number
+        ).all()
+        criteria = PVP_Criteria.query.filter_by(pvp_template_id=template_id).all()
+        
+        return render_template('generate_pvr.html',
+                             template=template,
+                             stages=stages,
+                             criteria=criteria)
+    
+    # Handle POST - generate report
+    try:
+        # Get batch data from form
+        batch_numbers = request.form.getlist('batch_number[]')
+        
+        if not batch_numbers or len(batch_numbers) < 3:
+            flash('Please enter data for at least 3 batches', 'error')
             return redirect(request.url)
-    
-    return render_template('generate_pvr.html', template=template, criteria=criteria)
+        
+        # Create PVR Report
+        pvr_report = PVR_Report(
+            pvp_template_id=template_id,
+            user_id=current_user.id,
+            status='Generated'
+        )
+        db.session.add(pvr_report)
+        db.session.flush()
+        
+        # Save batch data
+        criteria = PVP_Criteria.query.filter_by(pvp_template_id=template_id).all()
+        
+        for batch_num in batch_numbers:
+            for criterion in criteria:
+                test_result_key = f'result_{criterion.test_id}_{batch_num}'
+                test_result = request.form.get(test_result_key, '')
+                
+                if test_result:
+                    pvr_data = PVR_Data(
+                        pvr_report_id=pvr_report.id,
+                        batch_number=batch_num,
+                        test_id=criterion.test_id,
+                        test_result=test_result
+                    )
+                    db.session.add(pvr_data)
+        
+        db.session.commit()
+        
+        # Generate PDF and Word reports using comprehensive generators
+        pdf_generator = ComprehensivePVRGenerator()
+        pdf_path = pdf_generator.generate_comprehensive_pvr_pdf(pvr_report.id, REPORT_FOLDER)
+        
+        word_generator = ComprehensivePVRWordGenerator()
+        word_path = word_generator.generate_comprehensive_pvr_word(pvr_report.id, REPORT_FOLDER)
+        
+        # Update report with file paths
+        pvr_report.pdf_filepath = pdf_path
+        pvr_report.word_filepath = word_path
+        pvr_report.conclusion = 'Pass'  # TODO: Auto-calculate
+        db.session.commit()
+        
+        flash('✅ PVR Report generated successfully!', 'success')
+        return redirect(url_for('pv.view_pvr', report_id=pvr_report.id))
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error generating PVR: {e}", exc_info=True)
+        flash(f'Error generating PVR: {str(e)}', 'error')
+        return redirect(request.url)
 
 
-# ==================== ROUTE 5: View PVR Report ====================
-@pv_bp.route('/report/<int:report_id>', methods=['GET'])
+@pv_routes.route('/report/<int:report_id>')
+@login_required
 def view_pvr(report_id):
-    """
-    View generated PVR report details
-    """
+    """View generated PVR report"""
+    
     report = PVR_Report.query.get_or_404(report_id)
-    return render_template('view_pvr.html', report=report)
+    template = report.pvp_template
+    batch_data = PVR_Data.query.filter_by(pvr_report_id=report_id).all()
+    
+    return render_template('view_pvr.html',
+                         report=report,
+                         template=template,
+                         batch_data=batch_data)
 
 
-# ==================== ROUTE 6: Download PVR PDF ====================
-@pv_bp.route('/download/<int:report_id>', methods=['GET'])
-def download_pvr(report_id):
-    """
-    Download PVR PDF file
-    """
+@pv_routes.route('/download/<int:report_id>/pdf')
+@login_required
+def download_pvr_pdf(report_id):
+    """Download PVR PDF report"""
+    
     report = PVR_Report.query.get_or_404(report_id)
     
-    if not report.generated_filepath or not os.path.exists(report.generated_filepath):
-        flash('PDF file not found.', 'danger')
-        return redirect(url_for('pv_bp.list_templates'))
+    if not report.pdf_filepath or not os.path.exists(report.pdf_filepath):
+        flash('PDF report not found', 'error')
+        return redirect(url_for('pv.view_pvr', report_id=report_id))
     
-    return send_file(
-        report.generated_filepath,
-        as_attachment=True,
-        download_name=f"PVR_Report_{report.id}.pdf"
-    )
-# ==================== ROUTE 7: Download PVR Word Document ====================
-@pv_bp.route('/download-word/<int:report_id>', methods=['GET'])
+    return send_file(report.pdf_filepath, as_attachment=True)
+
+
+@pv_routes.route('/download/<int:report_id>/word')
+@login_required
 def download_pvr_word(report_id):
-    """
-    Download PVR Word document
-    """
+    """Download PVR Word report"""
+    
     report = PVR_Report.query.get_or_404(report_id)
-
+    
     if not report.word_filepath or not os.path.exists(report.word_filepath):
-        flash('Word document not found.', 'danger')
-        return redirect(url_for('pv_bp.list_templates'))
-
-    return send_file(
-        report.word_filepath,
-        as_attachment=True,
-        download_name=f"PVR_Report_{report.id}.docx"
-    )
+        flash('Word report not found', 'error')
+        return redirect(url_for('pv.view_pvr', report_id=report_id))
+    
+    return send_file(report.word_filepath, as_attachment=True)
