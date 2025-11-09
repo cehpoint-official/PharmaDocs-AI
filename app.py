@@ -18,7 +18,7 @@ app.register_blueprint(admin.bp)
 app.register_blueprint(equipments.bp)
 app.register_blueprint(user.bp)
 app.register_blueprint(amv_routes.amv_bp)
-app.register_blueprint(pv_routes.pv_bp)
+app.register_blueprint(pv_routes.pv_routes)
 
 # Root route
 @app.route('/')

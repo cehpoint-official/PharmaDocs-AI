@@ -16,10 +16,6 @@
          class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow">
         <i class="fas fa-plus mr-2"></i>Create AMV Document
       </a>
-      <a href="{{ url_for('amv_bp.amv_verification_page') }}"
-         class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow">
-        <i class="fas fa-file-word mr-2"></i>AMV Verification
-      </a>
     </div>
   </div>
 
@@ -88,10 +84,6 @@
                class="inline-flex items-center px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded">
               <i class="fas fa-plus mr-1"></i>Create AMV
             </a>
-            <a href="{{ url_for('amv_bp.amv_verification_page') }}"
-               class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded">
-              <i class="fas fa-file-word mr-1"></i>Verification
-            </a>
           </div>
         </div>
 
@@ -103,7 +95,7 @@
           <h6 class="font-semibold">Process Validation</h6>
           <p class="text-gray-500 text-sm mt-1">Generate PV protocols for manufacturing process qualification.</p>
           <div class="flex justify-center gap-2 mt-3">
-           <a href="{{ url_for('pv_bp.upload_pvp_template') }}"
+           <a href="{{ url_for('pv.upload_pvp') }}"
               class="inline-flex items-center px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded">
              <i class="fas fa-plus mr-1"></i>Generate PVR
            </a>
