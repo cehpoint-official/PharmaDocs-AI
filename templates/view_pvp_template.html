@@ -22,12 +22,12 @@
                 </p>
             </div>
             <div class="flex gap-2">
-                <a href="{{ url_for('pv_bp.generate_pvr', template_id=template.id) }}" 
+                <a href="{{ url_for('pv.generate_pvr', template_id=template.id) }}" 
                    class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition flex items-center">
                     <i class="fas fa-plus mr-2"></i>
                     Generate PVR
                 </a>
-                <a href="{{ url_for('pv_bp.list_templates') }}" 
+                <a href="{{ url_for('pv.list_templates') }}" 
                    class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
                     Back to List
                 </a>
@@ -148,13 +148,13 @@
                             </p>
                         </div>
                         <div class="flex gap-2">
-                            <a href="{{ url_for('pv_bp.view_pvr', report_id=report.id) }}" 
+                            <a href="{{ url_for('pv.view_pvr', report_id=report.id) }}" 
                                class="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition">
                                 <i class="fas fa-eye mr-1"></i>View
                             </a>
-                            <a href="{{ url_for('pv_bp.download_pvr', report_id=report.id) }}" 
+                            <a href="{{ url_for('pv.download_pvr_pdf', report_id=report.id) }}" 
                                class="px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded transition">
-                                <i class="fas fa-download mr-1"></i>Download
+                                <i class="fas fa-download mr-1"></i>Download PDF
                             </a>
                         </div>
                     </div>

@@ -22,19 +22,19 @@
                 </p>
             </div>
             <div class="flex gap-2">
-                <a href="{{ url_for('pv_bp.download_pvr', report_id=report.id) }}" 
+                <a href="{{ url_for('pv.download_pvr_pdf', report_id=report.id) }}" 
                    class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition flex items-center">
                     <i class="fas fa-download mr-2"></i>
                     Download PDF
                 </a>
                 {% if report.word_filepath %}
-                <a href="{{ url_for('pv_bp.download_pvr_word', report_id=report.id) }}"
+                <a href="{{ url_for('pv.download_pvr_word', report_id=report.id) }}"
                    class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center">
                     <i class="fas fa-file-word mr-2"></i>
                     Download Word
                 </a>
                 {% endif %}
-                <a href="{{ url_for('pv_bp.view_template', template_id=report.template.id) }}" 
+                <a href="{{ url_for('pv.view_pvp_template', template_id=report.template.id) }}" 
                    class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
                     Back to Template
                 </a>
@@ -137,7 +137,7 @@
                     </p>
                 </div>
                 <div class="ml-auto">
-                    <a href="{{ url_for('pv_bp.download_pvr', report_id=report.id) }}" 
+                    <a href="{{ url_for('pv.download_pvr_pdf', report_id=report.id) }}" 
                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition">
                         <i class="fas fa-download mr-1"></i>Download
                     </a>

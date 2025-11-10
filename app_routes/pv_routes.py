@@ -5,8 +5,8 @@
 Process Validation Routes - Enhanced with comprehensive extraction
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify
-from flask_login import login_required, current_user
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify, session
+
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
@@ -34,9 +34,11 @@ os.makedirs(REPORT_FOLDER, exist_ok=True)
 
 
 @pv_routes.route('/upload', methods=['GET', 'POST'])
-@login_required
 def upload_pvp():
     """Upload and extract PVP document"""
+    
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
     
     if request.method == 'GET':
         return render_template('upload_pvp.html')
@@ -68,8 +70,8 @@ def upload_pvp():
         
         # Extract data using AI
         flash('Extracting data from PVP... This may take a minute.', 'info')
-        extractor = EnhancedPVPExtractor()
-        extracted_data = extractor.extract_all(filepath)
+        extractor = EnhancedPVPExtractor(filepath)
+        extracted_data = extractor.extract_all()
         
         # Create PVP Template record
         product_name = extracted_data['product_info'].get('product_name', 'Unknown Product')
@@ -81,7 +83,7 @@ def upload_pvp():
             product_type=product_type,
             batch_size=batch_size,
             filepath=filepath,
-            user_id=current_user.id
+            user_id=session['user_id']
         )
         db.session.add(pvp_template)
         db.session.flush()  # Get ID
@@ -160,11 +162,13 @@ def upload_pvp():
 
 
 @pv_routes.route('/templates')
-@login_required
 def list_templates():
     """List all uploaded PVP templates"""
     
-    templates = PVP_Template.query.filter_by(user_id=current_user.id).order_by(
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    templates = PVP_Template.query.filter_by(user_id=session['user_id']).order_by(
         PVP_Template.created_at.desc()
     ).all()
     
@@ -172,9 +176,11 @@ def list_templates():
 
 
 @pv_routes.route('/template/<int:template_id>')
-@login_required
 def view_pvp_template(template_id):
     """View PVP template details"""
+    
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
     
     template = PVP_Template.query.get_or_404(template_id)
     
@@ -195,9 +201,11 @@ def view_pvp_template(template_id):
 
 
 @pv_routes.route('/generate/<int:template_id>', methods=['GET', 'POST'])
-@login_required
 def generate_pvr(template_id):
     """Generate PVR report from PVP template"""
+    
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
     
     template = PVP_Template.query.get_or_404(template_id)
     
@@ -225,7 +233,7 @@ def generate_pvr(template_id):
         # Create PVR Report
         pvr_report = PVR_Report(
             pvp_template_id=template_id,
-            user_id=current_user.id,
+            user_id=session['user_id'],
             status='Generated'
         )
         db.session.add(pvr_report)
@@ -274,9 +282,11 @@ def generate_pvr(template_id):
 
 
 @pv_routes.route('/report/<int:report_id>')
-@login_required
 def view_pvr(report_id):
     """View generated PVR report"""
+    
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
     
     report = PVR_Report.query.get_or_404(report_id)
     template = report.pvp_template
@@ -289,9 +299,11 @@ def view_pvr(report_id):
 
 
 @pv_routes.route('/download/<int:report_id>/pdf')
-@login_required
 def download_pvr_pdf(report_id):
     """Download PVR PDF report"""
+    
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
     
     report = PVR_Report.query.get_or_404(report_id)
     
@@ -303,9 +315,11 @@ def download_pvr_pdf(report_id):
 
 
 @pv_routes.route('/download/<int:report_id>/word')
-@login_required
 def download_pvr_word(report_id):
     """Download PVR Word report"""
+    
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
     
     report = PVR_Report.query.get_or_404(report_id)
     
