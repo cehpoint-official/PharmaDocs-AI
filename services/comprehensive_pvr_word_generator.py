@@ -9,6 +9,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.style import WD_STYLE_TYPE
 from datetime import datetime
 import os
+import re
 from database import db
 from models import (
     PVR_Report, PVP_Template, PVP_Equipment, PVP_Material,
@@ -94,7 +95,8 @@ class ComprehensivePVRWordGenerator:
         # Save document
         os.makedirs(output_folder, exist_ok=True)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"PVR_{self.template.product_name.replace(' ', '_')}_{timestamp}.docx"
+        safe_product_name = re.sub(r'[<>:"/\\|?*]', '_', self.template.product_name).replace(' ', '_')
+        filename = f"PVR_{safe_product_name}_{timestamp}.docx"  
         filepath = os.path.join(output_folder, filename)
         
         self.doc.save(filepath)

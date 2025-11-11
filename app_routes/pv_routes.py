@@ -9,6 +9,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 
 from werkzeug.utils import secure_filename
 import os
+import re
 from datetime import datetime
 from database import db
 from models import (
@@ -258,9 +259,27 @@ def generate_pvr(template_id):
         
         db.session.commit()
         
+        # Prepare batch data for generators
+        batch_data = []
+        for batch_num in batch_numbers:
+            batch_info = {'batch_number': batch_num, 'test_results': {}}
+            for criterion in criteria:
+                test_result_key = f'result_{criterion.test_id}_{batch_num}'
+                batch_info['test_results'][criterion.test_name] = request.form.get(test_result_key, '')
+            batch_data.append(batch_info)
+        
+        # Generate PDF report file path
+        safe_product_name = re.sub(r'[<>:"/\\|?*]', '_', template.product_name).replace(' ', '_')
+        pdf_filename = f"PVR_{safe_product_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        pdf_path = os.path.join(REPORT_FOLDER, pdf_filename)
+
+        # Generate Word report file path
+        word_filename = f"PVR_{safe_product_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+        word_path = os.path.join(REPORT_FOLDER, word_filename)
+        
         # Generate PDF and Word reports using comprehensive generators
-        pdf_generator = ComprehensivePVRGenerator()
-        pdf_path = pdf_generator.generate_comprehensive_pvr_pdf(pvr_report.id, REPORT_FOLDER)
+        pdf_generator = ComprehensivePVRGenerator(template, batch_data)
+        pdf_path = pdf_generator.generate_pdf(pdf_path)
         
         word_generator = ComprehensivePVRWordGenerator()
         word_path = word_generator.generate_comprehensive_pvr_word(pvr_report.id, REPORT_FOLDER)

@@ -9,6 +9,8 @@ import json
 import logging
 from typing import Dict, List, Optional, Tuple
 import pdfplumber
+import camelot
+import pandas as pd
 import google.generativeai as genai
 
 # Configure logging
@@ -33,6 +35,7 @@ class EnhancedPVPExtractor:
         self.pdf_path = pdf_path
         self.full_text = ""
         self.product_type = None
+        self.tables = []  # Store extracted tables
         
     def extract_all(self) -> Dict:
         """Main extraction method - extracts everything from PVP"""
@@ -47,6 +50,10 @@ class EnhancedPVPExtractor:
             return self._empty_result()
         
         logger.info(f"Extracted {len(self.full_text)} characters from PDF")
+        
+        # Extract tables from PDF
+        self.tables = self._extract_tables_from_pdf()
+        logger.info(f"Extracted {len(self.tables)} tables from PDF")
         
         # Extract all data
         result = {
@@ -77,6 +84,23 @@ class EnhancedPVPExtractor:
         except Exception as e:
             logger.error(f"Error extracting text from PDF: {e}")
             return ""
+    
+    def _extract_tables_from_pdf(self) -> List:
+        """Extract all tables from PDF using camelot"""
+        try:
+            # Extract tables using camelot (lattice method for bordered tables)
+            tables = camelot.read_pdf(self.pdf_path, pages='all', flavor='lattice')
+            logger.info(f"Camelot lattice found {len(tables)} tables")
+            
+            # If no tables found with lattice, try stream method for non-bordered tables
+            if len(tables) == 0:
+                tables = camelot.read_pdf(self.pdf_path, pages='all', flavor='stream')
+                logger.info(f"Camelot stream found {len(tables)} tables")
+            
+            return tables
+        except Exception as e:
+            logger.error(f"Error extracting tables: {e}")
+            return []
     
     def _extract_product_info(self) -> Dict:
         """Extract basic product information"""
@@ -225,11 +249,17 @@ Return only the JSON array, no other text.
             return self._extract_equipment_with_regex()
     
     def _extract_equipment_with_regex(self) -> List[Dict]:
-        """Extract equipment using regex"""
+        """Extract equipment using tables and regex"""
         
         equipment = []
         
-        # Look for equipment patterns
+        # First, try to extract from tables
+        equipment_from_tables = self._extract_equipment_from_tables()
+        if equipment_from_tables:
+            equipment.extend(equipment_from_tables)
+            logger.info(f"Extracted {len(equipment_from_tables)} equipment from tables")
+        
+        # Also try regex patterns as backup
         equipment_patterns = [
             r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+\(?([A-Z]{2,}-\d+)\)?',  # Balance (BAL-001)
             r'Equipment:\s*([A-Za-z\s]+)',
@@ -239,15 +269,70 @@ Return only the JSON array, no other text.
         for pattern in equipment_patterns:
             matches = re.finditer(pattern, self.full_text, re.MULTILINE)
             for match in matches:
-                equipment.append({
-                    'equipment_name': match.group(1).strip(),
-                    'equipment_id': match.group(2) if len(match.groups()) > 1 else '',
-                    'location': '',
-                    'calibration_status': 'Valid'
-                })
+                equip_name = match.group(1).strip()
+                equip_id = match.group(2) if len(match.groups()) > 1 else ''
+                
+                # Avoid duplicates
+                if not any(e['equipment_name'] == equip_name for e in equipment):
+                    equipment.append({
+                        'equipment_name': equip_name,
+                        'equipment_id': equip_id,
+                        'location': '',
+                        'calibration_status': 'Valid'
+                    })
         
-        logger.info(f"Regex extracted {len(equipment)} equipment items")
-        return equipment[:20]  # Limit to 20 items
+        logger.info(f"Total extracted {len(equipment)} equipment items")
+        return equipment[:50]  # Limit to 50 items
+    
+    def _extract_equipment_from_tables(self) -> List[Dict]:
+        """Extract equipment from tables in the PDF"""
+        equipment = []
+        
+        for table in self.tables:
+            df = table.df
+            
+            # Check if this table contains equipment data
+            # Look for columns like: Equipment, Equipment ID, Equipment Name, etc.
+            headers = df.iloc[0].str.lower() if len(df) > 0 else []
+            
+            equipment_keywords = ['equipment', 'instrument', 'machine', 'apparatus']
+            id_keywords = ['id', 'code', 'no.', 'number']
+            location_keywords = ['location', 'area', 'room']
+            
+            # Check if this is an equipment table
+            is_equipment_table = any(
+                any(keyword in str(header).lower() for keyword in equipment_keywords)
+                for header in headers
+            )
+            
+            if is_equipment_table:
+                # Find column indices
+                name_col = None
+                id_col = None
+                location_col = None
+                
+                for i, header in enumerate(headers):
+                    header_lower = str(header).lower()
+                    if any(kw in header_lower for kw in equipment_keywords):
+                        name_col = i
+                    elif any(kw in header_lower for kw in id_keywords):
+                        id_col = i
+                    elif any(kw in header_lower for kw in location_keywords):
+                        location_col = i
+                
+                # Extract equipment rows
+                for idx in range(1, len(df)):  # Skip header row
+                    row = df.iloc[idx]
+                    
+                    if name_col is not None and pd.notna(row[name_col]) and str(row[name_col]).strip():
+                        equipment.append({
+                            'equipment_name': str(row[name_col]).strip(),
+                            'equipment_id': str(row[id_col]).strip() if id_col is not None and pd.notna(row[id_col]) else '',
+                            'location': str(row[location_col]).strip() if location_col is not None and pd.notna(row[location_col]) else '',
+                            'calibration_status': 'Valid'
+                        })
+        
+        return equipment
     
     def _extract_materials(self) -> List[Dict]:
         """Extract materials (API, excipients, packaging)"""
@@ -293,27 +378,112 @@ Return only the JSON array, no other text.
             return self._extract_materials_with_regex()
     
     def _extract_materials_with_regex(self) -> List[Dict]:
-        """Extract materials using regex"""
+        """Extract materials using tables and regex"""
         
         materials = []
         
+        # First, try to extract from tables
+        materials_from_tables = self._extract_materials_from_tables()
+        if materials_from_tables:
+            materials.extend(materials_from_tables)
+            logger.info(f"Extracted {len(materials_from_tables)} materials from tables")
+        
+        # Also try regex patterns as backup
         # Common pharmaceutical materials
-        api_keywords = ['api', 'active ingredient', 'drug substance']
-        excipient_keywords = ['excipient', 'sodium hydroxide', 'water for injection', 'preservative']
+        api_keywords = ['api', 'active ingredient', 'drug substance', 'fluorouracil', 'paracetamol', 'ibuprofen']
+        excipient_keywords = ['excipient', 'sodium hydroxide', 'water for injection', 'preservative', 'sodium chloride']
         
         text_lower = self.full_text.lower()
         
         # Simple extraction
         for keyword in api_keywords:
             if keyword in text_lower:
-                materials.append({
-                    'material_type': 'API',
-                    'material_name': keyword.title(),
-                    'specification': 'USP',
-                    'quantity': ''
-                })
+                # Avoid duplicates
+                if not any(m['material_name'].lower() == keyword for m in materials):
+                    materials.append({
+                        'material_type': 'API',
+                        'material_name': keyword.title(),
+                        'specification': 'USP',
+                        'quantity': ''
+                    })
         
-        logger.info(f"Regex extracted {len(materials)} materials")
+        for keyword in excipient_keywords:
+            if keyword in text_lower:
+                # Avoid duplicates
+                if not any(m['material_name'].lower() == keyword for m in materials):
+                    materials.append({
+                        'material_type': 'Excipient',
+                        'material_name': keyword.title(),
+                        'specification': 'USP',
+                        'quantity': ''
+                    })
+        
+        logger.info(f"Total extracted {len(materials)} materials")
+        return materials[:50]  # Limit to 50 items
+    
+    def _extract_materials_from_tables(self) -> List[Dict]:
+        """Extract materials from tables in the PDF"""
+        materials = []
+        
+        for table in self.tables:
+            df = table.df
+            
+            # Check if this table contains materials data
+            headers = df.iloc[0].str.lower() if len(df) > 0 else []
+            
+            material_keywords = ['material', 'ingredient', 'component', 'item', 'api', 'excipient']
+            spec_keywords = ['specification', 'spec', 'standard', 'grade']
+            qty_keywords = ['quantity', 'qty', 'amount', 'weight']
+            
+            # Check if this is a materials table
+            is_material_table = any(
+                any(keyword in str(header).lower() for keyword in material_keywords)
+                for header in headers
+            )
+            
+            if is_material_table:
+                # Find column indices
+                name_col = None
+                type_col = None
+                spec_col = None
+                qty_col = None
+                
+                for i, header in enumerate(headers):
+                    header_lower = str(header).lower()
+                    if any(kw in header_lower for kw in material_keywords):
+                        name_col = i
+                    elif 'type' in header_lower or 'category' in header_lower:
+                        type_col = i
+                    elif any(kw in header_lower for kw in spec_keywords):
+                        spec_col = i
+                    elif any(kw in header_lower for kw in qty_keywords):
+                        qty_col = i
+                
+                # Extract material rows
+                for idx in range(1, len(df)):  # Skip header row
+                    row = df.iloc[idx]
+                    
+                    if name_col is not None and pd.notna(row[name_col]) and str(row[name_col]).strip():
+                        material_name = str(row[name_col]).strip()
+                        
+                        # Determine material type
+                        material_type = 'Excipient'  # Default
+                        if type_col is not None and pd.notna(row[type_col]):
+                            type_val = str(row[type_col]).lower()
+                            if 'api' in type_val or 'active' in type_val:
+                                material_type = 'API'
+                            elif 'packaging' in type_val:
+                                material_type = 'Packaging'
+                        elif any(kw in material_name.lower() for kw in ['api', 'active', 'drug']):
+                            material_type = 'API'
+                        
+                        materials.append({
+                            'material_type': material_type,
+                            'material_name': material_name,
+                            'specification': str(row[spec_col]).strip() if spec_col is not None and pd.notna(row[spec_col]) else 'USP',
+                            'quantity': str(row[qty_col]).strip() if qty_col is not None and pd.notna(row[qty_col]) else ''
+                        })
+        
         return materials
     
     def _extract_stages(self) -> List[Dict]:
@@ -367,13 +537,23 @@ Return only the JSON array, no other text.
             return self._extract_stages_with_regex()
     
     def _extract_stages_with_regex(self) -> List[Dict]:
-        """Extract stages using regex and template matching"""
+        """Extract stages using regex, templates, and table matching"""
         
         stages = []
         stage_names = self._get_stage_template_names()
         
-        # Search for each stage name in text
+        # Method 1: Try to extract from tables first
+        stages_from_tables = self._extract_stages_from_tables()
+        if stages_from_tables:
+            stages.extend(stages_from_tables)
+            logger.info(f"Extracted {len(stages_from_tables)} stages from tables")
+        
+        # Method 2: Search for each stage name in text
         for i, stage_name in enumerate(stage_names, 1):
+            # Skip if already found in tables
+            if any(s['stage_name'].lower() == stage_name.lower() for s in stages):
+                continue
+            
             # Clean stage name for searching
             search_term = stage_name.lower().replace('(if applicable)', '').strip()
             
@@ -386,32 +566,183 @@ Return only the JSON array, no other text.
                     'acceptance_criteria': ''
                 })
         
-        logger.info(f"Regex extracted {len(stages)} stages")
+        # Method 3: Look for numbered process steps
+        if len(stages) < 3:  # If we haven't found many stages yet
+            stage_pattern = r'(?:Step|Stage|Process)\s+(\d+)[:\s]+([A-Z][a-zA-Z\s]+)'
+            matches = re.finditer(stage_pattern, self.full_text, re.MULTILINE)
+            
+            for match in matches:
+                stage_num = int(match.group(1))
+                stage_name = match.group(2).strip()
+                
+                # Avoid duplicates
+                if not any(s['stage_name'].lower() == stage_name.lower() for s in stages):
+                    stages.append({
+                        'stage_number': stage_num,
+                        'stage_name': stage_name,
+                        'equipment_used': '',
+                        'parameters': '',
+                        'acceptance_criteria': ''
+                    })
+        
+        # Sort by stage number
+        stages.sort(key=lambda x: x['stage_number'])
+        
+        logger.info(f"Total extracted {len(stages)} stages")
+        return stages[:30]  # Limit to 30 stages
+    
+    def _extract_stages_from_tables(self) -> List[Dict]:
+        """Extract manufacturing stages from tables"""
+        stages = []
+        
+        for table in self.tables:
+            df = table.df
+            
+            # Check if this table contains stage/process data
+            headers = df.iloc[0].str.lower() if len(df) > 0 else []
+            
+            stage_keywords = ['stage', 'step', 'process', 'operation', 'activity']
+            
+            # Check if this is a stages table
+            is_stage_table = any(
+                any(keyword in str(header).lower() for keyword in stage_keywords)
+                for header in headers
+            )
+            
+            if is_stage_table:
+                # Find column indices
+                stage_col = None
+                name_col = None
+                equipment_col = None
+                params_col = None
+                criteria_col = None
+                
+                for i, header in enumerate(headers):
+                    header_lower = str(header).lower()
+                    if 'no' in header_lower or 'number' in header_lower or '#' in header_lower:
+                        stage_col = i
+                    elif any(kw in header_lower for kw in stage_keywords):
+                        name_col = i
+                    elif 'equipment' in header_lower or 'machine' in header_lower:
+                        equipment_col = i
+                    elif 'parameter' in header_lower or 'condition' in header_lower:
+                        params_col = i
+                    elif 'criteria' in header_lower or 'acceptance' in header_lower or 'limit' in header_lower:
+                        criteria_col = i
+                
+                # Extract stage rows
+                for idx in range(1, len(df)):  # Skip header row
+                    row = df.iloc[idx]
+                    
+                    # Get stage number
+                    stage_num = idx
+                    if stage_col is not None and pd.notna(row[stage_col]):
+                        try:
+                            stage_num = int(re.search(r'\d+', str(row[stage_col])).group())
+                        except:
+                            stage_num = idx
+                    
+                    # Get stage name
+                    stage_name = ''
+                    if name_col is not None and pd.notna(row[name_col]):
+                        stage_name = str(row[name_col]).strip()
+                    
+                    if stage_name:
+                        stages.append({
+                            'stage_number': stage_num,
+                            'stage_name': stage_name,
+                            'equipment_used': str(row[equipment_col]).strip() if equipment_col is not None and pd.notna(row[equipment_col]) else '',
+                            'parameters': str(row[params_col]).strip() if params_col is not None and pd.notna(row[params_col]) else '',
+                            'acceptance_criteria': str(row[criteria_col]).strip() if criteria_col is not None and pd.notna(row[criteria_col]) else ''
+                        })
+        
         return stages
     
     def _extract_test_criteria(self) -> List[Dict]:
-        """Extract test criteria and acceptance limits"""
+        """Extract test criteria and acceptance limits from tables and text"""
         
         criteria = []
         
-        # Common test patterns
+        # Method 1: Extract from tables first
+        criteria_from_tables = self._extract_test_criteria_from_tables()
+        if criteria_from_tables:
+            criteria.extend(criteria_from_tables)
+            logger.info(f"Extracted {len(criteria_from_tables)} test criteria from tables")
+        
+        # Method 2: Common test patterns from text
         test_patterns = [
-            r'pH[:\s]+(\d+\.?\d*)\s*[-–]\s*(\d+\.?\d*)',
-            r'Assay[:\s]+(\d+\.?\d*)\s*[-–]\s*(\d+\.?\d*)%',
-            r'Volume[:\s]+(\d+\.?\d*)\s*ml',
+            (r'pH[:\s]+(\d+\.?\d*)\s*[-–to]\s*(\d+\.?\d*)', 'pH Test'),
+            (r'Assay[:\s]+(\d+\.?\d*)\s*[-–to]\s*(\d+\.?\d*)%', 'Assay'),
+            (r'Volume[:\s]+(\d+\.?\d*)\s*(?:ml|ML)', 'Volume'),
+            (r'Weight[:\s]+(\d+\.?\d*)\s*(?:g|kg|mg)', 'Weight'),
+            (r'Particulate\s+Matter', 'Particulate Matter'),
+            (r'Sterility\s+Test', 'Sterility Test'),
+            (r'Endotoxin[:\s]+(<\s*\d+\.?\d*)', 'Endotoxin Test'),
         ]
         
-        for pattern in test_patterns:
+        for pattern, test_name in test_patterns:
             matches = re.finditer(pattern, self.full_text, re.IGNORECASE)
             for match in matches:
-                criteria.append({
-                    'test_id': f'test_{len(criteria)+1}',
-                    'test_name': match.group(0).split(':')[0].strip(),
-                    'acceptance_criteria': match.group(0)
-                })
+                # Avoid duplicates
+                if not any(c['test_name'].lower() == test_name.lower() for c in criteria):
+                    criteria.append({
+                        'test_id': f'test_{len(criteria)+1}',
+                        'test_name': test_name,
+                        'acceptance_criteria': match.group(0)
+                    })
         
-        logger.info(f"Extracted {len(criteria)} test criteria")
-        return criteria[:20]  # Limit to 20
+        logger.info(f"Total extracted {len(criteria)} test criteria")
+        return criteria[:50]  # Limit to 50
+    
+    def _extract_test_criteria_from_tables(self) -> List[Dict]:
+        """Extract test criteria from tables"""
+        criteria = []
+        
+        for table in self.tables:
+            df = table.df
+            
+            # Check if this table contains test/quality criteria
+            headers = df.iloc[0].str.lower() if len(df) > 0 else []
+            
+            test_keywords = ['test', 'parameter', 'specification', 'quality', 'analysis', 'examination']
+            criteria_keywords = ['criteria', 'acceptance', 'limit', 'specification', 'range']
+            
+            # Check if this is a test criteria table
+            is_test_table = (
+                any(any(keyword in str(header).lower() for keyword in test_keywords) for header in headers) and
+                any(any(keyword in str(header).lower() for keyword in criteria_keywords) for header in headers)
+            )
+            
+            if is_test_table:
+                # Find column indices
+                test_col = None
+                criteria_col = None
+                method_col = None
+                
+                for i, header in enumerate(headers):
+                    header_lower = str(header).lower()
+                    if any(kw in header_lower for kw in test_keywords):
+                        test_col = i
+                    elif any(kw in header_lower for kw in criteria_keywords):
+                        criteria_col = i
+                    elif 'method' in header_lower or 'procedure' in header_lower:
+                        method_col = i
+                
+                # Extract test criteria rows
+                for idx in range(1, len(df)):  # Skip header row
+                    row = df.iloc[idx]
+                    
+                    if test_col is not None and pd.notna(row[test_col]) and str(row[test_col]).strip():
+                        test_name = str(row[test_col]).strip()
+                        acceptance = str(row[criteria_col]).strip() if criteria_col is not None and pd.notna(row[criteria_col]) else ''
+                        
+                        criteria.append({
+                            'test_id': f'test_{len(criteria)+1}',
+                            'test_name': test_name,
+                            'acceptance_criteria': acceptance
+                        })
+        
+        return criteria
     
     def _get_stage_template_names(self) -> List[str]:
         """Get stage names from database template"""

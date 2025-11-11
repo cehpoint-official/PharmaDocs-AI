@@ -604,7 +604,7 @@ class ComprehensivePVRGenerator:
         return elements
 
 
-def generate_comprehensive_pvr_pdf(pvp_template, batch_data: List[Dict], output_path: str) -> str:
+def generate_pdf(pvp_template, batch_data: List[Dict], output_path: str) -> str:
     """
     Main function to generate comprehensive PVR PDF
     
