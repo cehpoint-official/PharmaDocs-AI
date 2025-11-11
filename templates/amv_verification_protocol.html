@@ -1204,6 +1204,213 @@ document.addEventListener('DOMContentLoaded', function() {
         // Trigger change event on page load to show correct parameters
         instrumentSelect.dispatchEvent(new Event('change'));
     }
+
+    // Handle form submission separately
+    const form = document.querySelector('form[action="/amv/generate-verification-protocol"]');
+    
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            console.log('=== FORM SUBMISSION STARTED ===');
+            
+            // Capture validation parameters
+            const valParamCheckboxes = document.querySelectorAll('input[name="val_params"]:checked');
+            const selectedValParams = Array.from(valParamCheckboxes).map(cb => cb.value);
+            
+            console.log('Selected Validation Parameters:', selectedValParams);
+            
+            // Create a hidden input to store the selected parameters
+            let valParamsInput = document.querySelector('input[name="val_params_json"]');
+            if (!valParamsInput) {
+                valParamsInput = document.createElement('input');
+                valParamsInput.type = 'hidden';
+                valParamsInput.name = 'val_params_json';
+                form.appendChild(valParamsInput);
+            }
+            valParamsInput.value = JSON.stringify(selectedValParams);
+            
+            console.log('Validation Parameters JSON:', valParamsInput.value);
+
+            // Capture equipment selections
+            const equipmentCheckboxes = document.querySelectorAll('input[name="selected_equipment"]:checked');
+            const selectedEquipment = Array.from(equipmentCheckboxes).map(cb => {
+                return {
+                    id: cb.value,
+                    name: cb.closest('.flex').querySelector('label').textContent.trim(),
+                    code: cb.dataset.code || '',
+                    brand: cb.dataset.brand || ''
+                };
+            });
+            
+            console.log('Selected Equipment:', selectedEquipment);
+            document.getElementById('selected_equipment_json').value = JSON.stringify(selectedEquipment);
+            
+            // Capture glass materials selections
+            const glassCheckboxes = document.querySelectorAll('input[name="selected_glass_materials"]:checked');
+            const selectedGlassMaterials = Array.from(glassCheckboxes).map(cb => {
+                return {
+                    id: cb.value,
+                    name: cb.closest('.flex').querySelector('label').textContent.trim(),
+                    characteristics: cb.dataset.characteristics || ''
+                };
+            });
+            
+            console.log('Selected Glass Materials:', selectedGlassMaterials);
+            document.getElementById('selected_glass_materials_json').value = JSON.stringify(selectedGlassMaterials);
+            
+            // Capture reagents selections
+            const reagentCheckboxes = document.querySelectorAll('input[name="selected_reagents"]:checked');
+            const selectedReagents = Array.from(reagentCheckboxes).map(cb => {
+                return {
+                    id: cb.value,
+                    name: cb.closest('.flex').querySelector('label').textContent.trim(),
+                    batch: cb.dataset.batch || '',
+                    expiry_date: cb.dataset.expiry || ''
+                };
+            });
+            
+            console.log('Selected Reagents:', selectedReagents);
+            document.getElementById('selected_reagents_json').value = JSON.stringify(selectedReagents);
+            
+            // Capture reference selection
+            const referenceRadio = document.querySelector('input[name="selected_reference"]:checked');
+            const selectedReference = referenceRadio ? {
+                id: referenceRadio.value,
+                standard_name: referenceRadio.dataset.standardName || '',
+                potency: referenceRadio.dataset.potency || ''
+            } : null;
+            
+            console.log('Selected Reference:', selectedReference);
+            document.getElementById('selected_reference_json').value = selectedReference ? JSON.stringify(selectedReference) : '{}';
+            
+            console.log('=== FORM SUBMISSION COMPLETE ===');
+            
+            // Optional: Add a small delay to see the console logs before form submits
+            // setTimeout(() => {
+            //     form.submit();
+            // }, 100);
+        });
+    }
 });
+
+// Auto-select validation parameters based on instrument type
+function autoSelectValidationParameters(instrumentType) {
+    // Define validation parameters for each instrument type
+    const validationParameters = {
+        'UV': [
+            'system_suitability',
+            'specificity',
+            'system_precision',
+            'method_precision',
+            'linearity',
+            'recovery',
+            'robustness'
+        ],
+        'AAS': [
+            'system_suitability',
+            'specificity', 
+            'system_precision',
+            'method_precision',
+            'linearity',
+            'recovery',
+            'robustness'
+        ],
+        'HPLC': [
+            'system_suitability',
+            'specificity',
+            'system_precision',
+            'method_precision',
+            'intermediate_precision',
+            'linearity',
+            'recovery',
+            'robustness'
+        ],
+        'UPLC': [
+            'system_suitability',
+            'specificity',
+            'system_precision',
+            'method_precision',
+            'intermediate_precision',
+            'linearity',
+            'recovery',
+            'robustness'
+        ],
+        'GC': [
+            'system_suitability',
+            'specificity',
+            'system_precision',
+            'method_precision',
+            'intermediate_precision',
+            'linearity',
+            'recovery',
+            'robustness'
+        ],
+        'Titration': [
+            'system_precision',
+            'method_precision',
+            'linearity',
+            'recovery'
+        ]
+    };
+    
+    // Get the parameters for the selected instrument type
+    const selectedParams = validationParameters[instrumentType] || [];
+    
+    if (selectedParams.length > 0) {
+        // First, uncheck all validation parameter checkboxes
+        document.querySelectorAll('input[name="val_params"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        // Then check the ones for the selected instrument type
+        selectedParams.forEach(paramValue => {
+            const checkbox = document.querySelector(`input[name="val_params"][value="${paramValue}"]`);
+            if (checkbox) {
+                checkbox.checked = true;
+            }
+        });
+        
+        // Show the auto-selection notification
+        const notification = document.getElementById('auto-selection-notification');
+        if (notification) {
+            notification.classList.remove('hidden');
+            
+            // Auto-hide the notification after 5 seconds
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 5000);
+        }
+        
+        // Show a success message
+        showNotification(`Auto-selected ${selectedParams.length} validation parameters for ${instrumentType}`, 'success');
+    }
+}
+
+// Show notification function (make sure it exists)
+function showNotification(message, type = 'info') {
+    // Your existing showNotification function implementation
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-500 text-white' : 
+        type === 'error' ? 'bg-red-500 text-white' : 
+        'bg-blue-500 text-white'
+    }`;
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mr-2"></i>
+            <span>${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
 </script>
 {% endblock %}

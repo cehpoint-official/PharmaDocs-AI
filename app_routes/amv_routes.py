@@ -1251,6 +1251,19 @@ def generate_verification_protocol():
         return redirect(url_for('auth.login'))
     
     try:
+        print("🔍 Received form data:", request.form)
+        print("🔍 Form keys:", list(request.form.keys()))
+        
+        # Get validation parameters from form
+        val_params_json = request.form.get('val_params_json', '[]')
+        selected_val_params = json.loads(val_params_json) if val_params_json else []
+        
+        print(f"🎯 Selected validation parameters from form: {selected_val_params}")
+
+
+
+
+
         form_data = request.form
         
         # Get the actual selected IDs from form
@@ -1356,7 +1369,8 @@ def generate_verification_protocol():
             'selected_equipment_json': json.dumps(selected_equipment),
             'selected_glass_materials_json': json.dumps(selected_glass),
             'selected_reagents_json': json.dumps(selected_reagents),
-            'selected_reference_json': json.dumps(selected_reference)
+            'selected_reference_json': json.dumps(selected_reference),
+            'val_params': selected_val_params
         }
         
         # Get validation parameters
