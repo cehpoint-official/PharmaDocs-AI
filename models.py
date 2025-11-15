@@ -20,17 +20,82 @@ class User(db.Model):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     last_login: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=True, default="")
+    subscription_plan: Mapped[str] = mapped_column(String(50), default='free', nullable=False)
+    subscription_expiry: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    stripe_customer_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    razorpay_customer_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    subscription_status: Mapped[str] = mapped_column(String(50), default='active', nullable=False)  # active, canceled, past_due, incomplete
+    trial_ends_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    documents_limit: Mapped[int] = mapped_column(Integer, default=5, nullable=False)  # Per month limit
 
     # Relationships
     companies: Mapped[List["Company"]] = relationship("Company", back_populates="user")
     documents: Mapped[List["Document"]] = relationship("Document", back_populates="user")
     activity_logs: Mapped[List["ActivityLog"]] = relationship("ActivityLog", back_populates="user")
+    subscriptions: Mapped[List["Subscription"]] = relationship("Subscription", back_populates="user")
+    payments: Mapped[List["Payment"]] = relationship("Payment", back_populates="user")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def get_plan_limits(self):
+        """Get limits for current subscription plan"""
+        limits = {
+            'free': {
+                'documents_per_month': 5,
+                'storage_mb': 100,
+                'api_requests_per_day': 10,
+                'features': ['basic_reports', 'email_support']
+            },
+            'basic': {
+                'documents_per_month': 50,
+                'storage_mb': 1000,
+                'api_requests_per_day': 100,
+                'features': ['basic_reports', 'advanced_reports', 'email_support', 'priority_support']
+            },
+            'premium': {
+                'documents_per_month': -1,  # Unlimited
+                'storage_mb': 10000,
+                'api_requests_per_day': 1000,
+                'features': ['all_reports', 'custom_templates', 'priority_support', 'phone_support', 'api_access']
+            }
+        }
+        return limits.get(self.subscription_plan, limits['free'])
+
+    def can_create_document(self):
+        """Check if user can create more documents this month"""
+        if self.subscription_plan == 'premium':
+            return True
+        
+        from datetime import datetime
+        from sqlalchemy import extract
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        
+        monthly_docs = Document.query.filter(
+            Document.user_id == self.id,
+            extract('month', Document.created_at) == current_month,
+            extract('year', Document.created_at) == current_year
+        ).count()
+        
+        limits = self.get_plan_limits()
+        return monthly_docs < limits['documents_per_month']
+
+    def is_subscription_active(self):
+        """Check if subscription is active and not expired"""
+        if self.subscription_plan == 'free':
+            return True
+        
+        if self.subscription_status != 'active':
+            return False
+            
+        if self.subscription_expiry and self.subscription_expiry < datetime.now():
+            return False
+            
+        return True
 
 class Company(db.Model):
     __tablename__ = 'companies'
@@ -448,3 +513,133 @@ class AMVVerificationDocument(db.Model):
     def set_validation_parameters(self, params):
         """Set validation parameters from list"""
         self.validation_parameters = json.dumps(params)
+
+class Subscription(db.Model):
+    """Model for tracking subscription history and details"""
+    __tablename__ = 'subscriptions'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    stripe_subscription_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    razorpay_subscription_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    razorpay_plan_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    plan_name: Mapped[str] = mapped_column(String(50), nullable=False)  # free, basic, premium
+    status: Mapped[str] = mapped_column(String(50), nullable=False)  # active, canceled, past_due, incomplete, trialing
+    current_period_start: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    current_period_end: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
+    canceled_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    trial_start: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    trial_end: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(), onupdate=datetime.now())
+
+    # Relationships
+    user: Mapped["User"] = relationship("User", back_populates="subscriptions")
+    payments: Mapped[List["Payment"]] = relationship("Payment", back_populates="subscription")
+
+    def is_trial(self):
+        """Check if subscription is in trial period"""
+        if not self.trial_start or not self.trial_end:
+            return False
+        now = datetime.now()
+        return self.trial_start <= now <= self.trial_end
+
+    def days_until_expiry(self):
+        """Get days until subscription expires"""
+        if not self.current_period_end:
+            return None
+        delta = self.current_period_end - datetime.now()
+        return max(0, delta.days)
+
+class Payment(db.Model):
+    """Model for tracking all payment transactions"""
+    __tablename__ = 'payments'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    subscription_id: Mapped[int] = mapped_column(Integer, ForeignKey('subscriptions.id'), nullable=True)
+    stripe_payment_intent_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    stripe_charge_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    razorpay_order_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    razorpay_payment_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)  # Amount in paise for INR or cents for USD
+    currency: Mapped[str] = mapped_column(String(10), default='usd', nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)  # succeeded, failed, pending, refunded
+    payment_method: Mapped[str] = mapped_column(String(50), nullable=True)  # card, bank_transfer, etc.
+    description: Mapped[str] = mapped_column(String(500), nullable=True)
+    payment_metadata: Mapped[str] = mapped_column(Text, nullable=True)  # JSON string for additional data
+    receipt_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    refunded_amount: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # Amount refunded in cents
+    failure_reason: Mapped[str] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now())
+
+    # Relationships
+    user: Mapped["User"] = relationship("User", back_populates="payments")
+    subscription: Mapped["Subscription"] = relationship("Subscription", back_populates="payments")
+
+    def get_amount_dollars(self):
+        """Get amount in dollars"""
+        return self.amount / 100.0
+
+    def get_refunded_dollars(self):
+        """Get refunded amount in dollars"""
+        return self.refunded_amount / 100.0
+
+    def is_successful(self):
+        """Check if payment was successful"""
+        return self.status == 'succeeded'
+
+    def is_refunded(self):
+        """Check if payment was refunded"""
+        return self.refunded_amount > 0
+
+    def get_metadata(self):
+        """Get metadata as dictionary"""
+        if self.metadata:
+            try:
+                return json.loads(self.metadata)
+            except:
+                return {}
+        return {}
+
+    def set_metadata(self, data):
+        """Set metadata from dictionary"""
+        self.metadata = json.dumps(data)
+
+class SubscriptionPlan(db.Model):
+    """Model for defining subscription plan details"""
+    __tablename__ = 'subscription_plans'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    price: Mapped[int] = mapped_column(Integer, nullable=False)  # Price in cents
+    currency: Mapped[str] = mapped_column(String(10), default='usd', nullable=False)
+    billing_interval: Mapped[str] = mapped_column(String(20), default='month', nullable=False)  # month, year
+    stripe_price_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    documents_per_month: Mapped[int] = mapped_column(Integer, nullable=False)
+    storage_mb: Mapped[int] = mapped_column(Integer, nullable=False)
+    api_requests_per_day: Mapped[int] = mapped_column(Integer, nullable=False)
+    features: Mapped[str] = mapped_column(Text, nullable=True)  # JSON string of features
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now())
+
+    def get_price_dollars(self):
+        """Get price in dollars"""
+        return self.price / 100.0
+
+    def get_features_list(self):
+        """Get features as list"""
+        if self.features:
+            try:
+                return json.loads(self.features)
+            except:
+                return []
+        return []
+
+    def set_features_list(self, features):
+        """Set features from list"""
+        self.features = json.dumps(features)

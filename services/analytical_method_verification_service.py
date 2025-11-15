@@ -1233,12 +1233,11 @@ class AnalyticalMethodVerificationService:
             # Ultimate fallback - return empty bytes
             return io.BytesIO()
     
-    def generate_verification_protocol(self, method_info, selected_params, protocol_data):
+    def generate_verification_protocol(self, method_info, protocol_data):
         """Generate protocol from form data - COMPLETELY FIXED VERSION"""
         try:
             print("🔍 DEBUG: generate_verification_protocol called")
             print(f"📦 protocol_data keys: {list(protocol_data.keys()) if protocol_data else 'None'}")
-            print(f"📦 Full protocol_data: {protocol_data}")
             
             # Ensure we have valid data
             if not protocol_data:
@@ -1246,83 +1245,87 @@ class AnalyticalMethodVerificationService:
             if not method_info:
                 method_info = {}
 
-            # Get selected validation parameters from the form
+            # **CRITICAL FIX: Get validation parameters from the form**
             selected_val_params = protocol_data.get('val_params', [])
             print(f"🔍 RAW val_params: {selected_val_params} (type: {type(selected_val_params)})")
 
-            # Define the order of parameters as they appear in the form
-            parameters = [
-                ("6.1", "System Suitability"),
-                ("6.2", "Specificity"),
-                ("6.3", "System Precision"),
-                ("6.4", "Method Precision"),
-                ("6.5", "Intermediate Precision"),
-                ("6.6", "Linearity and Range"),
-                ("6.7", "Accuracy/Recovery"),
-                ("6.8", "Robustness"),
-                ("6.9", "Range"),
-                ("6.10", "LOD and LOQ"),
-                ("6.11", "LOD and LOQ Precision")
-            ]
+            # **FIXED: Handle different data types properly**
+            if isinstance(selected_val_params, str):
+                # Convert string to list
+                if selected_val_params.strip() and selected_val_params.startswith('['):
+                    try:
+                        selected_val_params = json.loads(selected_val_params)
+                    except:
+                        selected_val_params = [p.strip() for p in selected_val_params.split(',') if p.strip()]
+                else:
+                    selected_val_params = [selected_val_params] if selected_val_params.strip() else []
+            
+            # Ensure it's a list
+            if not isinstance(selected_val_params, list):
+                selected_val_params = [selected_val_params] if selected_val_params else []
 
-            # Create a dictionary to store the selected validation parameters
-            verification_parameters = {}
+            print(f"🔍 PROCESSED val_params: {selected_val_params}")
 
-            # FIRST: Check if ANY parameters are actually selected in the form
-            has_selected_params = False
-            if selected_val_params:
-                if isinstance(selected_val_params, list) and len(selected_val_params) > 0:
-                    has_selected_params = True
-                    print(f"✅ Form has selected parameters: {selected_val_params}")
-                elif isinstance(selected_val_params, dict) and any(selected_val_params.values()):
-                    has_selected_params = True
-                elif isinstance(selected_val_params, str) and selected_val_params.strip():
-                    has_selected_params = True
+            # **FIXED: Correct parameter mapping that matches HTML checkbox values**
+            parameter_mapping = {
+                # Frontend value -> Section number
+                'system_suitability': '6.1',
+                'specificity': '6.2', 
+                'system_precision': '6.3',
+                'method_precision': '6.4',
+                'intermediate_precision': '6.5',
+                'linearity': '6.6',
+                'recovery': '6.7',
+                'robustness': '6.8',
+                'range': '6.9',
+                'lod_loq': '6.10',
+                'lod_loq_precision': '6.11'
+            }
+            
+            # Display names for sections
+            display_names = {
+                '6.1': 'System Suitability',
+                '6.2': 'Specificity',
+                '6.3': 'System Precision', 
+                '6.4': 'Method Precision',
+                '6.5': 'Intermediate Precision',
+                '6.6': 'Linearity and Range',
+                '6.7': 'Accuracy/Recovery',
+                '6.8': 'Robustness',
+                '6.9': 'Range',
+                '6.10': 'LOD and LOQ',
+                '6.11': 'LOD and LOQ Precision'
+            }
 
-            # Populate the dictionary based on the selected parameters from the form
-            for key, param_name in parameters:
-                is_selected = False
+            # Initialize all parameters to False
+            verification_parameters = {key: False for key in display_names.keys()}
+            
+            # **FIXED: Map frontend checkbox values to section numbers**
+            for frontend_value in selected_val_params:
+                frontend_value_str = str(frontend_value).strip()
+                print(f"🔍 Processing frontend value: '{frontend_value_str}'")
                 
-                if has_selected_params:
-                    # Convert the parameter name to form-friendly values for matching
-                    form_value_simple = param_name.lower().replace(" ", "_")
-                    form_value_display = param_name
-                    
-                    # Handle different data types from frontend
-                    if isinstance(selected_val_params, list):
-                        # Check each parameter in the list
-                        for param in selected_val_params:
-                            param_str = str(param).strip()
-                            
-                            # Multiple matching strategies
-                            if (param_str == key or  # Exact key match "6.1"
-                                param_str == form_value_simple or  # "system_suitability"
-                                param_str == form_value_display or  # "System Suitability"
-                                param_name.lower() == param_str.lower() or  # Case insensitive name match
-                                f"6.{key.split('.')[1]}" == param_str):  # Handle "6.1" format
-                                
-                                is_selected = True
-                                print(f"🎯 Matched parameter {key} with form value: {param_str}")
-                                break
-                    
-                    elif isinstance(selected_val_params, dict):
-                        # Check dictionary keys
-                        is_selected = selected_val_params.get(key, False)
-                    
-                    elif isinstance(selected_val_params, str):
-                        # Handle comma-separated string
-                        params_list = [p.strip() for p in selected_val_params.split(',')]
-                        is_selected = key in params_list or form_value_simple in params_list or param_name in params_list
+                # Direct mapping from checkbox value to section number
+                if frontend_value_str in parameter_mapping:
+                    section_number = parameter_mapping[frontend_value_str]
+                    verification_parameters[section_number] = True
+                    print(f"✅ Mapped '{frontend_value_str}' -> '{section_number}'")
                 
-                verification_parameters[key] = is_selected
-                print(f"📋 Parameter {key} ({param_name}): {is_selected}")
+                # If it's already a section number
+                elif frontend_value_str in display_names:
+                    verification_parameters[frontend_value_str] = True
+                    print(f"✅ Direct section number: '{frontend_value_str}'")
+                
+                else:
+                    print(f"❌ No mapping found for: '{frontend_value_str}'")
 
             # Count selected parameters
             selected_count = sum(verification_parameters.values())
             print(f"📊 Total parameters selected from form: {selected_count}")
+            print(f"🎯 Final verification_parameters: {verification_parameters}")
 
             # ONLY use defaults if NO parameters were selected in the form
-            if selected_count == 0 and not has_selected_params:
+            if selected_count == 0:
                 # Get the ACTUAL test method from protocol_data
                 actual_test_method = protocol_data.get('test_method', protocol_data.get('testMethod', 'HPLC'))
                 print(f"⚠️ No parameters selected in form, using defaults for: {actual_test_method}")
@@ -1332,33 +1335,33 @@ class AnalyticalMethodVerificationService:
                     default_params = ["6.1", "6.2", "6.3", "6.4", "6.7"]
                     print("🎯 Using HPLC defaults")
                 elif actual_test_method.upper() in ['TITRATION', 'TITRIMETRY']:
-                    default_params = ["6.3", "6.4", "6.7"]  # Removed System Suitability for Titration
+                    default_params = ["6.3", "6.4", "6.7"]
                     print("🎯 Using TITRATION defaults")
                 elif actual_test_method.upper() in ['UV', 'SPECTROPHOTOMETRY']:
-                    default_params = ["6.2", "6.4", "6.7"]  # Specificity, Method Precision, Accuracy
+                    default_params = ["6.2", "6.4", "6.7"]
                     print("🎯 Using UV defaults")
                 else:
                     default_params = ["6.1", "6.2", "6.4", "6.7"]
                     print("🎯 Using GENERIC defaults")
                 
                 # Update verification parameters with defaults
-                for key in verification_parameters:
-                    verification_parameters[key] = key in default_params
+                for param in default_params:
+                    if param in verification_parameters:
+                        verification_parameters[param] = True
             else:
                 print("✅ Using parameters selected in form (NOT defaults)")
 
-            # **FIXED: Properly extract ALL form data with proper fallbacks**
-            # Get the actual form data with proper field names
+            # **FIXED: Extract ALL form data with proper fallbacks**
             form_data_for_protocol = {
                 # Basic Information
-                'product_name': protocol_data.get('product_name', protocol_data.get('productName', '')),
-                'protocol_number': protocol_data.get('protocol_number', protocol_data.get('protocolNumber', '')),
+                'product_name': protocol_data.get('product_name', protocol_data.get('productName', 'Unknown Product')),
+                'protocol_number': protocol_data.get('protocol_number', protocol_data.get('protocolNumber', 'AMV-PROTOCOL-001')),
                 'test_method': protocol_data.get('test_method', protocol_data.get('testMethod', 'HPLC')),
-                'active_ingredient': protocol_data.get('active_ingredient', protocol_data.get('activeIngredient', '')),
+                'active_ingredient': protocol_data.get('active_ingredient', protocol_data.get('activeIngredient', 'Unknown Ingredient')),
                 'label_claim': protocol_data.get('label_claim', protocol_data.get('labelClaim', '')),
-                'company_name': protocol_data.get('company_name', protocol_data.get('companyName', '')),
+                'company_name': protocol_data.get('company_name', protocol_data.get('companyName', 'Unknown Company')),
                 'company_location': protocol_data.get('company_location', protocol_data.get('companyLocation', '')),
-                'specification_range': protocol_data.get('specification_range', protocol_data.get('specificationRange', '')),
+                'specification_range': protocol_data.get('specification_range', protocol_data.get('specificationRange', '90.0% - 110.0%')),
                 'methodology_code': protocol_data.get('methodology_code', protocol_data.get('methodologyCode', '')),
                 'standard_potency': protocol_data.get('standard_potency', protocol_data.get('standardPotency', '')),
                 
@@ -1383,8 +1386,13 @@ class AnalyticalMethodVerificationService:
                 
                 # Team Information
                 'prepared_by_name': protocol_data.get('prepared_by_name', protocol_data.get('preparedByName', '')),
+                'prepared_by_dept': protocol_data.get('prepared_by_dept', protocol_data.get('preparedByDept', 'Quality Control')),
                 'reviewed_by_name': protocol_data.get('reviewed_by_name', protocol_data.get('reviewedByName', '')),
+                'reviewed_by_dept': protocol_data.get('reviewed_by_dept', protocol_data.get('reviewedByDept', 'Quality Control')),
                 'approved_by_name': protocol_data.get('approved_by_name', protocol_data.get('approvedByName', '')),
+                'approved_by_dept': protocol_data.get('approved_by_dept', protocol_data.get('approvedByDept', 'Quality Assurance')),
+                'authorized_by_name': protocol_data.get('authorized_by_name', protocol_data.get('authorizedByName', '')),
+                'authorized_by_dept': protocol_data.get('authorized_by_dept', protocol_data.get('authorizedByDept', 'Quality Assurance')),
                 
                 # Additional parameters
                 'mode': protocol_data.get('mode', 'LC'),
