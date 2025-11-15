@@ -27,9 +27,61 @@
                             type="text" 
                             name="product_name" 
                             required
+                            value="{{ template.product_name or '' }}"
                             placeholder="e.g., Fluorouracil Injection BP 50mg/ml"
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Protocol Number <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="protocol_number" 
+                            required
+                            placeholder="e.g., PVP/001/2024"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Batch Size <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="batch_size" 
+                            required
+                            value="{{ template.batch_size or '' }}"
+                            placeholder="e.g., 50.0 Liters / 2500 units"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Manufacturing Site <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="manufacturing_site" 
+                            required
+                            placeholder="e.g., Plant 1, Block A"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Validation Type <span class="text-red-500">*</span>
+                        </label>
+                        <select 
+                            name="validation_type" 
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="Prospective">Prospective</option>
+                            <option value="Concurrent">Concurrent</option>
+                            <option value="Retrospective">Retrospective</option>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -49,13 +101,59 @@
                 </div>
             </div>
 
+            <!-- Approval Personnel -->
+            <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-user-check text-green-600 mr-2"></i>
+                    Approval Personnel
+                </h3>
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Prepared By <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="prepared_by" 
+                            required
+                            placeholder="Name & Designation"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Checked By <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="checked_by" 
+                            required
+                            placeholder="Name & Designation"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Approved By <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="approved_by" 
+                            required
+                            placeholder="Name & Designation"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        >
+                    </div>
+                </div>
+            </div>
+
             <!-- Batch Numbers -->
             <div>
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">
                     <i class="fas fa-vials text-purple-600 mr-2"></i>
-                    Batch Numbers
+                    Batch Details
                 </h3>
-                <div id="batch-numbers-container" class="grid md:grid-cols-3 gap-4">
+                <div id="batch-numbers-container" class="space-y-4">
                     <!-- Batch inputs will be generated here -->
                 </div>
             </div>
@@ -142,21 +240,49 @@ const batchInputCells = document.querySelectorAll('.batch-input-cell');
 function updateBatches() {
     const count = parseInt(batchCountSelect.value);
     
-    // Update batch number inputs
+    // Update batch number inputs with detailed fields
     batchNumbersContainer.innerHTML = '';
     for (let i = 1; i <= count; i++) {
         const div = document.createElement('div');
+        div.className = 'bg-purple-50 border border-purple-200 rounded-lg p-4';
         div.innerHTML = `
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                Batch ${i} <span class="text-red-500">*</span>
-            </label>
-            <input 
-                type="text" 
-                name="batch_number[]" 
-                required
-                placeholder="e.g., FLU-001-2024"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
+            <h4 class="font-semibold text-gray-800 mb-3 text-lg">Batch ${i}</h4>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Batch Number <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        name="batch_${i}_number" 
+                        required
+                        placeholder="e.g., FLU-001-2024"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Manufacturing Date <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="date" 
+                        name="batch_${i}_date" 
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Batch Size
+                    </label>
+                    <input 
+                        type="text" 
+                        name="batch_${i}_size" 
+                        placeholder="e.g., 50.0 L"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                </div>
+            </div>
         `;
         batchNumbersContainer.appendChild(div);
     }

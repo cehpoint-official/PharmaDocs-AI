@@ -18,7 +18,7 @@
                 </p>
                 <p class="text-sm text-gray-500 mt-1">
                     <i class="fas fa-file-alt mr-1"></i>
-                    Template: <strong>{{ report.pvp_template.product_name }}</strong>
+                    Template: <strong>{{ report.template.product_name }}</strong>
                 </p>
             </div>
             <div class="flex gap-2">
@@ -34,7 +34,7 @@
                     Download Word
                 </a>
                 {% endif %}
-                <a href="{{ url_for('pv.view_pvp_template', template_id=report.pvp_template.id) }}" 
+                <a href="{{ url_for('pv.view_pvp_template', template_id=report.template.id) }}" 
                    class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
                     Back to Template
                 </a>

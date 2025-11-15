@@ -259,24 +259,22 @@ Return only the JSON array, no other text.
             equipment.extend(equipment_from_tables)
             logger.info(f"Extracted {len(equipment_from_tables)} equipment from tables")
         
-        # Also try regex patterns as backup
-        equipment_patterns = [
-            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+\(?([A-Z]{2,}-\d+)\)?',  # Balance (BAL-001)
-            r'Equipment:\s*([A-Za-z\s]+)',
-            r'Instrument:\s*([A-Za-z\s]+)'
-        ]
+        # Extract from text - look for equipment section
+        equipment_section_pattern = r'(?:equipment and machinery list|production equipment)(.*?)(?:engineering equipment|raw material|quality control|$)'
+        match = re.search(equipment_section_pattern, self.full_text, re.IGNORECASE | re.DOTALL)
         
-        for pattern in equipment_patterns:
-            matches = re.finditer(pattern, self.full_text, re.MULTILINE)
-            for match in matches:
-                equip_name = match.group(1).strip()
-                equip_id = match.group(2) if len(match.groups()) > 1 else ''
-                
-                # Avoid duplicates
-                if not any(e['equipment_name'] == equip_name for e in equipment):
+        if match:
+            equipment_text = match.group(1)
+            # Look for equipment entries with IDs
+            # Pattern: equipment name followed by ID code
+            lines = equipment_text.split('\n')
+            for line in lines:
+                line = line.strip()
+                if len(line) > 5 and not line.lower().startswith('s.no'):
+                    # Skip headers and short lines
                     equipment.append({
-                        'equipment_name': equip_name,
-                        'equipment_id': equip_id,
+                        'equipment_name': line[:50],  # First 50 chars as name
+                        'equipment_id': '',
                         'location': '',
                         'calibration_status': 'Valid'
                     })
@@ -288,16 +286,19 @@ Return only the JSON array, no other text.
         """Extract equipment from tables in the PDF"""
         equipment = []
         
-        for table in self.tables:
+        for idx, table in enumerate(self.tables):
             df = table.df
             
             # Check if this table contains equipment data
             # Look for columns like: Equipment, Equipment ID, Equipment Name, etc.
             headers = df.iloc[0].str.lower() if len(df) > 0 else []
             
-            equipment_keywords = ['equipment', 'instrument', 'machine', 'apparatus']
-            id_keywords = ['id', 'code', 'no.', 'number']
-            location_keywords = ['location', 'area', 'room']
+            # DEBUG: Print table headers to see what we have
+            logger.info(f"Table {idx} headers: {list(headers)}")
+            
+            equipment_keywords = ['equipment', 'instrument', 'machine', 'apparatus', 'balance', 'item']
+            id_keywords = ['id', 'code', 'no.', 'number', 'sr']
+            location_keywords = ['location', 'area', 'room', 'department']
             
             # Check if this is an equipment table
             is_equipment_table = any(
@@ -540,23 +541,47 @@ Return only the JSON array, no other text.
         """Extract stages using regex, templates, and table matching"""
         
         stages = []
-        stage_names = self._get_stage_template_names()
         
-        # Method 1: Try to extract from tables first
+        # Method 1: Extract from process flow diagram or manufacturing process section
+        process_section_pattern = r'(?:manufacturing process|process flow diagram)(.*?)(?:filling|sealing|labelling|sampling|$)'
+        match = re.search(process_section_pattern, self.full_text, re.IGNORECASE | re.DOTALL)
+        
+        if match:
+            process_text = match.group(1)
+            # Look for numbered steps or process names
+            step_patterns = [
+                r'(?:step|stage)\s+(\d+)[:\s]+([^\n]+)',
+                r'^\s*(\d+)\.\s+([A-Z][^\n]{10,80})',
+            ]
+            
+            for pattern in step_patterns:
+                matches = re.finditer(pattern, process_text, re.MULTILINE | re.IGNORECASE)
+                for match in matches:
+                    stage_num = int(match.group(1)) if match.group(1).isdigit() else len(stages) + 1
+                    stage_name = match.group(2).strip()
+                    
+                    if not any(s['stage_name'].lower() == stage_name.lower() for s in stages):
+                        stages.append({
+                            'stage_number': stage_num,
+                            'stage_name': stage_name,
+                            'equipment_used': '',
+                            'parameters': '',
+                            'acceptance_criteria': ''
+                        })
+        
+        # Method 2: Try table extraction
         stages_from_tables = self._extract_stages_from_tables()
         if stages_from_tables:
             stages.extend(stages_from_tables)
             logger.info(f"Extracted {len(stages_from_tables)} stages from tables")
         
-        # Method 2: Search for each stage name in text
+        # Method 3: Get stage names from template
+        stage_names = self._get_stage_template_names()
         for i, stage_name in enumerate(stage_names, 1):
-            # Skip if already found in tables
             if any(s['stage_name'].lower() == stage_name.lower() for s in stages):
                 continue
             
-            # Clean stage name for searching
             search_term = stage_name.lower().replace('(if applicable)', '').strip()
-            
             if search_term in self.full_text.lower():
                 stages.append({
                     'stage_number': i,
@@ -566,42 +591,24 @@ Return only the JSON array, no other text.
                     'acceptance_criteria': ''
                 })
         
-        # Method 3: Look for numbered process steps
-        if len(stages) < 3:  # If we haven't found many stages yet
-            stage_pattern = r'(?:Step|Stage|Process)\s+(\d+)[:\s]+([A-Z][a-zA-Z\s]+)'
-            matches = re.finditer(stage_pattern, self.full_text, re.MULTILINE)
-            
-            for match in matches:
-                stage_num = int(match.group(1))
-                stage_name = match.group(2).strip()
-                
-                # Avoid duplicates
-                if not any(s['stage_name'].lower() == stage_name.lower() for s in stages):
-                    stages.append({
-                        'stage_number': stage_num,
-                        'stage_name': stage_name,
-                        'equipment_used': '',
-                        'parameters': '',
-                        'acceptance_criteria': ''
-                    })
-        
-        # Sort by stage number
         stages.sort(key=lambda x: x['stage_number'])
-        
         logger.info(f"Total extracted {len(stages)} stages")
-        return stages[:30]  # Limit to 30 stages
+        return stages[:30]
     
     def _extract_stages_from_tables(self) -> List[Dict]:
         """Extract manufacturing stages from tables"""
         stages = []
         
-        for table in self.tables:
+        for idx, table in enumerate(self.tables):
             df = table.df
             
             # Check if this table contains stage/process data
             headers = df.iloc[0].str.lower() if len(df) > 0 else []
             
-            stage_keywords = ['stage', 'step', 'process', 'operation', 'activity']
+            # DEBUG: Log table info
+            logger.info(f"Table {idx} has {len(df)} rows, headers: {list(headers)}")
+            
+            stage_keywords = ['stage', 'step', 'process', 'operation', 'activity', 'procedure']
             
             # Check if this is a stages table
             is_stage_table = any(

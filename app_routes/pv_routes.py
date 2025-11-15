@@ -60,6 +60,12 @@ def upload_pvp():
         return redirect(request.url)
     
     try:
+        # Get template name from form
+        template_name = request.form.get('template_name', '').strip()
+        if not template_name:
+            flash('Please provide a template name', 'error')
+            return redirect(request.url)
+        
         # Save uploaded file
         filename = secure_filename(file.filename)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -80,11 +86,12 @@ def upload_pvp():
         batch_size = extracted_data['product_info'].get('batch_size', '')
         
         pvp_template = PVP_Template(
+            template_name=template_name,
+            original_filepath=filepath,
+            user_id=session['user_id'],
             product_name=product_name,
             product_type=product_type,
-            batch_size=batch_size,
-            filepath=filepath,
-            user_id=session['user_id']
+            batch_size=batch_size
         )
         db.session.add(pvp_template)
         db.session.flush()  # Get ID
@@ -224,23 +231,42 @@ def generate_pvr(template_id):
     
     # Handle POST - generate report
     try:
-        # Get batch data from form
-        batch_numbers = request.form.getlist('batch_number[]')
+        # Get form data
+        batch_count = int(request.form.get('batch-count', 3))
         
-        if not batch_numbers or len(batch_numbers) < 3:
-            flash('Please enter data for at least 3 batches', 'error')
+        # Collect batch numbers
+        batch_numbers = []
+        batch_details = {}
+        
+        for i in range(1, batch_count + 1):
+            batch_num = request.form.get(f'batch_{i}_number', '')
+            if batch_num:
+                batch_numbers.append(batch_num)
+                batch_details[batch_num] = {
+                    'manufacturing_date': request.form.get(f'batch_{i}_date', ''),
+                    'batch_size': request.form.get(f'batch_{i}_size', '')
+                }
+        
+        if not batch_numbers or len(batch_numbers) < 1:
+            flash('Please enter at least one batch', 'error')
             return redirect(request.url)
         
-        # Create PVR Report
+        # Create PVR Report with new metadata fields
         pvr_report = PVR_Report(
             pvp_template_id=template_id,
             user_id=session['user_id'],
-            status='Generated'
+            status='Generated',
+            protocol_number=request.form.get('protocol_number', ''),
+            validation_type=request.form.get('validation_type', 'Prospective'),
+            manufacturing_site=request.form.get('manufacturing_site', ''),
+            prepared_by=request.form.get('prepared_by', ''),
+            checked_by=request.form.get('checked_by', ''),
+            approved_by=request.form.get('approved_by', '')
         )
         db.session.add(pvr_report)
         db.session.flush()
         
-        # Save batch data
+        # Save batch data with manufacturing date and batch size
         criteria = PVP_Criteria.query.filter_by(pvp_template_id=template_id).all()
         
         for batch_num in batch_numbers:
@@ -252,6 +278,8 @@ def generate_pvr(template_id):
                     pvr_data = PVR_Data(
                         pvr_report_id=pvr_report.id,
                         batch_number=batch_num,
+                        manufacturing_date=batch_details[batch_num]['manufacturing_date'],
+                        batch_size=batch_details[batch_num]['batch_size'],
                         test_id=criterion.test_id,
                         test_result=test_result
                     )
@@ -262,7 +290,12 @@ def generate_pvr(template_id):
         # Prepare batch data for generators
         batch_data = []
         for batch_num in batch_numbers:
-            batch_info = {'batch_number': batch_num, 'test_results': {}}
+            batch_info = {
+                'batch_number': batch_num,
+                'manufacturing_date': batch_details[batch_num]['manufacturing_date'],
+                'batch_size': batch_details[batch_num]['batch_size'],
+                'test_results': {}
+            }
             for criterion in criteria:
                 test_result_key = f'result_{criterion.test_id}_{batch_num}'
                 batch_info['test_results'][criterion.test_name] = request.form.get(test_result_key, '')
@@ -308,7 +341,7 @@ def view_pvr(report_id):
         return redirect(url_for('auth.login'))
     
     report = PVR_Report.query.get_or_404(report_id)
-    template = report.pvp_template
+    template = report.template
     batch_data = PVR_Data.query.filter_by(pvr_report_id=report_id).all()
     
     return render_template('view_pvr.html',

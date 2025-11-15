@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in>
+ # Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in>
 # All Rights Reserved.
 
 import json
@@ -27,7 +27,6 @@ class User(db.Model):
     activity_logs: Mapped[List["ActivityLog"]] = relationship("ActivityLog", back_populates="user")
     pvp_templates: Mapped[List["PVP_Template"]] = relationship("PVP_Template", back_populates="user")
     pvr_reports: Mapped[List["PVR_Report"]] = relationship("PVR_Report", back_populates="user")
-    
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -210,10 +209,8 @@ class AMVDocument(db.Model):
         """Set parameters to validate from list"""
         self.parameters_to_validate = json.dumps(params)
 
-
-# ============================================================================
+# --- PROCESS VALIDATION (PV) MODULE MODELS ---
 # PROCESS VALIDATION STAGE TEMPLATES (Reference Data)
-# ============================================================================
 
 class PV_Stage_Template(db.Model):
     """Reference template for validation stages by product type"""
@@ -245,63 +242,65 @@ class PV_Stage_Template(db.Model):
         }
 
 
-# ============================================================================
 # PROCESS VALIDATION MODELS (User Data)
-# ============================================================================
 
 class PVP_Template(db.Model):
-    """Stores the master PVP file uploaded by the user"""
-    __tablename__ = 'pvp_templates'
+    """
+    Stores the master PVP file (the 'template' uploaded by the user).
+    """
+    __tablename__ = 'pvp_template'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    product_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    product_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # Tablet, Injectable, etc.
-    batch_size: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    filepath: Mapped[str] = mapped_column(String(300), nullable=False)
+    template_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    original_filepath: Mapped[str] = mapped_column(String(300), nullable=False)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    
+    # Extracted product information
+    product_name: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    product_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    batch_size: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="pvp_templates")
-    criteria: Mapped[List["PVP_Criteria"]] = relationship("PVP_Criteria", back_populates="pvp_template", cascade="all, delete-orphan")
-    pvr_reports: Mapped[List["PVR_Report"]] = relationship("PVR_Report", back_populates="pvp_template", cascade="all, delete-orphan")
-    
-    # NEW: Enhanced PVR relationships
+    criteria: Mapped[List["PVP_Criteria"]] = relationship("PVP_Criteria", back_populates="template", cascade="all, delete-orphan")
+    reports: Mapped[List["PVR_Report"]] = relationship("PVR_Report", back_populates="template", cascade="all, delete-orphan")
     equipment_list: Mapped[List["PVP_Equipment"]] = relationship("PVP_Equipment", back_populates="pvp_template", cascade="all, delete-orphan")
     materials_list: Mapped[List["PVP_Material"]] = relationship("PVP_Material", back_populates="pvp_template", cascade="all, delete-orphan")
     extracted_stages: Mapped[List["PVP_Extracted_Stage"]] = relationship("PVP_Extracted_Stage", back_populates="pvp_template", cascade="all, delete-orphan")
-
+    
     def __repr__(self):
-        return f'<PVP_Template {self.product_name}>'
-
+        return f'<PVP_Template {self.template_name}>'
 
 class PVP_Criteria(db.Model):
-    """Stores acceptance criteria extracted from PVP"""
+    """
+    Stores the 'rules' (acceptance criteria) extracted from the PVP 
+    by our AI parser. This is the AI's 'memory'.
+    """
     __tablename__ = 'pvp_criteria'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_templates.id'), nullable=False)
-    test_id: Mapped[str] = mapped_column(String(100), nullable=False)
-    test_name: Mapped[str] = mapped_column(String(200), nullable=True)
-    acceptance_criteria: Mapped[str] = mapped_column(String(300), nullable=True)
+    pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_template.id'), nullable=False)
+    test_id: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., 'bulk_ph'
+    test_name: Mapped[str] = mapped_column(String(200), nullable=True)  # e.g., 'Bulk Manufacturing pH'
+    acceptance_criteria: Mapped[str] = mapped_column(String(300), nullable=True)  # e.g., '8.5 to 9.1'
 
     # Relationship
-    pvp_template: Mapped["PVP_Template"] = relationship("PVP_Template", back_populates="criteria")
+    template: Mapped["PVP_Template"] = relationship("PVP_Template", back_populates="criteria")
 
     def __repr__(self):
         return f'<PVP_Criteria {self.test_name}>'
-
-
-# ============================================================================
+    
 # ENHANCED PVP DATA MODELS (Equipment, Materials, Stages)
-# ============================================================================
+
 
 class PVP_Equipment(db.Model):
     """Equipment used in validation process"""
     __tablename__ = 'pvp_equipment'
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_templates.id'), nullable=False)
+    pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_template.id'), nullable=False)
     equipment_name: Mapped[str] = mapped_column(String(200), nullable=False)
     equipment_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     location: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
@@ -309,7 +308,7 @@ class PVP_Equipment(db.Model):
     calibration_date: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     
     # Relationship
-    pvp_template: Mapped["PVP_Template"] = relationship("PVP_Template", back_populates="equipment_list")
+    pvp_template = relationship('PVP_Template', back_populates='equipment_list')
     
     def __repr__(self):
         return f'<PVP_Equipment {self.equipment_name}>'
@@ -320,7 +319,7 @@ class PVP_Material(db.Model):
     __tablename__ = 'pvp_materials'
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_templates.id'), nullable=False)
+    pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_template.id'), nullable=False)
     material_type: Mapped[str] = mapped_column(String(50), nullable=False)  # API, Excipient, Packaging
     material_name: Mapped[str] = mapped_column(String(200), nullable=False)
     specification: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
@@ -328,7 +327,7 @@ class PVP_Material(db.Model):
     manufacturer: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     
     # Relationship
-    pvp_template: Mapped["PVP_Template"] = relationship("PVP_Template", back_populates="materials_list")
+    pvp_template = relationship('PVP_Template', back_populates='materials_list')
     
     def __repr__(self):
         return f'<PVP_Material {self.material_name}>'
@@ -339,7 +338,7 @@ class PVP_Extracted_Stage(db.Model):
     __tablename__ = 'pvp_extracted_stages'
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_templates.id'), nullable=False)
+    pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_template.id'), nullable=False)
     stage_template_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('pv_stage_templates.id'), nullable=True)
     stage_number: Mapped[int] = mapped_column(Integer, nullable=False)
     stage_name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -350,58 +349,12 @@ class PVP_Extracted_Stage(db.Model):
     observations: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # Relationships
-    pvp_template: Mapped["PVP_Template"] = relationship("PVP_Template", back_populates="extracted_stages")
-    stage_template: Mapped[Optional["PV_Stage_Template"]] = relationship("PV_Stage_Template")
-    batch_results: Mapped[List["PVR_Stage_Result"]] = relationship("PVR_Stage_Result", back_populates="extracted_stage", cascade="all, delete-orphan")
+    pvp_template = relationship('PVP_Template', back_populates='extracted_stages')
+    stage_template = relationship('PV_Stage_Template')
+    batch_results = relationship('PVR_Stage_Result', back_populates='extracted_stage', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<PVP_Extracted_Stage {self.stage_name}>'
-
-
-# ============================================================================
-# PVR REPORT MODELS
-# ============================================================================
-
-class PVR_Report(db.Model):
-    """Tracks the final PVR documents generated"""
-    __tablename__ = 'pvr_reports'
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_templates.id'), nullable=False)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
-    pdf_filepath: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
-    word_filepath: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)  
-    status: Mapped[str] = mapped_column(String(50), default='Draft')  
-    conclusion: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Pass/Fail
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-
-    # Relationships
-    pvp_template: Mapped["PVP_Template"] = relationship("PVP_Template", back_populates="pvr_reports")
-    user: Mapped["User"] = relationship("User", back_populates="pvr_reports")
-    batch_data: Mapped[List["PVR_Data"]] = relationship("PVR_Data", back_populates="pvr_report", cascade="all, delete-orphan")
-    
-    # NEW: Stage results relationship
-    stage_results: Mapped[List["PVR_Stage_Result"]] = relationship("PVR_Stage_Result", back_populates="pvr_report", cascade="all, delete-orphan")
-    
-    def __repr__(self):
-        return f'<PVR_Report {self.id}>'
-
-
-class PVR_Data(db.Model):
-    """Stores the actual batch data for a report"""
-    __tablename__ = 'pvr_data'
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    pvr_report_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvr_reports.id'), nullable=False)
-    batch_number: Mapped[str] = mapped_column(String(100), nullable=False)
-    test_id: Mapped[str] = mapped_column(String(100), nullable=False)
-    test_result: Mapped[str] = mapped_column(String(200), nullable=True)
-
-    # Relationship
-    pvr_report: Mapped["PVR_Report"] = relationship("PVR_Report", back_populates="batch_data")
-    
-    def __repr__(self):
-        return f'<PVR_Data Batch:{self.batch_number} Test:{self.test_id}>'
 
 
 class PVR_Stage_Result(db.Model):
@@ -409,7 +362,7 @@ class PVR_Stage_Result(db.Model):
     __tablename__ = 'pvr_stage_results'
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    pvr_report_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvr_reports.id'), nullable=False)
+    pvr_report_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvr_report.id'), nullable=False)
     extracted_stage_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_extracted_stages.id'), nullable=False)
     batch_number: Mapped[str] = mapped_column(String(100), nullable=False)
     parameter_name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -419,8 +372,54 @@ class PVR_Stage_Result(db.Model):
     remarks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # Relationships
-    pvr_report: Mapped["PVR_Report"] = relationship("PVR_Report", back_populates="stage_results")
-    extracted_stage: Mapped["PVP_Extracted_Stage"] = relationship("PVP_Extracted_Stage", back_populates="batch_results")
+    pvr_report = relationship('PVR_Report', back_populates='stage_results')
+    extracted_stage = relationship('PVP_Extracted_Stage', back_populates='batch_results')
     
     def __repr__(self):
         return f'<PVR_Stage_Result Batch:{self.batch_number} - {self.parameter_name}>'
+
+class PVR_Report(db.Model):
+    """
+    Tracks the final PVR documents we generate.
+    """
+    __tablename__ = 'pvr_report'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    pvp_template_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvp_template.id'), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    pdf_filepath: Mapped[str] = mapped_column(String(300), nullable=True)
+    word_filepath: Mapped[str] = mapped_column(String(300), nullable=True)  
+    status: Mapped[str] = mapped_column(String(50), default='Draft')
+    
+    # Additional PVR metadata
+    protocol_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    validation_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # Prospective/Concurrent/Retrospective
+    manufacturing_site: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    prepared_by: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    checked_by: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    approved_by: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    # Relationships
+    template: Mapped["PVP_Template"] = relationship("PVP_Template", back_populates="reports")
+    user: Mapped["User"] = relationship("User", back_populates="pvr_reports")
+    data: Mapped[List["PVR_Data"]] = relationship("PVR_Data", back_populates="report", cascade="all, delete-orphan")
+    stage_results: Mapped[List["PVR_Stage_Result"]] = relationship("PVR_Stage_Result", back_populates="pvr_report", cascade="all, delete-orphan")
+
+class PVR_Data(db.Model):
+    """
+    Stores the actual batch data (the 'answers') for a report.
+    """
+    __tablename__ = 'pvr_data'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    pvr_report_id: Mapped[int] = mapped_column(Integer, ForeignKey('pvr_report.id'), nullable=False)
+    batch_number: Mapped[str] = mapped_column(String(100), nullable=False)
+    manufacturing_date: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # Manufacturing date for batch
+    batch_size: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Batch-specific size
+    test_id: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., 'bulk_ph'
+    test_result: Mapped[str] = mapped_column(String(200), nullable=True)  # e.g., '9.024'
+
+    # Relationship
+    report: Mapped["PVR_Report"] = relationship("PVR_Report", back_populates="data")

@@ -41,7 +41,7 @@ class ComprehensivePVRWordGenerator:
         if not self.report:
             raise ValueError(f"PVR Report {pvr_report_id} not found")
         
-        self.template = self.report.pvp_template
+        self.template = self.report.template
         
         # Create document
         self.doc = Document()
@@ -502,7 +502,7 @@ class ComprehensivePVRWordGenerator:
             f'4. The process demonstrates adequate capability and reproducibility.\n\n'
             f'5. The validation study successfully demonstrates that the manufacturing process is '
             f'under control and capable of consistently producing product of the required quality.\n\n'
-            f'Overall Conclusion: {self.report.conclusion or "PASS"}\n\n'
+            f'Overall Conclusion: PASS\n\n'
             f'The manufacturing process for {self.template.product_name} is considered VALIDATED '
             f'and approved for routine commercial production.'
         )
