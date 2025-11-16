@@ -542,58 +542,59 @@ Return only the JSON array, no other text.
         
         stages = []
         
-        # Method 1: Extract from process flow diagram or manufacturing process section
-        process_section_pattern = r'(?:manufacturing process|process flow diagram)(.*?)(?:filling|sealing|labelling|sampling|$)'
-        match = re.search(process_section_pattern, self.full_text, re.IGNORECASE | re.DOTALL)
+        # Method 1: Extract major process headings (Dispensing, Filling, Lyophilization, etc.)
+        # These become the main stage headings
+        major_process_headings = [
+            ('Dispensing of Raw Material', r'dispensing\s+of\s+raw\s+material'),
+            ('Manufacturing Process', r'manufacturing\s*process'),
+            ('Filtration', r'filtration|aseptic\s+filtration'),
+            ('Filling & Partial Plugging', r'filling\s*(?:&|and)\s*partial\s+plugging'),
+            ('Lyophilization Process', r'lyophilization\s*process'),
+            ('Visual Inspection', r'visual\s+inspection'),
+            ('Sealing', r'sealing|capping'),
+            ('Packaging', r'packaging|packing'),
+            ('Labeling', r'labeling|labelling'),
+        ]
         
-        if match:
-            process_text = match.group(1)
-            # Look for numbered steps or process names
-            step_patterns = [
-                r'(?:step|stage)\s+(\d+)[:\s]+([^\n]+)',
-                r'^\s*(\d+)\.\s+([A-Z][^\n]{10,80})',
-            ]
-            
-            for pattern in step_patterns:
-                matches = re.finditer(pattern, process_text, re.MULTILINE | re.IGNORECASE)
-                for match in matches:
-                    stage_num = int(match.group(1)) if match.group(1).isdigit() else len(stages) + 1
-                    stage_name = match.group(2).strip()
-                    
-                    if not any(s['stage_name'].lower() == stage_name.lower() for s in stages):
-                        stages.append({
-                            'stage_number': stage_num,
-                            'stage_name': stage_name,
-                            'equipment_used': '',
-                            'parameters': '',
-                            'acceptance_criteria': ''
-                        })
+        for stage_name, pattern in major_process_headings:
+            if re.search(pattern, self.full_text, re.IGNORECASE):
+                # Find the section text for this stage
+                section_pattern = rf'{pattern}[:\s]*([^\n]{{0,500}})'
+                match = re.search(section_pattern, self.full_text, re.IGNORECASE | re.DOTALL)
+                
+                parameters = ''
+                if match and match.group(1):
+                    parameters = match.group(1).strip()[:200]
+                
+                stages.append({
+                    'stage_number': len(stages) + 1,
+                    'stage_name': stage_name,
+                    'equipment_used': '',
+                    'parameters': parameters,
+                    'acceptance_criteria': ''
+                })
         
         # Method 2: Try table extraction
         stages_from_tables = self._extract_stages_from_tables()
         if stages_from_tables:
-            stages.extend(stages_from_tables)
+            # Add table stages if not already present
+            for table_stage in stages_from_tables:
+                if not any(table_stage['stage_name'].lower() in s['stage_name'].lower() for s in stages):
+                    stages.append(table_stage)
             logger.info(f"Extracted {len(stages_from_tables)} stages from tables")
         
-        # Method 3: Get stage names from template
-        stage_names = self._get_stage_template_names()
-        for i, stage_name in enumerate(stage_names, 1):
-            if any(s['stage_name'].lower() == stage_name.lower() for s in stages):
-                continue
-            
-            search_term = stage_name.lower().replace('(if applicable)', '').strip()
-            if search_term in self.full_text.lower():
-                stages.append({
-                    'stage_number': i,
-                    'stage_name': stage_name,
-                    'equipment_used': '',
-                    'parameters': '',
-                    'acceptance_criteria': ''
-                })
+        # Remove duplicates and re-number
+        unique_stages = []
+        seen_names = set()
+        for stage in stages:
+            name_lower = stage['stage_name'].lower()
+            if name_lower not in seen_names:
+                seen_names.add(name_lower)
+                stage['stage_number'] = len(unique_stages) + 1
+                unique_stages.append(stage)
         
-        stages.sort(key=lambda x: x['stage_number'])
-        logger.info(f"Total extracted {len(stages)} stages")
-        return stages[:30]
+        logger.info(f"Total extracted {len(unique_stages)} unique stages")
+        return unique_stages[:30]
     
     def _extract_stages_from_tables(self) -> List[Dict]:
         """Extract manufacturing stages from tables"""

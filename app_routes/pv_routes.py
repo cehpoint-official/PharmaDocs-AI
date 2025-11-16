@@ -311,7 +311,7 @@ def generate_pvr(template_id):
         word_path = os.path.join(REPORT_FOLDER, word_filename)
         
         # Generate PDF and Word reports using comprehensive generators
-        pdf_generator = ComprehensivePVRGenerator(template, batch_data)
+        pdf_generator = ComprehensivePVRGenerator(template, batch_data, pvr_report)
         pdf_path = pdf_generator.generate_pdf(pdf_path)
         
         word_generator = ComprehensivePVRWordGenerator()

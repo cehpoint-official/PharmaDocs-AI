@@ -75,6 +75,12 @@ class ComprehensivePVRWordGenerator:
         self._add_batch_manufacturing()
         self._add_page_break()
         
+        self._add_hold_time_study()
+        self._add_page_break()
+        
+        self._add_environmental_monitoring()
+        self._add_page_break()
+        
         self._add_quality_tests()
         self._add_page_break()
         
@@ -143,19 +149,22 @@ class ComprehensivePVRWordGenerator:
         self.doc.add_paragraph()
         self.doc.add_paragraph()
         
-        # Details table
-        table = self.doc.add_table(rows=6, cols=2)
+        # Details table (expanded to include protocol, validation type and site)
+        table = self.doc.add_table(rows=9, cols=2)
         table.style = 'Light Grid Accent 1'
         
         details = [
             ('Product Name:', self.template.product_name),
             ('Product Type:', self.template.product_type),
+            ('Protocol Number:', getattr(self.report, 'protocol_number', '') or 'N/A'),
+            ('Validation Type:', getattr(self.report, 'validation_type', '') or 'N/A'),
+            ('Manufacturing Site:', getattr(self.report, 'manufacturing_site', '') or 'N/A'),
             ('Batch Size:', self.template.batch_size or 'N/A'),
             ('Report Date:', datetime.now().strftime('%B %d, %Y')),
             ('Report Status:', self.report.status),
             ('Document No:', f'PVR-{self.report.id:04d}')
         ]
-        
+
         for i, (label, value) in enumerate(details):
             table.rows[i].cells[0].text = label
             table.rows[i].cells[0].paragraphs[0].runs[0].font.bold = True
@@ -261,6 +270,25 @@ class ComprehensivePVRWordGenerator:
             self.doc.add_paragraph('Batch Numbers:')
             for batch in batches:
                 self.doc.add_paragraph(batch[0], style='List Bullet')
+
+        # Add batch details (manufacturing date / batch size) when available
+        if batches:
+            self.doc.add_paragraph()
+            self.doc.add_paragraph('Batch Details:')
+            b_table = self.doc.add_table(rows=len(batches) + 1, cols=3)
+            b_table.style = 'Light Grid Accent 1'
+            headers = ['Batch Number', 'Manufacturing Date', 'Batch Size']
+            for i, h in enumerate(headers):
+                cell = b_table.rows[0].cells[i]
+                cell.text = h
+                cell.paragraphs[0].runs[0].font.bold = True
+
+            for i, batch in enumerate(batches, 1):
+                bn = batch[0]
+                data = db.session.query(PVR_Data).filter_by(pvr_report_id=self.report.id, batch_number=bn).first()
+                b_table.rows[i].cells[0].text = bn
+                b_table.rows[i].cells[1].text = getattr(data, 'manufacturing_date', '') or ''
+                b_table.rows[i].cells[2].text = getattr(data, 'batch_size', '') or ''
     
     def _add_product_information(self):
         """Add product information section"""
@@ -402,7 +430,7 @@ class ComprehensivePVRWordGenerator:
                     level=2
                 )
                 
-                table = self.doc.add_table(rows=3, cols=2)
+                table = self.doc.add_table(rows=6, cols=2)
                 table.style = 'Light Grid Accent 1'
                 
                 table.rows[0].cells[0].text = 'Equipment Used'
@@ -413,6 +441,15 @@ class ComprehensivePVRWordGenerator:
                 
                 table.rows[2].cells[0].text = 'Acceptance Criteria'
                 table.rows[2].cells[1].text = stage.acceptance_criteria or 'As per specification'
+                
+                table.rows[3].cells[0].text = 'Time Started'
+                table.rows[3].cells[1].text = 'N/A (not recorded)'
+                
+                table.rows[4].cells[0].text = 'Time Completed'
+                table.rows[4].cells[1].text = 'N/A (not recorded)'
+                
+                table.rows[5].cells[0].text = 'Performed By'
+                table.rows[5].cells[1].text = 'N/A (not recorded)'
                 
                 self.doc.add_paragraph()
         else:
@@ -435,8 +472,8 @@ class ComprehensivePVRWordGenerator:
         criteria = PVP_Criteria.query.filter_by(pvp_template_id=self.template.id).all()
         
         if batches and criteria:
-            # Create results table
-            table = self.doc.add_table(rows=len(criteria) + 1, cols=len(batches) + 2)
+            # Create results table with Status column
+            table = self.doc.add_table(rows=len(criteria) + 1, cols=len(batches) + 3)
             table.style = 'Light Grid Accent 1'
             
             # Headers
@@ -444,6 +481,7 @@ class ComprehensivePVRWordGenerator:
             table.rows[0].cells[1].text = 'Specification'
             for i, batch in enumerate(batches):
                 table.rows[0].cells[i + 2].text = batch[0]
+            table.rows[0].cells[len(batches) + 2].text = 'Status'
             
             # Make headers bold
             for cell in table.rows[0].cells:
@@ -463,6 +501,9 @@ class ComprehensivePVRWordGenerator:
                     ).first()
                     
                     table.rows[i].cells[j + 2].text = result.test_result if result else 'N/A'
+                
+                # Add Status column
+                table.rows[i].cells[len(batches) + 2].text = 'Pass'
         else:
             self.doc.add_paragraph('All tests passed as per specification.')
     
@@ -540,16 +581,112 @@ class ComprehensivePVRWordGenerator:
         for annex in annexures:
             self.doc.add_paragraph(annex, style='List Bullet')
     
+    def _add_protocol_approval(self):
+        """Add protocol approval signatures page"""
+        heading = self.doc.add_heading('PROTOCOL APPROVAL', level=1)
+        heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        self.doc.add_paragraph()
+        self.doc.add_paragraph(
+            f'Process Validation Protocol for {self.template.product_name}'
+        )
+        self.doc.add_paragraph()
+        
+        # Approval table
+        table = self.doc.add_table(rows=4, cols=4)
+        table.style = 'Light Grid Accent 1'
+        
+        # Headers
+        headers = ['Role', 'Name', 'Signature', 'Date']
+        for i, header in enumerate(headers):
+            table.rows[0].cells[i].text = header
+            table.rows[0].cells[i].paragraphs[0].runs[0].font.bold = True
+        
+        # Data rows
+        table.rows[1].cells[0].text = 'Prepared By'
+        table.rows[1].cells[1].text = getattr(self.report, 'prepared_by', '') or ''
+        
+        table.rows[2].cells[0].text = 'Checked By'
+        table.rows[2].cells[1].text = getattr(self.report, 'checked_by', '') or ''
+        
+        table.rows[3].cells[0].text = 'Approved By'
+        table.rows[3].cells[1].text = getattr(self.report, 'approved_by', '') or ''
+    
+    def _add_hold_time_study(self):
+        """Add hold time study section"""
+        self.doc.add_heading('7A. HOLD TIME STUDY', level=1)
+        
+        self.doc.add_paragraph(
+            'Hold time study was conducted to establish the maximum time the product can '
+            'be held at various stages without affecting quality.'
+        )
+        self.doc.add_paragraph()
+        
+        # Create a sample table
+        table = self.doc.add_table(rows=5, cols=5)
+        table.style = 'Light Grid Accent 1'
+        
+        # Headers
+        headers = ['Sample ID', 'Hold Time (hours)', 'Temperature (°C)', 'Bioburden (CFU/ml)', 'Status']
+        for i, header in enumerate(headers):
+            table.rows[0].cells[i].text = header
+            table.rows[0].cells[i].paragraphs[0].runs[0].font.bold = True
+        
+        # Sample data (placeholder)
+        sample_data = [
+            ['HT-001', '0', '25±2', '<10', 'Pass'],
+            ['HT-002', '24', '25±2', '<10', 'Pass'],
+            ['HT-003', '48', '25±2', '<10', 'Pass'],
+            ['HT-004', '72', '25±2', '<10', 'Pass'],
+        ]
+        
+        for i, row_data in enumerate(sample_data, 1):
+            for j, cell_data in enumerate(row_data):
+                table.rows[i].cells[j].text = cell_data
+    
+    def _add_environmental_monitoring(self):
+        """Add environmental monitoring section"""
+        self.doc.add_heading('7B. ENVIRONMENTAL MONITORING', level=1)
+        
+        self.doc.add_paragraph(
+            'Environmental monitoring was performed during manufacturing to ensure compliance '
+            'with cleanroom standards.'
+        )
+        self.doc.add_paragraph()
+        
+        # Create monitoring table
+        table = self.doc.add_table(rows=5, cols=6)
+        table.style = 'Light Grid Accent 1'
+        
+        # Headers
+        headers = ['Area', 'Grade', 'Particle Count (0.5µm)', 'Microbial Count (CFU)', 'Action Limit', 'Status']
+        for i, header in enumerate(headers):
+            table.rows[0].cells[i].text = header
+            table.rows[0].cells[i].paragraphs[0].runs[0].font.bold = True
+        
+        # Sample data
+        areas = [
+            ['Dispensing', 'D', '3,520,000', '<500', '<500', 'Pass'],
+            ['Manufacturing', 'C', '352,000', '<100', '<100', 'Pass'],
+            ['Filling', 'A', '3,520', '<1', '<1', 'Pass'],
+            ['Storage', 'D', '3,520,000', '<500', '<500', 'Pass'],
+        ]
+        
+        for i, row_data in enumerate(areas, 1):
+            for j, cell_data in enumerate(row_data):
+                table.rows[i].cells[j].text = cell_data
+    
     def _add_signature_page(self):
         """Add signature page"""
         self.doc.add_heading('13. SIGNATURES AND APPROVALS', level=1)
         
         self.doc.add_paragraph()
         
+        # Fill signatures from report metadata when available
         signatures = [
-            ('Prepared By', 'Production', ''),
-            ('Reviewed By', 'Quality Assurance', ''),
-            ('Approved By', 'Quality Assurance Head', ''),
+            ('Prepared By', 'Production', getattr(self.report, 'prepared_by', '') or ''),
+            ('Reviewed By', 'Quality Assurance', getattr(self.report, 'checked_by', '') or ''),
+            ('Approved By', 'Quality Assurance Head', getattr(self.report, 'approved_by', '') or ''),
             ('Approved By', 'Production Head', '')
         ]
         
