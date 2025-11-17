@@ -567,133 +567,6 @@
 
 <script>
 
-// Add this script to your form
-// Update the form submission handler in amv_verification_protocol.html
-
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form[action="/amv/generate-verification-protocol"]');
-    
-    if (!form) {
-        console.error('Form not found!');
-        return;
-    }
-    
-    form.addEventListener('submit', function(e) {
-        console.log('=== FORM SUBMISSION STARTED ===');
-        
-        // Capture equipment selections
-        const equipmentCheckboxes = document.querySelectorAll('input[name="selected_equipment"]:checked');
-        const selectedEquipment = Array.from(equipmentCheckboxes).map(cb => {
-            const label = cb.nextElementSibling;
-            return {
-                id: cb.value,
-                name: label ? label.textContent.trim() : 'Unknown',
-                code: cb.dataset.code || '',
-                brand: cb.dataset.brand || ''
-            };
-        });
-        
-        console.log('Selected Equipment:', selectedEquipment);
-        document.getElementById('selected_equipment_json').value = JSON.stringify(selectedEquipment);
-        console.log('Equipment JSON set to:', document.getElementById('selected_equipment_json').value);
-        
-        // Capture glass materials selections
-        const glassCheckboxes = document.querySelectorAll('input[name="selected_glass_materials"]:checked');
-        const selectedGlassMaterials = Array.from(glassCheckboxes).map(cb => {
-            const label = cb.nextElementSibling;
-            const charElement = label ? label.nextElementSibling : null;
-            return {
-                id: cb.value,
-                name: label ? label.textContent.trim() : 'Unknown',
-                characteristics: charElement ? charElement.textContent.trim() : ''
-            };
-        });
-        
-        console.log('Selected Glass Materials:', selectedGlassMaterials);
-        document.getElementById('selected_glass_materials_json').value = JSON.stringify(selectedGlassMaterials);
-        console.log('Glass JSON set to:', document.getElementById('selected_glass_materials_json').value);
-        
-        // Capture reagents selections
-        const reagentCheckboxes = document.querySelectorAll('input[name="selected_reagents"]:checked');
-        const selectedReagents = Array.from(reagentCheckboxes).map(cb => {
-            const label = cb.nextElementSibling;
-            const batchElement = label ? label.nextElementSibling : null;
-            const expiryElement = batchElement ? batchElement.nextElementSibling : null;
-            
-            return {
-                id: cb.value,
-                name: label ? label.textContent.trim() : 'Unknown',
-                batch: batchElement ? batchElement.textContent.trim() : '',
-                expiry_date: expiryElement ? expiryElement.textContent.trim() : ''
-            };
-        });
-        
-        console.log('Selected Reagents:', selectedReagents);
-        document.getElementById('selected_reagents_json').value = JSON.stringify(selectedReagents);
-        console.log('Reagents JSON set to:', document.getElementById('selected_reagents_json').value);
-        
-        // Capture reference selection
-        const referenceRadio = document.querySelector('input[name="selected_reference"]:checked');
-        const selectedReference = referenceRadio ? {
-            id: referenceRadio.value,
-            standard_name: referenceRadio.nextElementSibling ? referenceRadio.nextElementSibling.textContent.trim() : 'Unknown'
-        } : null;
-        
-        console.log('Selected Reference:', selectedReference);
-        document.getElementById('selected_reference_json').value = selectedReference ? JSON.stringify(selectedReference) : '{}';
-        console.log('Reference JSON set to:', document.getElementById('selected_reference_json').value);
-        
-        console.log('=== FORM SUBMISSION COMPLETE ===');
-        
-        // Optional: Prevent submission for debugging
-        // e.preventDefault();
-        // return false;
-    });
-});
-
-
-// IMPROVED version using data attributes
-form.addEventListener('submit', function(e) {
-    // Equipment
-    const selectedEquipment = Array.from(document.querySelectorAll('input[name="selected_equipment"]:checked')).map(cb => ({
-        id: cb.value,
-        name: cb.closest('.flex').querySelector('label').textContent.trim(),
-        code: cb.dataset.code || '',
-        brand: cb.dataset.brand || ''
-    }));
-    document.getElementById('selected_equipment_json').value = JSON.stringify(selectedEquipment);
-    
-    // Glass Materials
-    const selectedGlass = Array.from(document.querySelectorAll('input[name="selected_glass_materials"]:checked')).map(cb => ({
-        id: cb.value,
-        name: cb.closest('.flex').querySelector('label').textContent.trim(),
-        characteristics: cb.dataset.characteristics || ''
-    }));
-    document.getElementById('selected_glass_materials_json').value = JSON.stringify(selectedGlass);
-    
-    // Reagents
-    const selectedReagents = Array.from(document.querySelectorAll('input[name="selected_reagents"]:checked')).map(cb => ({
-        id: cb.value,
-        name: cb.closest('.flex').querySelector('label').textContent.trim(),
-        batch: cb.dataset.batch || '',
-        expiry_date: cb.dataset.expiry || ''
-    }));
-    document.getElementById('selected_reagents_json').value = JSON.stringify(selectedReagents);
-    
-    // Reference
-    const referenceRadio = document.querySelector('input[name="selected_reference"]:checked');
-    const selectedReference = referenceRadio ? {
-        id: referenceRadio.value,
-        standard_name: referenceRadio.dataset.standardName || '',
-        potency: referenceRadio.dataset.potency || ''
-    } : null;
-    document.getElementById('selected_reference_json').value = selectedReference ? JSON.stringify(selectedReference) : '{}';
-});
-
-
-
-
-
 // Copy all JavaScript functions from create_amv.html
 function extractMethodData() {
     const formData = new FormData();
@@ -1178,6 +1051,7 @@ function autoSelectValidationParameters(instrumentType) {
 // Add form validation on submit
 document.addEventListener('DOMContentLoaded', function() {
     // Handle instrument type change to show/hide specific parameters
+    const form = document.querySelector('form[action="/amv/generate-verification-protocol"]');
     const instrumentSelect = document.querySelector('select[name="test_method"]');
     if (instrumentSelect) {
         instrumentSelect.addEventListener('change', function() {
@@ -1204,6 +1078,153 @@ document.addEventListener('DOMContentLoaded', function() {
         // Trigger change event on page load to show correct parameters
         instrumentSelect.dispatchEvent(new Event('change'));
     }
+
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            console.log('=== CONSOLIDATED FORM SUBMISSION HANDLER FIRING ===');
+
+            // 1. Capture Equipment selections
+            const selectedEquipment = Array.from(document.querySelectorAll('input[name="selected_equipment"]:checked')).map(cb => ({
+                id: cb.value,
+                name: cb.closest('.flex').querySelector('label').textContent.trim(),
+                code: cb.dataset.code || '',
+                brand: cb.dataset.brand || ''
+            }));
+            document.getElementById('selected_equipment_json').value = JSON.stringify(selectedEquipment);
+            console.log('Selected Equipment JSON:', document.getElementById('selected_equipment_json').value);
+
+            // 2. Capture Glass Materials selections
+            const selectedGlass = Array.from(document.querySelectorAll('input[name="selected_glass_materials"]:checked')).map(cb => ({
+                id: cb.value,
+                name: cb.closest('.flex').querySelector('label').textContent.trim(),
+                characteristics: cb.dataset.characteristics || ''
+            }));
+            document.getElementById('selected_glass_materials_json').value = JSON.stringify(selectedGlass);
+            console.log('Selected Glass JSON:', document.getElementById('selected_glass_materials_json').value);
+
+            // 3. Capture Reagents selections
+            const selectedReagents = Array.from(document.querySelectorAll('input[name="selected_reagents"]:checked')).map(cb => ({
+                id: cb.value,
+                name: cb.closest('.flex').querySelector('label').textContent.trim(),
+                batch: cb.dataset.batch || '',
+                expiry_date: cb.dataset.expiry || ''
+            }));
+            document.getElementById('selected_reagents_json').value = JSON.stringify(selectedReagents);
+            console.log('Selected Reagents JSON:', document.getElementById('selected_reagents_json').value);
+
+            // 4. Capture Reference selection
+            const referenceRadio = document.querySelector('input[name="selected_reference"]:checked');
+            const selectedReference = referenceRadio ? {
+                id: referenceRadio.value,
+                standard_name: referenceRadio.dataset.standardName || '',
+                potency: referenceRadio.dataset.potency || ''
+            } : null;
+            document.getElementById('selected_reference_json').value = selectedReference ? JSON.stringify(selectedReference) : '{}';
+            console.log('Selected Reference JSON:', document.getElementById('selected_reference_json').value);
+
+            // The 'val_params' checkboxes will be sent as a list of values automatically by the browser,
+            // so no special handling is needed here. Your backend will receive them under the 'val_params' key.
+            const valParamCheckboxes = document.querySelectorAll('input[name="val_params"]:checked');
+            const selectedValParams = Array.from(valParamCheckboxes).map(cb => cb.value);
+            console.log('Selected Verification Parameters:', selectedValParams);
+
+            console.log('=== FORM SUBMISSION PROCEEDING ===');
+        });
+    }
 });
+
+// Auto-select validation parameters based on instrument type
+function autoSelectValidationParameters(instrumentType) {
+    // Define validation parameters for each instrument type
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-500 text-white' : 
+        type === 'error' ? 'bg-red-500 text-white' : 
+        'bg-blue-500 text-white'
+    }`;
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mr-2"></i>
+            <span>${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+    const validationParameters = {
+        'UV': [
+            'system_suitability',
+            'specificity',
+            'system_precision',
+            'method_precision',
+            'linearity',
+            'recovery',
+            'robustness'
+        ],
+        'AAS': [
+            'system_suitability',
+            'specificity', 
+            'system_precision',
+            'method_precision',
+            'linearity',
+            'recovery',
+            'robustness'
+        ],
+        'HPLC': [
+            'system_suitability',
+            'specificity',
+            'system_precision',
+            'method_precision',
+            'intermediate_precision',
+            'linearity',
+            'recovery',
+            'robustness'
+        ],
+        'UPLC': [
+            'system_suitability',
+            'specificity',
+            'system_precision',
+            'method_precision',
+            'intermediate_precision',
+            'linearity',
+            'recovery',
+            'robustness'
+        ],
+        'GC': [
+            'system_suitability',
+            'specificity',
+            'system_precision',
+            'method_precision',
+            'intermediate_precision',
+            'linearity',
+            'recovery',
+            'robustness'
+        ],
+        'Titration': [
+            'system_precision',
+            'method_precision',
+            'linearity',
+            'recovery'
+        ]
+    };
+    
+    const selectedParams = validationParameters[instrumentType] || [];
+    
+    document.querySelectorAll('input[name="val_params"]').forEach(checkbox => {
+        checkbox.checked = selectedParams.includes(checkbox.value);
+    });
+    
+    if (selectedParams.length > 0) {
+        showNotification(`Auto-selected ${selectedParams.length} validation parameters for ${instrumentType}`, 'success');
+    }
+}
 </script>
 {% endblock %}

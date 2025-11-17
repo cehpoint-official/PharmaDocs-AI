@@ -8,7 +8,7 @@ import json
 app = create_app()
 
 # Import routes - renamed to app_routes to avoid conflict with installed routes package
-from app_routes import auth, dashboard, documents, equipments, admin, company, user, amv_routes, validation_routes
+from app_routes import auth, dashboard, documents, equipments, admin, company, user, amv_routes, validation_routes, subscription_routes, razorpay_routes
 
 # Import the functions from amv_routes
 from app_routes.amv_routes import get_amv_documents_count, get_amv_verification_count
@@ -23,6 +23,8 @@ app.register_blueprint(equipments.bp)
 app.register_blueprint(user.bp)
 app.register_blueprint(amv_routes.amv_bp)
 app.register_blueprint(validation_routes.validation_bp)
+app.register_blueprint(subscription_routes.bp)
+app.register_blueprint(razorpay_routes.bp)
 
 with app.app_context():
     # Import models to ensure tables are created
@@ -32,10 +34,15 @@ with app.app_context():
 # Register context processor on the main app (not blueprint)
 @app.context_processor
 def utility_processor():
-    return {
+    from utils.subscription_middleware import inject_subscription_context
+    context = {
         'get_amv_documents_count': get_amv_documents_count,
         'get_amv_verification_count': get_amv_verification_count
     }
+    # Add subscription context
+    subscription_context = inject_subscription_context()()
+    context.update(subscription_context)
+    return context
 
 
 @app.template_filter('from_json')
@@ -49,6 +56,22 @@ def from_json_filter(value):
         return value
     except (json.JSONDecodeError, TypeError, ValueError):
         return {}
+
+@app.template_filter('currency')
+def currency_filter(value):
+    """Format currency values"""
+    try:
+        return f"${value:.2f}"
+    except (TypeError, ValueError):
+        return f"${0:.2f}"
+
+@app.template_filter('percentage')
+def percentage_filter(value):
+    """Format percentage values"""
+    try:
+        return f"{value:.1f}%"
+    except (TypeError, ValueError):
+        return "0.0%"
 
 # Root route
 @app.route('/')
