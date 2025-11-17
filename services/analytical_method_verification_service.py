@@ -20,30 +20,163 @@ import numpy as np
 import random
 import io
 
+
 class AMVProtocolGenerator:
-    def __init__(self, form_data, company_data=None):
+    # In the AMVProtocolGenerator class __init__ method, add proper JSON parsing:
+
+    def __init__(self, form_data, verification_parameters=None, company_data=None):
         if not form_data:
-            # Provide default form data to prevent empty initialization
             form_data = {
                 'product_name': 'Test Product',
                 'active_ingredient': 'Test Ingredient', 
-                'label_claim': '100mg',
-                'protocol_number': 'AMV/P/TEST/001',
-                'company_name': 'Test Pharmaceuticals Ltd.',
-                'company_address': 'Test Address',
-                'methodology_code': 'TEST/METHOD/001',
-                'standard_potency': '99.5%',
-                'prepared_by': 'Test Analyst',
-                'checked_by': 'Test Manager',
-                'approved_by': 'Test Head'
             }
-        
+
         self.form_data = form_data
         self.company_data = company_data or {}
         self.doc = Document()
         self.current_page = 1
-        self.total_pages = 20  # Fixed as per template
+        self.total_pages = 20
         self.setup_document_margins()
+        
+        # Parse JSON data from form
+        self.selected_equipment = self._parse_json_data(form_data.get('selected_equipment_json'))
+        self.selected_glass_materials = self._parse_json_data(form_data.get('selected_glass_materials_json'))
+        self.selected_reagents = self._parse_json_data(form_data.get('selected_reagents_json'))
+        self.selected_reference = self._parse_json_data(form_data.get('selected_reference_json'))
+        
+        # **FIXED: Handle validation parameters properly**
+        self.verification_parameters = self._parse_validation_parameters(form_data, verification_parameters)
+        
+        print(f"🔍 FINAL VERIFICATION PARAMETERS: {self.verification_parameters}")
+
+
+    def _parse_validation_parameters(self, form_data, verification_parameters):
+        """Parse validation parameters from form data"""
+        val_params = {}
+        
+        # First priority: Direct verification_parameters dict
+        if verification_parameters and isinstance(verification_parameters, dict):
+            print("🎯 Using direct verification_parameters dict")
+            return verification_parameters
+        
+        # Second priority: val_params_json from form
+        val_params_json = form_data.get('val_params_json')
+        if val_params_json:
+            try:
+                selected_params = json.loads(val_params_json)
+                print(f"📦 val_params_json found: {selected_params}")
+                
+                # Map form values to section numbers
+                param_mapping = {
+                    'system_suitability': '6.1',
+                    'specificity': '6.2', 
+                    'system_precision': '6.3',
+                    'method_precision': '6.4',
+                    'intermediate_precision': '6.5',
+                    'linearity': '6.6',
+                    'recovery': '6.7',
+                    'robustness': '6.8',
+                    'range': '6.9',
+                    'lod_loq': '6.10',
+                    'lod_loq_precision': '6.11'
+                }
+                
+                for param in selected_params:
+                    if param in param_mapping:
+                        val_params[param_mapping[param]] = True
+                        
+            except Exception as e:
+                print(f"❌ Error parsing val_params_json: {e}")
+        
+        # Third priority: Individual val_params from form (Flask ImmutableMultiDict)
+        val_params_list = form_data.getlist('val_params') if hasattr(form_data, 'getlist') else []
+        if val_params_list:
+            print(f"📦 val_params list found: {val_params_list}")
+            
+            param_mapping = {
+                'system_suitability': '6.1',
+                'specificity': '6.2', 
+                'system_precision': '6.3',
+                'method_precision': '6.4',
+                'intermediate_precision': '6.5',
+                'linearity': '6.6',
+                'recovery': '6.7',
+                'robustness': '6.8',
+                'range': '6.9',
+                'lod_loq': '6.10',
+                'lod_loq_precision': '6.11'
+            }
+            
+            for param in val_params_list:
+                if param in param_mapping:
+                    val_params[param_mapping[param]] = True
+        
+        # If still no parameters selected, use sensible defaults based on instrument type
+        if not val_params:
+            test_method = form_data.get('test_method', 'HPLC').upper()
+            print(f"⚠️ No parameters selected, using defaults for: {test_method}")
+            
+            if test_method in ['HPLC', 'UPLC', 'LC']:
+                default_params = ['6.1', '6.2', '6.3', '6.4', '6.7']  # System Suitability, Specificity, System Precision, Method Precision, Accuracy
+            elif test_method in ['TITRATION']:
+                default_params = ['6.3', '6.4', '6.7']  # System Precision, Method Precision, Accuracy
+            elif test_method in ['UV', 'SPECTROPHOTOMETRY']:
+                default_params = ['6.2', '6.4', '6.7']  # Specificity, Method Precision, Accuracy
+            else:
+                default_params = ['6.1', '6.2', '6.4', '6.7']  # Generic defaults
+            
+            for param in default_params:
+                val_params[param] = True
+        
+        print(f"✅ Final validation parameters: {val_params}")
+        return val_params
+    
+    def _parse_json_data(self, data):
+        """Parse JSON data safely from form inputs"""
+        print(f"🔍 RAW JSON DATA: {repr(data)}")
+        
+        if not data or str(data).strip() in ['', 'null', 'None', '[]', '{}']:
+            return []
+        
+        try:
+            # Handle string JSON data
+            if isinstance(data, str):
+                # Clean the string data
+                cleaned_data = data.strip()
+                if not cleaned_data or cleaned_data in ['null', 'None', '[]', '{}']:
+                    return []
+                
+                # Parse JSON
+                parsed = json.loads(cleaned_data)
+                print(f"✅ Parsed JSON: {parsed}")
+                
+                # Ensure we return a list
+                if isinstance(parsed, list):
+                    return parsed
+                elif isinstance(parsed, dict):
+                    return [parsed]
+                else:
+                    return []
+            
+            # Handle already parsed data
+            elif isinstance(data, list):
+                return data
+            elif isinstance(data, dict):
+                return [data]
+            else:
+                print(f"⚠️ Unknown data type: {type(data)}")
+                return []
+                
+        except json.JSONDecodeError as e:
+            print(f"❌ JSON decode error: {e}")
+            print(f"❌ Problematic data: {repr(data)}")
+            return []
+        except Exception as e:
+            print(f"❌ Error parsing JSON data: {e}")
+            return []
+
+
+
     
     def setup_document_margins(self):
         """Set document margins safely"""
@@ -71,8 +204,8 @@ class AMVProtocolGenerator:
             left_cell = header_table.rows[0].cells[0]
             left_para = left_cell.paragraphs[0]
             
-            company_name = self.form_data.get('company_name', 'KWALITY PHARMACEUTICALS. LTD.')
-            company_address = self.form_data.get('company_address', '1-A, INDUSTRIAL AREA, RAJA KA BAGH TEHSIL NURPUR, KANGRA-176201 (INDIA)')
+            company_name = self.form_data.get('company_name', '')
+            company_address = self.form_data.get('company_location', '')
             
             company_run = left_para.add_run(f"{company_name}\n")
             company_run.bold = True
@@ -97,18 +230,18 @@ class AMVProtocolGenerator:
             
             # Product name
             product_table.rows[0].cells[0].text = "NAME OF PRODUCT"
-            product_name = self.form_data.get('product_name', 'LEUCOVORIN CALCIUM FOR INJECTION 50MG/VIAL')
+            product_name = self.form_data.get('product_name', '')
             product_table.rows[0].cells[1].text = str(product_name)[:100]  # Limit length
             
             # Label claim
             product_table.rows[1].cells[0].text = "LABEL CLAIM"
-            active_ingredient = self.form_data.get('active_ingredient', 'LEUCOVORIN CALCIUM')
-            label_claim = self.form_data.get('label_claim', '50MG')
-            label_text = f"EACH VIAL CONTAIN:\n{active_ingredient}\t{label_claim}"
+            active_ingredient = self.form_data.get('active_ingredient', '')
+            label_claim = self.form_data.get('label_claim', '')
+            label_text = f"{active_ingredient}\t{label_claim}"
             product_table.rows[1].cells[1].text = str(label_text)[:200]  # Limit length
             
             # Protocol number and page
-            protocol_no = self.form_data.get('protocol_number', 'AMV/P/0154')
+            protocol_no = self.form_data.get('protocol_number', '')
             product_table.rows[2].cells[0].text = f"PROTOCOL NO. {protocol_no}"
             product_table.rows[2].cells[1].text = f"PAGE {self.current_page} OF {self.total_pages}"
             
@@ -138,7 +271,7 @@ class AMVProtocolGenerator:
             title_run = title_para.add_run(
                 f"\n\n\nANALYTICAL METHOD VALIDATION PROTOCOL FOR ASSAY\n"
                 f"OF\n"
-                f"{self.form_data.get('product_name', 'LEUCOVORIN CALCIUM FOR INJECTION 50MG/VIAL')}"
+                f"{self.form_data.get('product_name', '')}"
             )
             title_run.bold = True
             title_run.font.size = Pt(14)
@@ -214,10 +347,11 @@ class AMVProtocolGenerator:
             
             # Description
             desc_para = self.doc.add_paragraph()
-            product_name = self.form_data.get('product_name', 'LEUCOVORIN CALCIUM FOR INJECTION 50MG/VIAL')
+            product_name = self.form_data.get('product_name', '')
+            method_name = self.form_data.get('test_method', '')
             desc_text = (
                 f"This is a specific protocol for analytical method validation for Assay of "
-                f"{product_name} by High Performance Liquid Chromatography.\n"
+                f"{product_name} by {method_name}.\n"
                 f"This protocol has been approved by the following:"
             )
             desc_para.add_run(desc_text)
@@ -239,7 +373,7 @@ class AMVProtocolGenerator:
                 protocol_date = datetime.now()
             else:
                 try:
-                    protocol_date = datetime.strptime(self.form_data.get('protocol_date'), '%Y-%m-%d')
+                    protocol_date = datetime.strptime(self.form_data.get('protocol_date', ''), '%Y-%m-%d')
                 except:
                     protocol_date = datetime.now()
             
@@ -248,17 +382,17 @@ class AMVProtocolGenerator:
             # Approval data
             approval_data = [
                 ('Prepared By', 
-                 self.form_data.get('prepared_by', 'Sachin Kumar'), 
+                 self.form_data.get('prepared_by_name', ''), 
                  'Analyst Q.C', 
                  '[Signature]', 
                  date_str),
                 ('Checked By', 
-                 self.form_data.get('checked_by', 'Naresh'), 
+                 self.form_data.get('reviewed_by_name', ''), 
                  'Asst. Manager Q.C', 
                  '[Signature]', 
                  date_str),
                 ('Approved By', 
-                 self.form_data.get('approved_by', 'Ajay Bhatia'), 
+                 self.form_data.get('approved_by_name', ''), 
                  'Manager Q.C', 
                  '[Signature]', 
                  date_str)
@@ -290,8 +424,8 @@ class AMVProtocolGenerator:
             self.doc.add_paragraph("2.1 Objective")
             objective_text = (
                 f"To establish the methodology for the analytical method validation for Assay of "
-                f"{self.form_data.get('product_name', 'LEUCOVORIN CALCIUM FOR INJECTION 50MG/VIAL')} "
-                f"by High Performance Liquid Chromatography."
+                f"{self.form_data.get('product_name', '')} "
+                f"by {self.form_data.get('test_method', '')}."
             )
             self.doc.add_paragraph(objective_text)
             
@@ -299,8 +433,8 @@ class AMVProtocolGenerator:
             self.doc.add_paragraph("2.2 Scope")
             scope_text = (
                 f"This Validation is applicable for the determination of Assay of "
-                f"{self.form_data.get('product_name', 'LEUCOVORIN CALCIUM FOR INJECTION 50MG/VIAL')} "
-                f"by High Performance Liquid Chromatography."
+                f"{self.form_data.get('product_name', '')} "
+                f"by {self.form_data.get('test_method', '')}."
             )
             self.doc.add_paragraph(scope_text)
             
@@ -325,79 +459,134 @@ class AMVProtocolGenerator:
             
             # Equipment list
             self.doc.add_paragraph("3.1 List of Equipment and Instrument Used:")
-            equip_text = (
-                "The following apparatus / equipment shall be used for validation studies:\n"
-                "a) Analytical Balance\n"
-                "b) High Performance Liquid Chromatography\n"
-                "c) Ultra-sonic Bath\n"
-                "d) Vacuum Pump"
-            )
+    
+            if self.selected_equipment and len(self.selected_equipment) > 0:
+                equip_text = "The following apparatus / equipment shall be used for validation studies:\n"
+                for idx, equipment in enumerate(self.selected_equipment, 1):
+                    letter = chr(96 + idx)  # Convert 1->'a', 2->'b', etc.
+                    name = equipment.get('name', '')
+                    code = equipment.get('code', '')
+                    brand = equipment.get('brand', '')
+                    
+                    equip_text += f"{letter}) {name}"
+                    if code:
+                        equip_text += f" (Code: {code})"
+                    if brand:
+                        equip_text += f" - {brand}"
+                    equip_text += "\n"
+            else:
+                # Default equipment if none selected
+                equip_text = "The following apparatus / equipment shall be used for validation studies:\n" \
+                            "a) Analytical Balance\n" \
+                            "b) High Performance Liquid Chromatography\n" \
+                            "c) Ultra-sonic Bath\n" \
+                            "d) Vacuum Pump"
+            
             self.doc.add_paragraph(equip_text)
             
-            # Glass materials
+            # Glass materials - USING ACTUAL SELECTED DATA
             self.doc.add_paragraph("3.2 List of Glass or Other Materials")
-            glass_text = (
-                "The following glass or other materials shall be used for Validation studies:\n"
-                "a) Beaker: 1000ml\n"
-                "b) Glass Volumetric Flask: 50ml, 100ml\n"
-            )
+
+            if self.selected_glass_materials and len(self.selected_glass_materials) > 0:
+                glass_text = "The following glass or other materials shall be used for Validation studies:\n"
+                for idx, material in enumerate(self.selected_glass_materials, 1):
+                    letter = chr(96 + idx)
+                    name = material.get('name', '')
+                    characteristics = material.get('characteristics', '')
+                    glass_text += f"{letter}) {name}"
+                    if characteristics:
+                        glass_text += f" - {characteristics}"
+                    glass_text += "\n"
+            else:
+                # Default materials if none selected
+                glass_text = "The following glass or other materials shall be used for Validation studies:\n" \
+                            "a) Beaker: 1000ml\n" \
+                            "b) Glass Volumetric Flask: 50ml, 100ml\n" \
+                            "c) Pipette: 2ml, 2.5ml, 5ml\n" \
+                            "d) Graduated Cylinders: 500ml\n" \
+                            "e) Glass jars: 1000ml"
+
             self.doc.add_paragraph(glass_text)
-            
+
             self.add_page_break()
-            self.add_header_section(5)
             
-            # Continue glass materials
-            glass_cont_text = (
-                "c) Pipette: 2ml, 2.5ml, 5ml\n"
-                "d) Graduated Cylinders: 500ml\n"
-                "e) Glass jars: 1000ml"
-            )
-            self.doc.add_paragraph(glass_cont_text)
-            
-            # Reagents
+            # Reagents - USING ACTUAL SELECTED DATA
             self.doc.add_paragraph("3.3 List of Reagents and Prepared Solutions:")
-            reagents_text = (
-                "The following reagents and chemicals shall be used for Validation studies:"
-            )
+            reagents_text = "The following reagents and chemicals shall be used for Validation studies:"
             self.doc.add_paragraph(reagents_text)
-            
-            # Reagents table - SAFE VERSION
+
             try:
-                reagents_table = self.doc.add_table(rows=1, cols=2)
+                reagents_table = self.doc.add_table(rows=1, cols=3)
                 reagents_table.style = 'Table Grid'
-                reagents_table.rows[0].cells[0].text = "Reagent Name"
-                reagents_table.rows[0].cells[1].text = "Brand"
                 
-                reagents_data = self.form_data.get('reagents', [
-                    {'name': 'Tetrabutylammonium hydroxide solution', 'brand': 'Merck'},
-                    {'name': 'Methanol', 'brand': 'Merck'},
-                    {'name': 'Disodium Hydrogen Phosphate', 'brand': 'Merck'}
-                ])
+                # Add headers
+                header_cells = reagents_table.rows[0].cells
+                header_cells[0].text = "Reagent Name"
+                header_cells[1].text = "Batch Number"
+                header_cells[2].text = "Expiry Date"
+                
+                # Use selected reagents or defaults
+                if self.selected_reagents and len(self.selected_reagents) > 0:
+                    reagents_data = self.selected_reagents
+                else:
+                    reagents_data = [
+                        {
+                            'name': 'Tetrabutylammonium hydroxide solution', 
+                            'batch': 'TBH-001',
+                            'expiry_date': '2025-10-31'
+                        },
+                        {
+                            'name': 'Methanol', 
+                            'batch': 'MTH-002',
+                            'expiry_date': '2026-05-15'
+                        }
+                    ]
                 
                 for reagent in reagents_data:
                     row = reagents_table.add_row()
-                    if len(row.cells) >= 2:  # Safety check
-                        row.cells[0].text = reagent.get('name', '')
-                        row.cells[1].text = reagent.get('brand', '')
+                    cells = row.cells
+                    cells[0].text = reagent.get('name', '')
+                    cells[1].text = reagent.get('batch', '')
+                    
+                    # Format expiry date
+                    expiry_date = reagent.get('expiry_date', '')
+                    if expiry_date:
+                        try:
+                            date_obj = datetime.strptime(expiry_date, '%Y-%m-%d')
+                            cells[2].text = date_obj.strftime('%d/%m/%Y')
+                        except:
+                            cells[2].text = expiry_date
+                    else:
+                        cells[2].text = 'N/A'
+                        
             except Exception as e:
                 print(f"Error creating reagents table: {e}")
                 self.doc.add_paragraph("Reagents: As per methodology")
             
-            # Working standard
+            # Working standard - USING ACTUAL SELECTED REFERENCE
             self.doc.add_paragraph("3.4 Working Standard Details:")
             try:
                 standard_table = self.doc.add_table(rows=1, cols=2)
                 standard_table.style = 'Table Grid'
-                standard_table.rows[0].cells[0].text = "Name of Working Standard"
-                standard_table.rows[0].cells[1].text = "Potency"
                 
-                standard_name = self.form_data.get('active_ingredient', 'Leucovorin Calcium')
-                standard_potency = self.form_data.get('standard_potency', '90.8%')
+                # Add headers
+                header_cells = standard_table.rows[0].cells
+                header_cells[0].text = "Name of Working Standard"
+                header_cells[1].text = "Potency"
+                
+                # Use selected reference or defaults
+                if self.selected_reference and isinstance(self.selected_reference, dict):
+                    standard_name = self.selected_reference.get('standard_name', self.form_data.get('active_ingredient', ''))
+                    standard_potency = self.selected_reference.get('potency', self.form_data.get('standard_potency', ''))
+                else:
+                    standard_name = self.form_data.get('active_ingredient', '')
+                    standard_potency = self.form_data.get('standard_potency', '')
                 
                 row = standard_table.add_row()
-                if len(row.cells) >= 2:  # Safety check
-                    row.cells[0].text = standard_name
-                    row.cells[1].text = standard_potency
+                cells = row.cells
+                cells[0].text = standard_name
+                cells[1].text = standard_potency
+                    
             except Exception as e:
                 print(f"Error creating standard table: {e}")
             
@@ -411,46 +600,46 @@ class AMVProtocolGenerator:
             
             # Methodology content
             # Methodology content
-            method_code = self.form_data.get('methodology_code', 'KPL/STP/IN/108-00')
+            method_code = self.form_data.get('methodology_code', '')
 
             # Helper function for generating detailed methodologies
             def generate_detailed_methodology(form_data, method_type):
                 """Generate detailed methodology based on method type"""
                 
                 if method_type == 'HPLC':
-                    active = form_data.get('active_ingredient', 'Active Ingredient')
-                    label_claim = form_data.get('label_claim', '100mg')
-                    weight_sample = form_data.get('weight_sample', '20')
+                    active = form_data.get('active_ingredient', '')
+                    label_claim = form_data.get('label_claim', '')
+                    weight_sample = form_data.get('weight_sample', '')
                     
                     return (
-                        f"Standard solution: Accurately weigh and transfer about {form_data.get('weight_standard', '100mg')} of {active} working standard "
-                        f"into a {form_data.get('final_concentration_standard', '100ml')} volumetric flask. Add about 50ml of diluent and sonicate to dissolve. "
+                        f"Standard solution: Accurately weigh and transfer about {form_data.get('weight_standard', '')} of {active} working standard "
+                        f"into a {form_data.get('final_concentration_standard', '')} volumetric flask. Add about 50ml of diluent and sonicate to dissolve. "
                         f"Make up the volume with diluent and mix well.\n\n"
                         f"Sample solution: Weigh and powder {weight_sample} tablets. Transfer accurately weighed powder equivalent to {label_claim} of {active} "
-                        f"into a {form_data.get('final_concentration_sample', '100ml')} volumetric flask. Add about 50ml of diluent and sonicate for 15 minutes "
+                        f"into a {form_data.get('final_concentration_sample', '')} volumetric flask. Add about 50ml of diluent and sonicate for 15 minutes "
                         f"with intermittent shaking. Make up the volume with diluent and mix well. Filter the solution through 0.45µ PVDF syringe filter, "
                         f"discarding first few ml of filtrate.\n\n"
-                        f"Procedure: Inject {form_data.get('injection_volume', '10µL')} of blank, standard solution (six replicate injections) and sample solution "
+                        f"Procedure: Inject {form_data.get('injection_volume', '')} of blank, standard solution (six replicate injections) and sample solution "
                         f"(in duplicate) into the chromatograph. Record the chromatograms and measure the peak responses. "
                         f"Calculate the content of {active} per tablet."
                     )
                 
                 elif method_type == 'TITRATION':
-                    active = form_data.get('active_ingredient', 'Active Ingredient')
-                    label_claim = form_data.get('label_claim', '100mg')
-                    weight_sample = form_data.get('weight_sample', '20')
-                    molecular_weight = form_data.get('molecular_weight', '100')
+                    active = form_data.get('active_ingredient', '')
+                    label_claim = form_data.get('label_claim', '')
+                    weight_sample = form_data.get('weight_sample', '')
+                    molecular_weight = form_data.get('molecular_weight', '')
                     
                     return (
                         f"Weigh and powder {weight_sample} tablets. Add a quantity of the powder containing 1 g of {active} to 100ml of water, "
                         f"add 50ml of 1M hydrochloric acid VS and boil for 1 minute to remove the carbon dioxide. Cool and titrate the excess of acid "
                         f"with 1M sodium hydroxide VS using methyl orange solution as indicator. Each ml of 1M hydrochloric acid VS is equivalent to "
                         f"{molecular_weight}mg of {active}.\n\n"
-                        f"Standard solution: Accurately weigh and transfer about {form_data.get('weight_standard', '100mg')} of {active} working standard "
-                        f"into a {form_data.get('final_concentration_standard', '100ml')} volumetric flask. Add about 50ml of water and sonicate to dissolve. "
+                        f"Standard solution: Accurately weigh and transfer about {form_data.get('weight_standard', '')} of {active} working standard "
+                        f"into a {form_data.get('final_concentration_standard', '')} volumetric flask. Add about 50ml of water and sonicate to dissolve. "
                         f"Make up the volume with water and mix well.\n\n"
                         f"Sample solution: Weigh and powder {weight_sample} tablets. Transfer accurately weighed powder equivalent to {label_claim} of {active} "
-                        f"into a {form_data.get('final_concentration_sample', '100ml')} volumetric flask. Add about 50ml of water and sonicate for 15 minutes "
+                        f"into a {form_data.get('final_concentration_sample', '')} volumetric flask. Add about 50ml of water and sonicate for 15 minutes "
                         f"with intermittent shaking. Make up the volume with water and mix well. Filter the solution through Whatman filter paper No. 41, "
                         f"discarding first few ml of filtrate.\n\n"
                         f"Procedure: Pipette appropriate volumes of standard and sample solutions and titrate as described above. "
@@ -458,17 +647,17 @@ class AMVProtocolGenerator:
                     )
                 
                 elif method_type == 'UV':
-                    active = form_data.get('active_ingredient', 'Active Ingredient')
-                    label_claim = form_data.get('label_claim', '100mg')
-                    weight_sample = form_data.get('weight_sample', '20')
-                    wavelength = form_data.get('wavelength', '280nm')
+                    active = form_data.get('active_ingredient', '')
+                    label_claim = form_data.get('label_claim', '')
+                    weight_sample = form_data.get('weight_sample', '')
+                    wavelength = form_data.get('wavelength', '')
                     
                     return (
-                        f"Standard solution: Accurately weigh and transfer about {form_data.get('weight_standard', '100mg')} of {active} working standard "
-                        f"into a {form_data.get('final_concentration_standard', '100ml')} volumetric flask. Add about 50ml of diluent and sonicate to dissolve. "
+                        f"Standard solution: Accurately weigh and transfer about {form_data.get('weight_standard', '')} of {active} working standard "
+                        f"into a {form_data.get('final_concentration_standard', '')} volumetric flask. Add about 50ml of diluent and sonicate to dissolve. "
                         f"Make up the volume with diluent and mix well. Further dilute to get a concentration suitable for UV measurement.\n\n"
                         f"Sample solution: Weigh and powder {weight_sample} tablets. Transfer accurately weighed powder equivalent to {label_claim} of {active} "
-                        f"into a {form_data.get('final_concentration_sample', '100ml')} volumetric flask. Add about 50ml of diluent and sonicate for 15 minutes "
+                        f"into a {form_data.get('final_concentration_sample', '')} volumetric flask. Add about 50ml of diluent and sonicate for 15 minutes "
                         f"with intermittent shaking. Make up the volume with diluent and mix well. Filter the solution through Whatman filter paper No. 41, "
                         f"discarding first few ml of filtrate. Dilute appropriately to get a concentration suitable for UV measurement.\n\n"
                         f"Blank: Diluent\n\n"
@@ -494,15 +683,15 @@ class AMVProtocolGenerator:
                 
                 method_text = (
                     f"Product\tMethodology Code\n"
-                    f"{self.form_data.get('product_name', 'LEUCOVORIN CALCIUM FOR INJECTION 50MG/VIAL')}\t{method_code}\n"
+                    f"{self.form_data.get('product_name', '')}\t{method_code}\n"
                     f"Chromatographic system:\n\n"
                     f"Mode\t: {self.form_data.get('mode', 'LC')}\n"
                     f"Detector\t: {self.form_data.get('detector', 'UV 280 nm')}\n"
                     f"Column\t: {self.form_data.get('column', '4.5 mm X 25 cm; 5 µm L1')}\n"
-                    f"Injection volume\t: {self.form_data.get('injection_volume', '10µL')}\n"
+                    f"Injection volume\t: {self.form_data.get('injection_volume', '')}\n"
                     f"Autosampler\t: {self.form_data.get('autosampler_temp', '10°')}\n"
                     f"Column\t: {self.form_data.get('column_temp', '50°')}\n"
-                    f"Flow rate\t: {self.form_data.get('flow_rate', '1 ml/min')}\n"
+                    f"Flow rate\t: {self.form_data.get('flow_rate', '')}\n"
                     f"{self.form_data.get('solution_preparation', 'Solution A: Dissolve 2.6 ml of Tetrabutylammonium hydroxide solution (40% in water) and 2.8 gm of disodium hydrogen phosphate in 1000 ml of water. Adjust with phosphoric acid to a pH of 7.8.')} "
                     f"Mobile Phase: {self.form_data.get('mobile_phase', 'Methanol and Solution A (150:850)')}\n\n"
                     f"{detailed_methodology}"
@@ -514,7 +703,7 @@ class AMVProtocolGenerator:
                 
                 method_text = (
                     f"Product\tMethodology Code\n"
-                    f"{self.form_data.get('product_name', 'Product Name')}\t{method_code}\n"
+                    f"{self.form_data.get('product_name', '')}\t{method_code}\n"
                     f"Methodology By Titration:\n"
                     f"{detailed_methodology}"
                 )
@@ -525,9 +714,9 @@ class AMVProtocolGenerator:
                 
                 method_text = (
                     f"Product\tMethodology Code\n"
-                    f"{self.form_data.get('product_name', 'Product Name')}\t{method_code}\n"
+                    f"{self.form_data.get('product_name', '')}\t{method_code}\n"
                     f"UV Spectrophotometry:\n"
-                    f"Wavelength\t: {self.form_data.get('wavelength', '280 nm')}\n\n"
+                    f"Wavelength\t: {self.form_data.get('wavelength', '')}\n\n"
                     f"{detailed_methodology}"
                 )
 
@@ -535,7 +724,7 @@ class AMVProtocolGenerator:
             else:
                 method_text = (
                     f"Product\tMethodology Code\n"
-                    f"{self.form_data.get('product_name', 'Product Name')}\t{method_code}\n"
+                    f"{self.form_data.get('product_name', '')}\t{method_code}\n"
                     f"{self.form_data.get('solution_preparation', 'Methodology details here')}"
                 )
 
@@ -597,70 +786,70 @@ class AMVProtocolGenerator:
             
             # Calculation
             self.doc.add_paragraph("Calculation:")
-# Calculation formulas based on test method
+            # Calculation formulas based on test method
             if self.form_data.get('test_method', '').upper() in ['HPLC', 'LC', 'UPLC']:
                 calc_text = (
                     f"Analysis Samples: Standard solution and Sample Solution\n\n"
-                    f"Calculate the percentage of the labeled amount of {self.form_data.get('active_ingredient', 'Active Ingredient')} "
-                    f"({self.form_data.get('molecular_formula', 'Chemical Formula')}) in the portion of "
-                    f"{self.form_data.get('product_name', 'Product')} taken:\n\n"
+                    f"Calculate the percentage of the labeled amount of {self.form_data.get('active_ingredient', '')} "
+                    f"({self.form_data.get('molecular_formula', '')}) in the portion of "
+                    f"{self.form_data.get('product_name', '')} taken:\n\n"
                     f"Result = (rU/rS) × (CS/CU) × (Mr1/Mr2) × 100\n\n"
                     f"Where:\n"
-                    f"rU = peak response of {self.form_data.get('active_ingredient', 'active ingredient')} from the Sample solution\n"
-                    f"rS = peak response of {self.form_data.get('active_ingredient', 'active ingredient')} from the Standard solution\n"
-                    f"CS = concentration of {self.form_data.get('active_ingredient', 'Active Ingredient')} working standard in the Standard solution (mg/ml)\n"
-                    f"CU = nominal concentration of {self.form_data.get('active_ingredient', 'active ingredient')} in the Sample solution (mg/mL)\n"
-                    f"Mr1 = molecular weight of {self.form_data.get('active_ingredient', 'active ingredient')}, {self.form_data.get('molecular_weight', 'XXX')}\n"
-                    f"Mr2 = molecular weight of {self.form_data.get('active_ingredient', 'active ingredient')} salt form, {self.form_data.get('molecular_weight_salt', self.form_data.get('molecular_weight', 'XXX'))}\n\n"
-                    f"Acceptance Criteria: {self.form_data.get('specification_range', '95.0% - 105.0%')}"
+                    f"rU = peak response of {self.form_data.get('active_ingredient', '')} from the Sample solution\n"
+                    f"rS = peak response of {self.form_data.get('active_ingredient', '')} from the Standard solution\n"
+                    f"CS = concentration of {self.form_data.get('active_ingredient', '')} working standard in the Standard solution (mg/ml)\n"
+                    f"CU = nominal concentration of {self.form_data.get('active_ingredient', '')} in the Sample solution (mg/mL)\n"
+                    f"Mr1 = molecular weight of {self.form_data.get('active_ingredient', '')}, {self.form_data.get('molecular_weight', '')}\n"
+                    f"Mr2 = molecular weight of {self.form_data.get('active_ingredient', '')} salt form, {self.form_data.get('molecular_weight_salt', self.form_data.get('molecular_weight', ''))}\n\n"
+                    f"Acceptance Criteria: {self.form_data.get('specification_range', '')}"
                 )
 
             elif self.form_data.get('test_method', '').upper() in ['TITRATION', 'TITRIMETRY']:
                 calc_text = (
                     f"Analysis Samples: Standard solution and Sample Solution\n\n"
-                    f"Calculate the percentage of the labeled amount of {self.form_data.get('active_ingredient', 'Active Ingredient')} "
-                    f"in {self.form_data.get('product_name', 'Product')}:\n\n"
-                    f"Percentage Content = (V × M × F × {self.form_data.get('molecular_weight', 'MW')} × 100) / (W × 1000)\n\n"
+                    f"Calculate the percentage of the labeled amount of {self.form_data.get('active_ingredient', '')} "
+                    f"in {self.form_data.get('product_name', '')}:\n\n"
+                    f"Percentage Content = (V × M × F × {self.form_data.get('molecular_weight', '')} × 100) / (W × 1000)\n\n"
                     f"Where:\n"
                     f"V = Volume of titrant consumed (ml)\n"
                     f"M = Molarity of titrant\n"
                     f"F = Factor/Equivalence factor\n"
                     f"W = Weight of sample taken (mg)\n"
-                    f"Molecular Weight = {self.form_data.get('molecular_weight', 'XXX')}\n\n"
-                    f"Each ml of 1M titrant is equivalent to {self.form_data.get('molecular_weight', 'XXX')}mg of "
-                    f"{self.form_data.get('active_ingredient', 'Active Ingredient')}\n\n"
-                    f"Acceptance Criteria: {self.form_data.get('specification_range', '95.0% - 105.0%')}"
+                    f"Molecular Weight = {self.form_data.get('molecular_weight', '')}\n\n"
+                    f"Each ml of 1M titrant is equivalent to {self.form_data.get('molecular_weight', '')}mg of "
+                    f"{self.form_data.get('active_ingredient', '')}\n\n"
+                    f"Acceptance Criteria: {self.form_data.get('specification_range', '')}"
                 )
 
             elif self.form_data.get('test_method', '').upper() in ['UV', 'SPECTROPHOTOMETRY']:
                 calc_text = (
                     f"Analysis Samples: Standard solution and Sample Solution\n\n"
-                    f"Calculate the percentage of the labeled amount of {self.form_data.get('active_ingredient', 'Active Ingredient')} "
-                    f"in {self.form_data.get('product_name', 'Product')}:\n\n"
+                    f"Calculate the percentage of the labeled amount of {self.form_data.get('active_ingredient', '')} "
+                    f"in {self.form_data.get('product_name', '')}:\n\n"
                     f"Assay (%) = (As/Ast) × (Wst/Ws) × (Ds/Dst) × (P/100) × (Avg. Wt./Label Claim) × 100\n\n"
                     f"Where:\n"
-                    f"As = Absorbance of sample solution at {self.form_data.get('wavelength', 'XXX nm')}\n"
-                    f"Ast = Absorbance of standard solution at {self.form_data.get('wavelength', 'XXX nm')}\n"
-                    f"Wst = Weight of standard taken = {self.form_data.get('weight_standard', 'XXX mg')}\n"
-                    f"Ws = Weight of sample taken = {self.form_data.get('weight_sample', 'XXX mg')}\n"
+                    f"As = Absorbance of sample solution at {self.form_data.get('wavelength', '')}\n"
+                    f"Ast = Absorbance of standard solution at {self.form_data.get('wavelength', '')}\n"
+                    f"Wst = Weight of standard taken = {self.form_data.get('weight_standard', '')}\n"
+                    f"Ws = Weight of sample taken = {self.form_data.get('weight_sample', '')}\n"
                     f"Ds = Dilution factor of sample\n"
                     f"Dst = Dilution factor of standard\n"
-                    f"P = Potency of standard = {self.form_data.get('potency', 'XX%')}\n"
-                    f"Avg. Wt. = Average weight of tablets = {self.form_data.get('average_weight', 'XXX mg')}\n"
-                    f"Label Claim = {self.form_data.get('label_claim', 'XXX mg')}\n\n"
-                    f"Acceptance Criteria: {self.form_data.get('specification_range', '95.0% - 105.0%')}"
+                    f"P = Potency of standard = {self.form_data.get('potency', '')}\n"
+                    f"Avg. Wt. = Average weight of tablets = {self.form_data.get('average_weight', '')}\n"
+                    f"Label Claim = {self.form_data.get('label_claim', '')}\n\n"
+                    f"Acceptance Criteria: {self.form_data.get('specification_range', '')}"
                 )
 
             else:
                 calc_text = (
-                    f"Calculate the percentage of the labeled amount of {self.form_data.get('active_ingredient', 'Active Ingredient')} "
-                    f"in {self.form_data.get('product_name', 'Product')} as per the approved methodology.\n\n"
-                    f"Acceptance Criteria: {self.form_data.get('specification_range', '95.0% - 105.0%')}"
+                    f"Calculate the percentage of the labeled amount of {self.form_data.get('active_ingredient', '')} "
+                    f"in {self.form_data.get('product_name', '')} as per the approved methodology.\n\n"
+                    f"Acceptance Criteria: {self.form_data.get('specification_range', '')}"
                 )
 
             self.doc.add_paragraph(calc_text)
             
-            spec_range = self.form_data.get('specification_range', '90.0% - 110.0%')
+            spec_range = self.form_data.get('specification_range', '')
             # Parse the range to extract lower and upper limits
             import re
             limits = re.findall(r'(\d+\.?\d*)\s*%', spec_range)
@@ -668,13 +857,13 @@ class AMVProtocolGenerator:
                 lower_limit = limits[0]
                 upper_limit = limits[1]
             else:
-                lower_limit = "90.0"
-                upper_limit = "110.0"
+                lower_limit = ""
+                upper_limit = ""
 
             # Dynamic Limit paragraph
             limit_text = (
                 f"Limit: It contains not less than {lower_limit} percent and not more than {upper_limit} percent "
-                f"of the labeled amount of {self.form_data.get('active_ingredient', 'Active Ingredient')}."
+                f"of the labeled amount of {self.form_data.get('active_ingredient', '')}."
             )
             self.doc.add_paragraph(limit_text)
             
@@ -683,7 +872,7 @@ class AMVProtocolGenerator:
             print(f"Error in overview section: {e}")
     
     def add_validation_parameters_section(self):
-        """Add validation parameters section safely"""
+        """Add validation parameters section that reflects user selections"""
         try:
             self.add_header_section(7)
             
@@ -693,66 +882,74 @@ class AMVProtocolGenerator:
             title_run.bold = True
             
             # Introduction
-            intro_text = "The HPLC method is evaluated for following validation parameters:"
+            intro_text = f"The {self.form_data.get('test_method','')} method is evaluated for following validation parameters:"
             self.doc.add_paragraph(intro_text)
             
-            # Parameters table - SAFE VERSION
+            # Parameters table - USING ACTUAL SELECTIONS
             try:
-                params_table = self.doc.add_table(rows=8, cols=2)
-                params_table.style = 'Table Grid'
-                
-                params_table.rows[0].cells[0].text = "Sr.No."
-                params_table.rows[0].cells[1].text = "Validation Parameters"
-                
-                parameters = [
-                    ("6.1", "System Precision"),
-                    ("6.2", "Specificity"),
-                    ("6.3", "Method Precision"),
-                    ("6.4", "Intermediate Precision"),
-                    ("6.5", "Linearity and Range"),
-                    ("6.6", "Accuracy/Recovery"),
-                    ("6.7", "Robustness")
+                # Define all parameters with their mapping
+                all_parameters = [
+                    ("6.1", "System Suitability"),
+                    ("6.2", "Specificity"), 
+                    ("6.3", "System Precision"),
+                    ("6.4", "Method Precision"),
+                    ("6.5", "Intermediate Precision"),
+                    ("6.6", "Linearity and Range"),
+                    ("6.7", "Accuracy/Recovery"),
+                    ("6.8", "Robustness"),
+                    ("6.9", "Range"),
+                    ("6.10", "LOD and LOQ"),
+                    ("6.11", "LOD and LOQ Precision")
                 ]
                 
-                for idx, (sr_no, param) in enumerate(parameters, 1):
-                    if idx < len(params_table.rows):  # Safety check
-                        params_table.rows[idx].cells[0].text = sr_no
-                        params_table.rows[idx].cells[1].text = param
+                # Filter to only include selected parameters
+                selected_params = []
+                for param_key, param_name in all_parameters:
+                    if self.verification_parameters.get(param_key, False):
+                        selected_params.append((str(len(selected_params) + 1), param_name))
+                
+                print(f"📋 Displaying {len(selected_params)} selected parameters in document")
+                
+                if selected_params:
+                    # Create table with proper rows
+                    params_table = self.doc.add_table(rows=len(selected_params) + 1, cols=2)
+                    params_table.style = 'Table Grid'
+                    
+                    # Headers
+                    params_table.rows[0].cells[0].text = "Sr.No."
+                    params_table.rows[0].cells[1].text = "Validation Parameters"
+                    
+                    # Add selected parameters
+                    for idx, (sr_no, param_name) in enumerate(selected_params, 1):
+                        if idx < len(params_table.rows):
+                            params_table.rows[idx].cells[0].text = sr_no
+                            params_table.rows[idx].cells[1].text = param_name
+                else:
+                    # Fallback if no parameters selected (shouldn't happen with defaults)
+                    self.doc.add_paragraph("No validation parameters selected.")
+                    
             except Exception as e:
                 print(f"Error creating parameters table: {e}")
+                # Add fallback text
+                fallback_text = "• System Suitability\n• Specificity\n• System Precision\n• Method Precision\n• Accuracy/Recovery"
+                self.doc.add_paragraph(fallback_text)
             
             self.add_page_break()
         except Exception as e:
             print(f"Error in validation parameters section: {e}")
-    
+        
     def add_system_precision_section(self):
         """Add system precision section safely"""
         try:
-            self.add_header_section(8)
-            
-            # Title
-            title_para = self.doc.add_paragraph()
-            title_run = title_para.add_run("6.1 System Precision:")
-            title_run.bold = True
-            
-            # Description
-            desc_text = (
-                "The system precision of method is demonstrated by injecting the Blank/diluent, and Standard solution. "
-                "For preparation of diluent, blank solution (diluent), Standard solution and chromatographic conditions "
-                "refer to section 6.0 i.e. analytical methods."
-            )
-            self.doc.add_paragraph(desc_text)
-            
-            # Acceptance criteria
-            self.doc.add_paragraph("Acceptance criteria:")
-            criteria_text = (
-                "✓ System Suitability should meet the requirement.\n"
-                "✓ The relative Standard deviation of the replicate injections obtained from six replicates of Standard solution should be not more than 2.0%.\n"
-                "✓ Tailing factor obtain from Standard solution is NMT 2.0"
-            )
-            self.doc.add_paragraph(criteria_text)
-            
-            self.add_page_break()
+                        self.doc.add_heading("6.1 System Precision:", level=2)
+                        self.doc.add_paragraph("The system precision of method is demonstrated by injecting the Blank/diluent, and Standard solution. "
+                                               "For preparation of diluent, blank solution (diluent), Standard solution and chromatographic conditions "
+                                               "refer to section 6.0 i.e. analytical methods.")
+                        self.doc.add_paragraph("Acceptance criteria:")
+                        self.doc.add_paragraph("✓ System Suitability should meet the requirement.")
+                        self.doc.add_paragraph("✓ The relative Standard deviation of the replicate injections obtained from six replicates of Standard solution should be not more than 2.0%.")
+                        self.doc.add_paragraph("✓ Tailing factor obtain from Standard solution is NMT 2.0")
+                        self.add_page_break()        
         except Exception as e:
             print(f"Error in system precision section: {e}")
     
@@ -773,7 +970,7 @@ class AMVProtocolGenerator:
             self.doc.add_paragraph(desc_text)
             
             # Solutions preparation
-            active_ingredient = self.form_data.get('active_ingredient', 'Leucovorin Calcium')
+            active_ingredient = self.form_data.get('active_ingredient', '')
             solutions_text = (
                 f"Standard solution: Taken 12.0 mg of {active_ingredient} RS/WS and transfer it into 100 ml volumetric flask add water to dissolve the content sonicate if necessary, make up volume with water up to 100ml.\n"
                 f"Placebo Solution: Take placebo solution equivalent to sample (except API) in 100ml volumetric flask. Pipette 2.5ml of resulting solution and transfer to 100ml volumetric flask, make volume upto 100 ml with water.\n"
@@ -835,28 +1032,34 @@ class AMVProtocolGenerator:
             # Validation parameters
             self.add_validation_parameters_section()
             
-            # System precision
-            self.add_system_precision_section()
             
-            # Specificity
-            self.add_specificity_section()
+        
+            
+            
+            
             
             # Add remaining sections with safety checks
-            sections_to_add = [
-                self.add_method_precision_section,
-                self.add_intermediate_precision_section,
-                self.add_linearity_range_section,
-                self.add_accuracy_recovery_section,
-                self.add_robustness_section,
-                self.add_validation_report_section
-            ]
+            section_mapping = {
+                '6.1': self.add_system_precision_section,      # System Suitability
+                '6.2': self.add_specificity_section,           # Specificity
+                '6.3': self.add_system_precision_section,      # System Precision  
+                '6.4': self.add_method_precision_section,      # Method Precision
+                '6.5': self.add_intermediate_precision_section, # Intermediate Precision
+                '6.6': self.add_linearity_range_section,       # Linearity and Range
+                '6.7': self.add_accuracy_recovery_section,     # Accuracy/Recovery
+                '6.8': self.add_robustness_section,            # Robustness
+                '6.9': self.add_linearity_range_section,       # Range (reuse linearity)
+                '6.10': self.add_lod_loq_section,              # LOD and LOQ
+                '6.11': self.add_lod_loq_precision_section     # LOD and LOQ Precision
+            }
             
-            for section_method in sections_to_add:
-                try:
-                    section_method()
-                except Exception as e:
-                    print(f"Error in {section_method.__name__}: {e}")
-                    # Continue with next section instead of failing completely
+            for param_key, section_method in section_mapping.items():
+                if self.verification_parameters.get(param_key, False):
+                    try:
+                        print(f"📄 Generating section for parameter: {param_key}")
+                        section_method()
+                    except Exception as e:
+                        print(f"Error in {section_method.__name__}: {e}")
             
             # Save document
             if isinstance(output_filename, io.BytesIO):
@@ -951,6 +1154,27 @@ class AMVProtocolGenerator:
             self.doc.add_paragraph("A comprehensive validation report will be generated summarizing all results.")
         except Exception as e:
             print(f"Error in validation report section: {e}")
+    def add_lod_loq_section(self):
+        """Add LOD and LOQ section"""
+        try:
+            self.add_header_section(self.current_page)
+            self.doc.add_heading("6.10 LOD and LOQ", level=2)
+            self.doc.add_paragraph("Limit of Detection (LOD) and Limit of Quantitation (LOQ) will be determined.")
+            self.doc.add_paragraph("Acceptance criteria: LOD: S/N ≥ 3, LOQ: S/N ≥ 10")
+            self.add_page_break()
+        except Exception as e:
+            print(f"Error in LOD/LOQ section: {e}")
+
+    def add_lod_loq_precision_section(self):
+        """Add LOD and LOQ Precision section"""
+        try:
+            self.add_header_section(self.current_page)
+            self.doc.add_heading("6.11 LOD and LOQ Precision", level=2)
+            self.doc.add_paragraph("Precision at LOD and LOQ levels will be evaluated.")
+            self.doc.add_paragraph("Acceptance criteria: %RSD ≤ 10.0% at LOQ")
+            self.add_page_break()
+        except Exception as e:
+            print(f"Error in LOD/LOQ Precision section: {e}")
 
 
 class AnalyticalMethodVerificationService:
@@ -959,65 +1183,271 @@ class AnalyticalMethodVerificationService:
     def __init__(self):
         """Initialize the service without requiring form_data"""
         pass
-    
-    def generate_verification_protocol(self, method_info, selected_params, protocol_data):
-        """Generate protocol from form data - SAFE VERSION"""
-        try:
-            # Ensure we have valid data
-            if not protocol_data:
-                protocol_data = {}
-            
-            if not method_info:
-                method_info = {}
-            
-            # Convert form data with all available information
-            method_info_formatted = {
-                'product_name': protocol_data.get('productName', 'Test Product'),
-                'protocol_number': protocol_data.get('protocolNumber', 'AMV/P/TEST/001'),
-                'test_method': protocol_data.get('testMethod', 'HPLC'),
-                'active_ingredient': protocol_data.get('activeIngredient', 'Test Ingredient'),
-                'label_claim': protocol_data.get('labelClaim', '100mg'),
-                'company_name': protocol_data.get('companyName', 'Test Pharmaceuticals Ltd.'),
-                'company_address': protocol_data.get('companyLocation', 'Test Location'),
-                'specification_range': protocol_data.get('specificationRange', '95.0% - 105.0%'),
-                'methodology_code': protocol_data.get('methodologyCode', 'TEST/METHOD/001'),
-                'standard_potency': protocol_data.get('standardPotency', '99.5%'),
-                'prepared_by': protocol_data.get('preparedByName', 'Test Analyst'),
-                'checked_by': protocol_data.get('reviewedByName', 'Test Manager'),
-                'approved_by': protocol_data.get('approvedByName', 'Test Head'),
-                'date_option': 'auto'
-            }
-            
-            # Generate document using the main protocol generator
-            generator = AMVProtocolGenerator(method_info_formatted)
-            buffer = io.BytesIO()
-            generator.generate_protocol(buffer)
-            buffer.seek(0)
-            return buffer
-            
-        except Exception as e:
-            print(f"Error in generate_verification_protocol: {e}")
-            # Return a basic document as fallback
-            return self._create_fallback_protocol(protocol_data)
-    
+
     def _create_fallback_protocol(self, protocol_data):
-        """Create a fallback protocol when generation fails"""
+        """Create a basic fallback protocol when main generation fails"""
         try:
+            print("🔄 Creating fallback protocol...")
+            
             doc = Document()
-            doc.add_heading('Analytical Method Verification Protocol', 0)
-            doc.add_paragraph(f'Product: {protocol_data.get("productName", "Unknown Product")}')
-            doc.add_paragraph(f'Protocol No: {protocol_data.get("protocolNumber", "AMV/P/TEST/001")}')
-            doc.add_paragraph(f'Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
-            doc.add_paragraph('Note: This is a basic protocol generated due to system constraints.')
+            
+            # Add basic header
+            title = doc.add_heading('ANALYTICAL METHOD VERIFICATION PROTOCOL', 0)
+            title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Add basic information
+            doc.add_heading('Basic Information', level=1)
+            
+            basic_info = [
+                ('Product Name', protocol_data.get('product_name', 'Unknown Product')),
+                ('Active Ingredient', protocol_data.get('active_ingredient', 'Unknown')),
+                ('Test Method', protocol_data.get('test_method', 'Unknown Method')),
+                ('Protocol Number', protocol_data.get('protocol_number', 'Unknown')),
+                ('Company', protocol_data.get('company_name', 'Unknown Company'))
+            ]
+            
+            for label, value in basic_info:
+                p = doc.add_paragraph()
+                p.add_run(f"{label}: ").bold = True
+                p.add_run(str(value))
+            
+            # Add error notice
+            doc.add_heading('Notice', level=1)
+            doc.add_paragraph(
+                'This is a simplified protocol generated due to technical issues with the main generator. '
+                'Please contact technical support for the full protocol.'
+            )
+            
+            # Add generation info
+            doc.add_paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             
             buffer = io.BytesIO()
             doc.save(buffer)
             buffer.seek(0)
+            
+            print("✅ Fallback protocol created successfully")
             return buffer
+            
         except Exception as e:
-            print(f"Error creating fallback protocol: {e}")
-            return None
+            print(f"❌ Error creating fallback protocol: {e}")
+            # Ultimate fallback - return empty bytes
+            return io.BytesIO()
     
+    def generate_verification_protocol(self, method_info, protocol_data):
+        """Generate protocol from form data - COMPLETELY FIXED VERSION"""
+        try:
+            print("🔍 DEBUG: generate_verification_protocol called")
+            print(f"📦 protocol_data keys: {list(protocol_data.keys()) if protocol_data else 'None'}")
+            
+            # Ensure we have valid data
+            if not protocol_data:
+                protocol_data = {}
+            if not method_info:
+                method_info = {}
+
+            # **CRITICAL FIX: Get validation parameters from the form**
+            selected_val_params = protocol_data.get('val_params', [])
+            print(f"🔍 RAW val_params: {selected_val_params} (type: {type(selected_val_params)})")
+
+            # **FIXED: Handle different data types properly**
+            if isinstance(selected_val_params, str):
+                # Convert string to list
+                if selected_val_params.strip() and selected_val_params.startswith('['):
+                    try:
+                        selected_val_params = json.loads(selected_val_params)
+                    except:
+                        selected_val_params = [p.strip() for p in selected_val_params.split(',') if p.strip()]
+                else:
+                    selected_val_params = [selected_val_params] if selected_val_params.strip() else []
+            
+            # Ensure it's a list
+            if not isinstance(selected_val_params, list):
+                selected_val_params = [selected_val_params] if selected_val_params else []
+
+            print(f"🔍 PROCESSED val_params: {selected_val_params}")
+
+            # **FIXED: Correct parameter mapping that matches HTML checkbox values**
+            parameter_mapping = {
+                # Frontend value -> Section number
+                'system_suitability': '6.1',
+                'specificity': '6.2', 
+                'system_precision': '6.3',
+                'method_precision': '6.4',
+                'intermediate_precision': '6.5',
+                'linearity': '6.6',
+                'recovery': '6.7',
+                'robustness': '6.8',
+                'range': '6.9',
+                'lod_loq': '6.10',
+                'lod_loq_precision': '6.11'
+            }
+            
+            # Display names for sections
+            display_names = {
+                '6.1': 'System Suitability',
+                '6.2': 'Specificity',
+                '6.3': 'System Precision', 
+                '6.4': 'Method Precision',
+                '6.5': 'Intermediate Precision',
+                '6.6': 'Linearity and Range',
+                '6.7': 'Accuracy/Recovery',
+                '6.8': 'Robustness',
+                '6.9': 'Range',
+                '6.10': 'LOD and LOQ',
+                '6.11': 'LOD and LOQ Precision'
+            }
+
+            # Initialize all parameters to False
+            verification_parameters = {key: False for key in display_names.keys()}
+            
+            # **FIXED: Map frontend checkbox values to section numbers**
+            for frontend_value in selected_val_params:
+                frontend_value_str = str(frontend_value).strip()
+                print(f"🔍 Processing frontend value: '{frontend_value_str}'")
+                
+                # Direct mapping from checkbox value to section number
+                if frontend_value_str in parameter_mapping:
+                    section_number = parameter_mapping[frontend_value_str]
+                    verification_parameters[section_number] = True
+                    print(f"✅ Mapped '{frontend_value_str}' -> '{section_number}'")
+                
+                # If it's already a section number
+                elif frontend_value_str in display_names:
+                    verification_parameters[frontend_value_str] = True
+                    print(f"✅ Direct section number: '{frontend_value_str}'")
+                
+                else:
+                    print(f"❌ No mapping found for: '{frontend_value_str}'")
+
+            # Count selected parameters
+            selected_count = sum(verification_parameters.values())
+            print(f"📊 Total parameters selected from form: {selected_count}")
+            print(f"🎯 Final verification_parameters: {verification_parameters}")
+
+            # ONLY use defaults if NO parameters were selected in the form
+            if selected_count == 0:
+                # Get the ACTUAL test method from protocol_data
+                actual_test_method = protocol_data.get('test_method', protocol_data.get('testMethod', 'HPLC'))
+                print(f"⚠️ No parameters selected in form, using defaults for: {actual_test_method}")
+                
+                # Default parameters based on ACTUAL test method type
+                if actual_test_method.upper() in ['HPLC', 'LC', 'UPLC']:
+                    default_params = ["6.1", "6.2", "6.3", "6.4", "6.7"]
+                    print("🎯 Using HPLC defaults")
+                elif actual_test_method.upper() in ['TITRATION', 'TITRIMETRY']:
+                    default_params = ["6.3", "6.4", "6.7"]
+                    print("🎯 Using TITRATION defaults")
+                elif actual_test_method.upper() in ['UV', 'SPECTROPHOTOMETRY']:
+                    default_params = ["6.2", "6.4", "6.7"]
+                    print("🎯 Using UV defaults")
+                else:
+                    default_params = ["6.1", "6.2", "6.4", "6.7"]
+                    print("🎯 Using GENERIC defaults")
+                
+                # Update verification parameters with defaults
+                for param in default_params:
+                    if param in verification_parameters:
+                        verification_parameters[param] = True
+            else:
+                print("✅ Using parameters selected in form (NOT defaults)")
+
+            # **FIXED: Extract ALL form data with proper fallbacks**
+            form_data_for_protocol = {
+                # Basic Information
+                'product_name': protocol_data.get('product_name', protocol_data.get('productName', 'Unknown Product')),
+                'protocol_number': protocol_data.get('protocol_number', protocol_data.get('protocolNumber', 'AMV-PROTOCOL-001')),
+                'test_method': protocol_data.get('test_method', protocol_data.get('testMethod', 'HPLC')),
+                'active_ingredient': protocol_data.get('active_ingredient', protocol_data.get('activeIngredient', 'Unknown Ingredient')),
+                'label_claim': protocol_data.get('label_claim', protocol_data.get('labelClaim', '')),
+                'company_name': protocol_data.get('company_name', protocol_data.get('companyName', 'Unknown Company')),
+                'company_location': protocol_data.get('company_location', protocol_data.get('companyLocation', '')),
+                'specification_range': protocol_data.get('specification_range', protocol_data.get('specificationRange', '90.0% - 110.0%')),
+                'methodology_code': protocol_data.get('methodology_code', protocol_data.get('methodologyCode', '')),
+                'standard_potency': protocol_data.get('standard_potency', protocol_data.get('standardPotency', '')),
+                
+                # Method Parameters
+                'weight_standard': protocol_data.get('weight_standard', ''),
+                'weight_sample': protocol_data.get('weight_sample', ''),
+                'final_concentration_standard': protocol_data.get('final_concentration_standard', ''),
+                'final_concentration_sample': protocol_data.get('final_concentration_sample', ''),
+                'potency': protocol_data.get('potency', ''),
+                'average_weight': protocol_data.get('average_weight', ''),
+                'weight_per_ml': protocol_data.get('weight_per_ml', ''),
+                'wavelength': protocol_data.get('wavelength', ''),
+                'molecular_weight': protocol_data.get('molecular_weight', ''),
+                'molecular_formula': protocol_data.get('molecular_formula', ''),
+                'reference_absorbance_standard': protocol_data.get('reference_absorbance_standard', ''),
+                'reference_area_standard': protocol_data.get('reference_area_standard', ''),
+                'flow_rate': protocol_data.get('flow_rate', ''),
+                'injection_volume': protocol_data.get('injection_volume', ''),
+                'reference_volume': protocol_data.get('reference_volume', ''),
+                'weight_sample_gm': protocol_data.get('weight_sample_gm', ''),
+                'standard_factor': protocol_data.get('standard_factor', ''),
+                
+                # Team Information
+                'prepared_by_name': protocol_data.get('prepared_by_name', protocol_data.get('preparedByName', '')),
+                'prepared_by_dept': protocol_data.get('prepared_by_dept', protocol_data.get('preparedByDept', 'Quality Control')),
+                'reviewed_by_name': protocol_data.get('reviewed_by_name', protocol_data.get('reviewedByName', '')),
+                'reviewed_by_dept': protocol_data.get('reviewed_by_dept', protocol_data.get('reviewedByDept', 'Quality Control')),
+                'approved_by_name': protocol_data.get('approved_by_name', protocol_data.get('approvedByName', '')),
+                'approved_by_dept': protocol_data.get('approved_by_dept', protocol_data.get('approvedByDept', 'Quality Assurance')),
+                'authorized_by_name': protocol_data.get('authorized_by_name', protocol_data.get('authorizedByName', '')),
+                'authorized_by_dept': protocol_data.get('authorized_by_dept', protocol_data.get('authorizedByDept', 'Quality Assurance')),
+                
+                # Additional parameters
+                'mode': protocol_data.get('mode', 'LC'),
+                'detector': protocol_data.get('detector', 'UV 280 nm'),
+                'column': protocol_data.get('column', '4.5 mm X 25 cm; 5 µm L1'),
+                'autosampler_temp': protocol_data.get('autosampler_temp', '10°'),
+                'column_temp': protocol_data.get('column_temp', '50°'),
+                'mobile_phase': protocol_data.get('mobile_phase', 'Methanol and Solution A (150:850)'),
+                'solution_preparation': protocol_data.get('solution_preparation', 'Solution A: Dissolve 2.6 ml of Tetrabutylammonium hydroxide solution (40% in water) and 2.8 gm of disodium hydrogen phosphate in 1000 ml of water. Adjust with phosphoric acid to a pH of 7.8.'),
+                
+                'date_option': 'auto'
+            }
+
+            # **FIXED: Handle JSON data properly**
+            # Extract JSON data from form
+            selected_equipment_json = protocol_data.get('selected_equipment_json', '[]')
+            selected_glass_materials_json = protocol_data.get('selected_glass_materials_json', '[]')
+            selected_reagents_json = protocol_data.get('selected_reagents_json', '[]')
+            selected_reference_json = protocol_data.get('selected_reference_json', '{}')
+
+            print(f"📦 Equipment JSON: {selected_equipment_json}")
+            print(f"📦 Glass JSON: {selected_glass_materials_json}")
+            print(f"📦 Reagents JSON: {selected_reagents_json}")
+            print(f"📦 Reference JSON: {selected_reference_json}")
+
+            # Add JSON data to form_data_for_protocol
+            form_data_for_protocol.update({
+                'selected_equipment_json': selected_equipment_json,
+                'selected_glass_materials_json': selected_glass_materials_json,
+                'selected_reagents_json': selected_reagents_json,
+                'selected_reference_json': selected_reference_json,
+            })
+
+            print(f"🎯 Final verification_parameters: {verification_parameters}")
+            print(f"📝 Test Method: {form_data_for_protocol.get('test_method')}")
+            print(f"🏭 Product: {form_data_for_protocol.get('product_name')}")
+            print(f"🔬 Protocol No: {form_data_for_protocol.get('protocol_number')}")
+            print(f"👤 Prepared By: {form_data_for_protocol.get('prepared_by_name')}")
+
+            # Generate document using the main protocol generator with the CORRECT form data
+            generator = AMVProtocolGenerator(form_data_for_protocol, verification_parameters)
+            buffer = io.BytesIO()
+            generator.generate_protocol(buffer)
+            buffer.seek(0)
+            
+            print("✅ Protocol generated successfully!")
+            return buffer
+            
+        except Exception as e:
+            print(f"❌ Error in generate_verification_protocol: {e}")
+            import traceback
+            traceback.print_exc()
+            # Return a basic document as fallback
+            return self._create_fallback_protocol(protocol_data)
+        
     def generate_protocol_from_files(self, excel_path, pdf_path):
         """Generate protocol from Excel and PDF files"""
         try:

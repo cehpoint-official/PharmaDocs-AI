@@ -1,0 +1,15 @@
+# Ignore files not needed for Cloud Build
+.gcloudignore
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.db
+*.xls
+*.xlsx
+*.json
+*.env
+venv/
+.env
+.vscode/
+instance/

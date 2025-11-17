@@ -11,6 +11,7 @@ async function editCompany(companyId) {
     document.getElementById('editCompanyId').value = company.id;
     document.getElementById('editCompanyName').value = company.name;
     document.getElementById('editCompanyAddress').value = company.address || "";
+    document.getElementById('editCompanyGlassMaterials').value = company.glass_materials || "";
     openModal('editCompanyModal');
   } catch (err) {
     console.error(err);

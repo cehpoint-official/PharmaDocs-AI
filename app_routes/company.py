@@ -169,11 +169,14 @@ def edit_company(company_id):
     try:
         name = request.form.get('name')
         address = request.form.get('address')
+        glass_materials = request.form.get('glass_materials')
 
         if name:
             company.name = name
         if address:
             company.address = address
+        if glass_materials:
+            company.glass_materials = glass_materials
 
         if 'logo' in request.files:
             logo_file = request.files['logo']
