@@ -417,12 +417,6 @@ def create_amv_form():
             checked_sig_file = request.files.get('checked_signature')
             approved_sig_file = request.files.get('approved_signature')
             
-            # DEBUG: Log what files were received
-            current_app.logger.info(f"Signature files received:")
-            current_app.logger.info(f"  prepared_signature: {prepared_sig_file}")
-            current_app.logger.info(f"  checked_signature: {checked_sig_file}")
-            current_app.logger.info(f"  approved_signature: {approved_sig_file}")
-            
             # Define a folder to store signature uploads
             UPLOAD_FOLDER = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'signatures')
             os.makedirs(UPLOAD_FOLDER, exist_ok=True) # Create folder if it doesn't exist
@@ -434,23 +428,18 @@ def create_amv_form():
                 filepath = os.path.join(UPLOAD_FOLDER, filename)
                 prepared_sig_file.save(filepath)
                 signature_paths['prepared_by_sig'] = filepath
-                current_app.logger.info(f"Saved prepared signature to: {filepath}")
 
             if checked_sig_file:
                 filename = secure_filename(checked_sig_file.filename)
                 filepath = os.path.join(UPLOAD_FOLDER, filename)
                 checked_sig_file.save(filepath)
                 signature_paths['checked_by_sig'] = filepath
-                current_app.logger.info(f"Saved checked signature to: {filepath}")
 
             if approved_sig_file:
                 filename = secure_filename(approved_sig_file.filename)
                 filepath = os.path.join(UPLOAD_FOLDER, filename)
                 approved_sig_file.save(filepath)
                 signature_paths['approved_by_sig'] = filepath
-                current_app.logger.info(f"Saved approved signature to: {filepath}")
-
-            current_app.logger.info(f"Final signature_paths: {signature_paths}")
 
             # Ensure upload directory exists
             os.makedirs(os.path.dirname(method_pdf_path), exist_ok=True)
@@ -1224,7 +1213,6 @@ def test_extract_route():
 
 
 
-
 @amv_bp.route('/verification', methods=['GET'])
 def amv_verification_protocol_page():
     """Render the AMV Verification Protocol form page"""
@@ -1746,6 +1734,7 @@ def protocol_download():
     filename = f"AMV_Protocol_{product_name}.txt"
     return send_file(file_obj, as_attachment=True, download_name=filename, mimetype='text/plain')
 
+>>>>>>> 961c82ce4b77a8b11a44e879c8a7b498fad80d84
 @amv_bp.route('/api/generate-smiles', methods=['POST'])
 def generate_smiles():
     """Generate SMILES notation from active ingredient name"""
@@ -2173,3 +2162,4 @@ def view_amv_verification(document_id):
                          amv_verification=amv_verification)
 
 
+>>>>>>> 961c82ce4b77a8b11a44e879c8a7b498fad80d84
