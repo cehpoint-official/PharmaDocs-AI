@@ -13,7 +13,7 @@ import re
 from datetime import datetime
 from database import db
 from models import (
-    PVP_Template, PVP_Criteria, PVP_Equipment, PVP_Material, 
+    User, PVP_Template, PVP_Criteria, PVP_Equipment, PVP_Material, 
     PVP_Extracted_Stage, PVR_Report, PVR_Data, PVR_Stage_Result,
     PV_Stage_Template
 )
@@ -41,8 +41,13 @@ def upload_pvp():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
+    user = User.query.get(session['user_id'])
+    if not user:
+        session.clear()
+        return redirect(url_for('auth.login'))
+    
     if request.method == 'GET':
-        return render_template('upload_pvp.html')
+        return render_template('upload_pvp.html', user=user)
     
     # Handle POST - file upload
     if 'pvp_file' not in request.files:
@@ -176,11 +181,16 @@ def list_templates():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
+    user = User.query.get(session['user_id'])
+    if not user:
+        session.clear()
+        return redirect(url_for('auth.login'))
+    
     templates = PVP_Template.query.filter_by(user_id=session['user_id']).order_by(
         PVP_Template.created_at.desc()
     ).all()
     
-    return render_template('pvp_templates_list.html', templates=templates)
+    return render_template('pvp_templates_list.html', templates=templates, user=user)
 
 
 @pv_routes.route('/template/<int:template_id>')
@@ -188,6 +198,11 @@ def view_pvp_template(template_id):
     """View PVP template details"""
     
     if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user:
+        session.clear()
         return redirect(url_for('auth.login'))
     
     template = PVP_Template.query.get_or_404(template_id)
@@ -205,7 +220,8 @@ def view_pvp_template(template_id):
                          equipment=equipment,
                          materials=materials,
                          stages=stages,
-                         criteria=criteria)
+                         criteria=criteria,
+                         user=user)
 
 
 @pv_routes.route('/generate/<int:template_id>', methods=['GET', 'POST'])
@@ -213,6 +229,11 @@ def generate_pvr(template_id):
     """Generate PVR report from PVP template"""
     
     if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user:
+        session.clear()
         return redirect(url_for('auth.login'))
     
     template = PVP_Template.query.get_or_404(template_id)
@@ -227,7 +248,8 @@ def generate_pvr(template_id):
         return render_template('generate_pvr.html',
                              template=template,
                              stages=stages,
-                             criteria=criteria)
+                             criteria=criteria,
+                             user=user)
     
     # Handle POST - generate report
     try:
@@ -340,6 +362,11 @@ def view_pvr(report_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
+    user = User.query.get(session['user_id'])
+    if not user:
+        session.clear()
+        return redirect(url_for('auth.login'))
+    
     report = PVR_Report.query.get_or_404(report_id)
     template = report.template
     batch_data = PVR_Data.query.filter_by(pvr_report_id=report_id).all()
@@ -347,7 +374,8 @@ def view_pvr(report_id):
     return render_template('view_pvr.html',
                          report=report,
                          template=template,
-                         batch_data=batch_data)
+                         batch_data=batch_data,
+                         user=user)
 
 
 @pv_routes.route('/download/<int:report_id>/pdf')

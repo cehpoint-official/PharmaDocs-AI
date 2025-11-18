@@ -1106,8 +1106,9 @@ def manage_equipment():
                 flash('Equipment deleted successfully!', 'success')
     
     equipment_list = Equipment.query.filter_by(company_id=company_id).all()
+    user = User.query.get(session['user_id'])
     
-    return render_template('manage_equipment.html', equipment_list=equipment_list)
+    return render_template('manage_equipment.html', equipment_list=equipment_list, user=user)
 
 @amv_bp.route('/settings/materials', methods=['GET', 'POST'])
 def manage_materials():
@@ -1202,8 +1203,9 @@ def manage_reference_products():
             flash('Reference product added successfully!', 'success')
     
     references = ReferenceProduct.query.filter_by(company_id=company_id).all()
+    user = User.query.get(session['user_id'])
     
-    return render_template('manage_reference_products.html', references=references)
+    return render_template('manage_reference_products.html', references=references, user=user)
 
 @amv_bp.route('/test-extract', methods=['GET'])
 def test_extract_route():
@@ -1734,7 +1736,6 @@ def protocol_download():
     filename = f"AMV_Protocol_{product_name}.txt"
     return send_file(file_obj, as_attachment=True, download_name=filename, mimetype='text/plain')
 
->>>>>>> 961c82ce4b77a8b11a44e879c8a7b498fad80d84
 @amv_bp.route('/api/generate-smiles', methods=['POST'])
 def generate_smiles():
     """Generate SMILES notation from active ingredient name"""
@@ -2160,6 +2161,3 @@ def view_amv_verification(document_id):
                          document=document, 
                          metadata=metadata, 
                          amv_verification=amv_verification)
-
-
->>>>>>> 961c82ce4b77a8b11a44e879c8a7b498fad80d84
