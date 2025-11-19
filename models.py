@@ -36,6 +36,7 @@ class User(db.Model):
     pvr_reports: Mapped[List["PVR_Report"]] = relationship("PVR_Report", back_populates="user")
     subscriptions: Mapped[List["Subscription"]] = relationship("Subscription", back_populates="user")
     payments: Mapped[List["Payment"]] = relationship("Payment", back_populates="user")
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -379,7 +380,6 @@ class AMVDocument(db.Model):
         """Set parameters to validate from list"""
         self.parameters_to_validate = json.dumps(params)
 
-<<<<<<< HEAD
 # --- PROCESS VALIDATION (PV) MODULE MODELS ---
 # PROCESS VALIDATION STAGE TEMPLATES (Reference Data)
 
@@ -594,7 +594,7 @@ class PVR_Data(db.Model):
 
     # Relationship
     report: Mapped["PVR_Report"] = relationship("PVR_Report", back_populates="data")
-=======
+
 class AMVVerificationDocument(db.Model):
     """Specific model for AMV Verification documents with detailed parameters"""
     __tablename__ = 'amv_verification_documents'
@@ -860,4 +860,3 @@ class SubscriptionPlan(db.Model):
     def set_features_list(self, features):
         """Set features from list"""
         self.features = json.dumps(features)
->>>>>>> 961c82ce4b77a8b11a44e879c8a7b498fad80d84

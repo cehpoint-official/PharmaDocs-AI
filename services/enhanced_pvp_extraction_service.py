@@ -39,22 +39,16 @@ class EnhancedPVPExtractor:
         
     def extract_all(self) -> Dict:
         """Main extraction method - extracts everything from PVP"""
-        
         logger.info(f"Starting extraction from: {self.pdf_path}")
-        
         # Extract full text from PDF
         self.full_text = self._extract_text_from_pdf()
-        
         if not self.full_text:
             logger.error("Failed to extract text from PDF")
             return self._empty_result()
-        
         logger.info(f"Extracted {len(self.full_text)} characters from PDF")
-        
         # Extract tables from PDF
         self.tables = self._extract_tables_from_pdf()
         logger.info(f"Extracted {len(self.tables)} tables from PDF")
-        
         # Extract all data
         result = {
             'product_info': self._extract_product_info(),
@@ -62,14 +56,79 @@ class EnhancedPVPExtractor:
             'equipment': self._extract_equipment(),
             'materials': self._extract_materials(),
             'stages': self._extract_stages(),
-            'test_criteria': self._extract_test_criteria()
+            'test_criteria': self._extract_test_criteria(),
+            'test_preparations': self._extract_test_preparations(),
+            'calculation_sheet': self._extract_calculation_sheet(),
+            'observations': self._extract_observations(),
+            'signatures': self._extract_signatures(),
+            'protocol_summary': self._extract_protocol_summary()
         }
-        
         self.product_type = result['product_type']
-        
         logger.info(f"Extraction complete. Product: {result['product_info'].get('product_name')}, Type: {result['product_type']}")
-        
         return result
+    def _extract_test_preparations(self) -> list:
+        """Extract test preparation details and area/absorbance values from tables and text"""
+        preparations = []
+        for table in self.tables:
+            df = table.df
+            headers = df.iloc[0].str.lower() if len(df) > 0 else []
+            prep_keywords = ['preparation', 'test', 'sample', 'area', 'absorbance']
+            is_prep_table = any(any(k in str(h) for k in prep_keywords) for h in headers)
+            if is_prep_table:
+                for idx in range(1, len(df)):
+                    row = df.iloc[idx]
+                    preparations.append({
+                        'test_name': str(row[0]).strip(),
+                        'preparation': str(row[1]).strip() if len(row) > 1 else '',
+                        'area': str(row[2]).strip() if len(row) > 2 else '',
+                        'absorbance': str(row[3]).strip() if len(row) > 3 else ''
+                    })
+        return preparations
+
+    def _extract_calculation_sheet(self) -> list:
+        """Extract calculation formulas and results from tables"""
+        calculations = []
+        for table in self.tables:
+            df = table.df
+            headers = df.iloc[0].str.lower() if len(df) > 0 else []
+            calc_keywords = ['mean', 'sd', 'rsd', 'calculation', 'result']
+            is_calc_table = any(any(k in str(h) for k in calc_keywords) for h in headers)
+            if is_calc_table:
+                for idx in range(1, len(df)):
+                    row = df.iloc[idx]
+                    calculations.append({
+                        'parameter': str(row[0]).strip(),
+                        'mean': str(row[1]).strip() if len(row) > 1 else '',
+                        'sd': str(row[2]).strip() if len(row) > 2 else '',
+                        'rsd': str(row[3]).strip() if len(row) > 3 else '',
+                        'formula': str(row[4]).strip() if len(row) > 4 else ''
+                    })
+        return calculations
+
+    def _extract_observations(self) -> str:
+        """Extract observations, remarks, deviations from text"""
+        obs_pattern = r'(observations|remarks|deviations)[:\s]+([^\n]{0,500})'
+        match = re.search(obs_pattern, self.full_text, re.IGNORECASE)
+        return match.group(2).strip() if match else ''
+
+    def _extract_signatures(self) -> dict:
+        """Extract performed by, checked by, approved by, and dates"""
+        sig_pattern = r'(performed by|checked by|approved by)[:\s]+([^\n]+)'
+        matches = re.findall(sig_pattern, self.full_text, re.IGNORECASE)
+        signatures = {}
+        for role, name in matches:
+            signatures[role.lower().replace(' ', '_')] = name.strip()
+        date_pattern = r'(\d{2}/\d{2}/\d{4})'
+        dates = re.findall(date_pattern, self.full_text)
+        if dates:
+            signatures['date'] = dates[0]
+        return signatures
+
+    def _extract_protocol_summary(self) -> str:
+        """Extract protocol summary from text"""
+        protocol_pattern = r'(protocol|methodology|procedure)[:\s]+([^\n]{0,1000})'
+        match = re.search(protocol_pattern, self.full_text, re.IGNORECASE)
+        return match.group(2).strip() if match else ''
     
     def _extract_text_from_pdf(self) -> str:
         """Extract all text from PDF"""

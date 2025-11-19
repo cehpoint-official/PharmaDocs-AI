@@ -237,20 +237,32 @@ def generate_pvr(template_id):
         return redirect(url_for('auth.login'))
     
     template = PVP_Template.query.get_or_404(template_id)
-    
+
+    # Attach AI-extracted fields to template object for report generation
+    # If you save these in DB, fetch from related tables/models. Otherwise, fetch from extraction output.
+    # Example assumes you have a way to fetch these fields (adjust as needed):
+    from services.enhanced_pvp_extraction_service import EnhancedPVPExtractor
+    if hasattr(template, 'original_filepath') and template.original_filepath:
+        extractor = EnhancedPVPExtractor(template.original_filepath)
+        extracted_data = extractor.extract_all()
+        template.protocol_summary = extracted_data.get('protocol_summary', '')
+        template.test_preparations = extracted_data.get('test_preparations', [])
+        template.calculation_sheet = extracted_data.get('calculation_sheet', [])
+        template.observations = extracted_data.get('observations', '')
+        template.signatures = extracted_data.get('signatures', {})
+
     if request.method == 'GET':
         # Get stages and criteria for form
         stages = PVP_Extracted_Stage.query.filter_by(pvp_template_id=template_id).order_by(
             PVP_Extracted_Stage.stage_number
         ).all()
         criteria = PVP_Criteria.query.filter_by(pvp_template_id=template_id).all()
-        
         return render_template('generate_pvr.html',
                              template=template,
                              stages=stages,
                              criteria=criteria,
                              user=user)
-    
+
     # Handle POST - generate report
     try:
         # Get form data
