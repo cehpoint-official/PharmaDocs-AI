@@ -125,10 +125,26 @@ class EnhancedPVPExtractor:
         return signatures
 
     def _extract_protocol_summary(self) -> str:
-        """Extract protocol summary from text"""
-        protocol_pattern = r'(protocol|methodology|procedure)[:\s]+([^\n]{0,1000})'
-        match = re.search(protocol_pattern, self.full_text, re.IGNORECASE)
-        return match.group(2).strip() if match else ''
+        """Extract full methodology/protocol section from text"""
+        # Find start of methodology/protocol/procedure section
+        start_pattern = r'(methodology|protocol|procedure)[:\s]*\n?'
+        end_pattern = r'^(?:calculations?|results?|observations?|conclusion|references?)[:\s]*$'
+        lines = self.full_text.splitlines()
+        start_idx = None
+        end_idx = None
+        for i, line in enumerate(lines):
+            if re.match(start_pattern, line.strip(), re.IGNORECASE):
+                start_idx = i
+                break
+        if start_idx is not None:
+            for j in range(start_idx + 1, len(lines)):
+                if re.match(end_pattern, lines[j].strip(), re.IGNORECASE):
+                    end_idx = j
+                    break
+            # Extract all lines between start and end
+            section = lines[start_idx:end_idx] if end_idx else lines[start_idx:]
+            return '\n'.join(section).strip()
+        return ''
     
     def _extract_text_from_pdf(self) -> str:
         """Extract all text from PDF"""
@@ -145,17 +161,24 @@ class EnhancedPVPExtractor:
             return ""
     
     def _extract_tables_from_pdf(self) -> List:
-        """Extract all tables from PDF using camelot"""
+        """Extract all tables from PDF using camelot, ensuring temp files are closed"""
         try:
             # Extract tables using camelot (lattice method for bordered tables)
             tables = camelot.read_pdf(self.pdf_path, pages='all', flavor='lattice')
             logger.info(f"Camelot lattice found {len(tables)} tables")
-            
+
             # If no tables found with lattice, try stream method for non-bordered tables
             if len(tables) == 0:
                 tables = camelot.read_pdf(self.pdf_path, pages='all', flavor='stream')
                 logger.info(f"Camelot stream found {len(tables)} tables")
-            
+
+            # Explicitly close temp files if possible
+            for table in tables:
+                if hasattr(table, 'temp_dir') and table.temp_dir:
+                    try:
+                        table._close_temp_files()
+                    except Exception:
+                        pass
             return tables
         except Exception as e:
             logger.error(f"Error extracting tables: {e}")
