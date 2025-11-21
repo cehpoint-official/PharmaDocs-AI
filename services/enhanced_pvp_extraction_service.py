@@ -61,10 +61,12 @@ class EnhancedPVPExtractor:
             'calculation_sheet': self._extract_calculation_sheet(),
             'observations': self._extract_observations(),
             'signatures': self._extract_signatures(),
-            'protocol_summary': self._extract_protocol_summary()
+            'protocol_summary': self._extract_protocol_summary(),
+            'batch_details': self._extract_batch_details()
         }
         self.product_type = result['product_type']
         logger.info(f"Extraction complete. Product: {result['product_info'].get('product_name')}, Type: {result['product_type']}")
+        return result
         return result
     def _extract_test_preparations(self) -> list:
         """Extract test preparation details and area/absorbance values from tables and text"""
@@ -365,56 +367,20 @@ Return only the JSON array, no other text.
         return equipment[:50]  # Limit to 50 items
     
     def _extract_equipment_from_tables(self) -> List[Dict]:
-        """Extract equipment from tables in the PDF"""
+        """Extract equipment from tables in the PDF, capturing all columns"""
         equipment = []
-        
         for idx, table in enumerate(self.tables):
             df = table.df
-            
-            # Check if this table contains equipment data
-            # Look for columns like: Equipment, Equipment ID, Equipment Name, etc.
             headers = df.iloc[0].str.lower() if len(df) > 0 else []
-            
-            # DEBUG: Print table headers to see what we have
-            logger.info(f"Table {idx} headers: {list(headers)}")
-            
             equipment_keywords = ['equipment', 'instrument', 'machine', 'apparatus', 'balance', 'item']
-            id_keywords = ['id', 'code', 'no.', 'number', 'sr']
-            location_keywords = ['location', 'area', 'room', 'department']
-            
-            # Check if this is an equipment table
             is_equipment_table = any(
                 any(keyword in str(header).lower() for keyword in equipment_keywords)
                 for header in headers
             )
-            
             if is_equipment_table:
-                # Find column indices
-                name_col = None
-                id_col = None
-                location_col = None
-                
-                for i, header in enumerate(headers):
-                    header_lower = str(header).lower()
-                    if any(kw in header_lower for kw in equipment_keywords):
-                        name_col = i
-                    elif any(kw in header_lower for kw in id_keywords):
-                        id_col = i
-                    elif any(kw in header_lower for kw in location_keywords):
-                        location_col = i
-                
-                # Extract equipment rows
-                for idx in range(1, len(df)):  # Skip header row
+                for idx in range(1, len(df)):
                     row = df.iloc[idx]
-                    
-                    if name_col is not None and pd.notna(row[name_col]) and str(row[name_col]).strip():
-                        equipment.append({
-                            'equipment_name': str(row[name_col]).strip(),
-                            'equipment_id': str(row[id_col]).strip() if id_col is not None and pd.notna(row[id_col]) else '',
-                            'location': str(row[location_col]).strip() if location_col is not None and pd.notna(row[location_col]) else '',
-                            'calibration_status': 'Valid'
-                        })
-        
+                    equipment.append({h: str(row[i]).strip() if i < len(row) else '' for i, h in enumerate(headers)})
         return equipment
     
     def _extract_materials(self) -> List[Dict]:
@@ -505,68 +471,20 @@ Return only the JSON array, no other text.
         return materials[:50]  # Limit to 50 items
     
     def _extract_materials_from_tables(self) -> List[Dict]:
-        """Extract materials from tables in the PDF"""
+        """Extract materials from tables in the PDF, capturing all columns"""
         materials = []
-        
         for table in self.tables:
             df = table.df
-            
-            # Check if this table contains materials data
             headers = df.iloc[0].str.lower() if len(df) > 0 else []
-            
             material_keywords = ['material', 'ingredient', 'component', 'item', 'api', 'excipient']
-            spec_keywords = ['specification', 'spec', 'standard', 'grade']
-            qty_keywords = ['quantity', 'qty', 'amount', 'weight']
-            
-            # Check if this is a materials table
             is_material_table = any(
                 any(keyword in str(header).lower() for keyword in material_keywords)
                 for header in headers
             )
-            
             if is_material_table:
-                # Find column indices
-                name_col = None
-                type_col = None
-                spec_col = None
-                qty_col = None
-                
-                for i, header in enumerate(headers):
-                    header_lower = str(header).lower()
-                    if any(kw in header_lower for kw in material_keywords):
-                        name_col = i
-                    elif 'type' in header_lower or 'category' in header_lower:
-                        type_col = i
-                    elif any(kw in header_lower for kw in spec_keywords):
-                        spec_col = i
-                    elif any(kw in header_lower for kw in qty_keywords):
-                        qty_col = i
-                
-                # Extract material rows
-                for idx in range(1, len(df)):  # Skip header row
+                for idx in range(1, len(df)):
                     row = df.iloc[idx]
-                    
-                    if name_col is not None and pd.notna(row[name_col]) and str(row[name_col]).strip():
-                        material_name = str(row[name_col]).strip()
-                        
-                        # Determine material type
-                        material_type = 'Excipient'  # Default
-                        if type_col is not None and pd.notna(row[type_col]):
-                            type_val = str(row[type_col]).lower()
-                            if 'api' in type_val or 'active' in type_val:
-                                material_type = 'API'
-                            elif 'packaging' in type_val:
-                                material_type = 'Packaging'
-                        elif any(kw in material_name.lower() for kw in ['api', 'active', 'drug']):
-                            material_type = 'API'
-                        
-                        materials.append({
-                            'material_type': material_type,
-                            'material_name': material_name,
-                            'specification': str(row[spec_col]).strip() if spec_col is not None and pd.notna(row[spec_col]) else 'USP',
-                            'quantity': str(row[qty_col]).strip() if qty_col is not None and pd.notna(row[qty_col]) else ''
-                        })
-        
+                    materials.append({h: str(row[i]).strip() if i < len(row) else '' for i, h in enumerate(headers)})
         return materials
     
     def _extract_stages(self) -> List[Dict]:
