@@ -29,6 +29,36 @@ else:
 
 
 class EnhancedPVPExtractor:
+                def _extract_equipment_with_regex(self) -> List[Dict]:
+                    """Extract equipment using tables and regex as fallback"""
+                    equipment = []
+                    # First, try to extract from tables
+                    equipment_from_tables = self._extract_equipment_from_tables()
+                    if equipment_from_tables:
+                        equipment.extend(equipment_from_tables)
+                        logger.info(f"Extracted {len(equipment_from_tables)} equipment from tables")
+
+                    # Fallback: extract from text using regex if needed
+                    equipment_section_pattern = r'(?:equipment and machinery list|production equipment)(.*?)(?:engineering equipment|raw material|quality control|$)'
+                    match = re.search(equipment_section_pattern, self.full_text, re.IGNORECASE | re.DOTALL)
+                    if match:
+                        equipment_text = match.group(1)
+                        lines = equipment_text.split('\n')
+                        for line in lines:
+                            line = line.strip()
+                            if len(line) > 5 and not line.lower().startswith('s.no'):
+                                # Skip headers and short lines
+                                equipment.append({
+                                    'equipment_name': line[:50],  # First 50 chars as name
+                                    'equipment_id': '',
+                                    'location': '',
+                                    'calibration_status': 'Valid'
+                                })
+                    logger.info(f"Total extracted {len(equipment)} equipment items")
+                    return equipment[:50]  # Limit to 50 items
+
+
+class EnhancedPVPExtractor:
     """Extract comprehensive data from PVP documents"""
     
     def __init__(self, pdf_path: str):
@@ -185,6 +215,23 @@ class EnhancedPVPExtractor:
         except Exception as e:
             logger.error(f"Error extracting tables: {e}")
             return []
+
+    def _extract_batch_details(self) -> list:
+        """Extract batch details table (batch number, size, dates, etc.)"""
+        batch_details = []
+        for table in self.tables:
+            df = table.df
+            if df is None or len(df) == 0:
+                continue
+            headers = [str(h).strip() for h in df.iloc[0].tolist()]
+            batch_keywords = ['batch no', 'batch number', 'batch size', 'manufacturing date', 'mfg date', 'exp date', 'expiry date']
+            is_batch_table = any(any(k in str(h).lower() for k in batch_keywords) for h in headers)
+            if is_batch_table:
+                for idx in range(1, len(df)):
+                    row = df.iloc[idx].tolist()
+                    row_dict = {headers[i]: str(row[i]).strip() if i < len(row) else '' for i in range(len(headers))}
+                    batch_details.append(row_dict)
+        return batch_details
     
     def _extract_product_info(self) -> Dict:
         """Extract basic product information"""
@@ -297,51 +344,45 @@ Return only the JSON, no other text.
         else:
             return self._extract_equipment_with_regex()
     
-    def _extract_equipment_with_ai(self) -> List[Dict]:
-        """Extract equipment using AI"""
-        
-        try:
-            prompt = f"""
-Extract all equipment/instruments mentioned in this validation protocol.
-
-Text:
-{self.full_text[:5000]}
-
-Return ONLY a JSON array of equipment objects:
-[
-    {{
-        "equipment_name": "Balance",
-        "equipment_id": "BAL-001",
-        "location": "Dispensing Area",
-        "calibration_status": "Valid"
-    }}
-]
-
-Return only the JSON array, no other text.
-"""
-            
-            response = model.generate_content(prompt)
-            result_text = response.text.strip()
-            result_text = result_text.replace('```json', '').replace('```', '').strip()
-            
-            equipment = json.loads(result_text)
-            logger.info(f"AI extracted {len(equipment)} equipment items")
-            return equipment
-            
-        except Exception as e:
-            logger.error(f"AI equipment extraction failed: {e}")
-            return self._extract_equipment_with_regex()
-    
-    def _extract_equipment_with_regex(self) -> List[Dict]:
-        """Extract equipment using tables and regex"""
-        
-        equipment = []
-        
+    def _extract_materials_with_regex(self) -> List[Dict]:
+        """Extract materials using tables and regex"""
+        materials = []
         # First, try to extract from tables
-        equipment_from_tables = self._extract_equipment_from_tables()
-        if equipment_from_tables:
-            equipment.extend(equipment_from_tables)
-            logger.info(f"Extracted {len(equipment_from_tables)} equipment from tables")
+        materials_from_tables = self._extract_materials_from_tables()
+        if materials_from_tables:
+            materials.extend(materials_from_tables)
+            logger.info(f"Extracted {len(materials_from_tables)} materials from tables")
+        # Also try regex patterns as backup
+        api_keywords = ['api', 'active ingredient', 'drug substance', 'fluorouracil', 'paracetamol', 'ibuprofen']
+        excipient_keywords = ['excipient', 'sodium hydroxide', 'water for injection', 'preservative', 'sodium chloride']
+        text_lower = self.full_text.lower()
+        # Simple extraction
+        for keyword in api_keywords:
+            if keyword in text_lower:
+                # Avoid duplicates
+                if not any(m.get('material_name', '').lower() == keyword for m in materials):
+                    materials.append({
+                        'material_type': 'API',
+                        'material_name': keyword.title(),
+                        'specification': 'USP',
+                        'quantity': ''
+                    })
+        for keyword in excipient_keywords:
+            if keyword in text_lower:
+                # Avoid duplicates
+                if not any(m.get('material_name', '').lower() == keyword for m in materials):
+                    materials.append({
+                        'material_type': 'Excipient',
+                        'material_name': keyword.title(),
+                        'specification': 'USP',
+                        'quantity': ''
+                    })
+        logger.info(f"Total extracted {len(materials)} materials")
+        return materials[:50]  # Limit to 50 items
+
+    # The following lines were incorrectly indented and are now commented for review:
+    # equipment.extend(equipment_from_tables)
+    # logger.info(f"Extracted {len(equipment_from_tables)} equipment from tables")
         
         # Extract from text - look for equipment section
         equipment_section_pattern = r'(?:equipment and machinery list|production equipment)(.*?)(?:engineering equipment|raw material|quality control|$)'
@@ -448,7 +489,7 @@ Return only the JSON array, no other text.
         for keyword in api_keywords:
             if keyword in text_lower:
                 # Avoid duplicates
-                if not any(m['material_name'].lower() == keyword for m in materials):
+                if not any(m.get('material_name', '').lower() == keyword for m in materials):
                     materials.append({
                         'material_type': 'API',
                         'material_name': keyword.title(),
@@ -459,7 +500,7 @@ Return only the JSON array, no other text.
         for keyword in excipient_keywords:
             if keyword in text_lower:
                 # Avoid duplicates
-                if not any(m['material_name'].lower() == keyword for m in materials):
+                if not any(m.get('material_name', '').lower() == keyword for m in materials):
                     materials.append({
                         'material_type': 'Excipient',
                         'material_name': keyword.title(),
