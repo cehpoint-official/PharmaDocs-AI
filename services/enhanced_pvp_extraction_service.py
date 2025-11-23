@@ -27,37 +27,6 @@ else:
     model = None
     logger.warning("Gemini API key not found. Using regex-only extraction.")
 
-
-class EnhancedPVPExtractor:
-                def _extract_equipment_with_regex(self) -> List[Dict]:
-                    """Extract equipment using tables and regex as fallback"""
-                    equipment = []
-                    # First, try to extract from tables
-                    equipment_from_tables = self._extract_equipment_from_tables()
-                    if equipment_from_tables:
-                        equipment.extend(equipment_from_tables)
-                        logger.info(f"Extracted {len(equipment_from_tables)} equipment from tables")
-
-                    # Fallback: extract from text using regex if needed
-                    equipment_section_pattern = r'(?:equipment and machinery list|production equipment)(.*?)(?:engineering equipment|raw material|quality control|$)'
-                    match = re.search(equipment_section_pattern, self.full_text, re.IGNORECASE | re.DOTALL)
-                    if match:
-                        equipment_text = match.group(1)
-                        lines = equipment_text.split('\n')
-                        for line in lines:
-                            line = line.strip()
-                            if len(line) > 5 and not line.lower().startswith('s.no'):
-                                # Skip headers and short lines
-                                equipment.append({
-                                    'equipment_name': line[:50],  # First 50 chars as name
-                                    'equipment_id': '',
-                                    'location': '',
-                                    'calibration_status': 'Valid'
-                                })
-                    logger.info(f"Total extracted {len(equipment)} equipment items")
-                    return equipment[:50]  # Limit to 50 items
-
-
 class EnhancedPVPExtractor:
     """Extract comprehensive data from PVP documents"""
     
@@ -98,6 +67,8 @@ class EnhancedPVPExtractor:
         logger.info(f"Extraction complete. Product: {result['product_info'].get('product_name')}, Type: {result['product_type']}")
         return result
         return result
+    
+
     def _extract_test_preparations(self) -> list:
         """Extract test preparation details and area/absorbance values from tables and text"""
         preparations = []
@@ -344,6 +315,34 @@ Return only the JSON, no other text.
         else:
             return self._extract_equipment_with_regex()
     
+    def _extract_equipment_with_regex(self) -> List[Dict]:
+        """Extract equipment using tables and regex as fallback"""
+        equipment = []
+        # First, try to extract from tables
+        equipment_from_tables = self._extract_equipment_from_tables()
+        if equipment_from_tables:
+            equipment.extend(equipment_from_tables)
+            logger.info(f"Extracted {len(equipment_from_tables)} equipment from tables")
+
+        # Fallback: extract from text using regex if needed
+        equipment_section_pattern = r'(?:equipment and machinery list|production equipment)(.*?)(?:engineering equipment|raw material|quality control|$)'
+        match = re.search(equipment_section_pattern, self.full_text, re.IGNORECASE | re.DOTALL)
+        if match:
+            equipment_text = match.group(1)
+            lines = equipment_text.split('\n')
+            for line in lines:
+                line = line.strip()
+                if len(line) > 5 and not line.lower().startswith('s.no'):
+                    # Skip headers and short lines
+                    equipment.append({
+                        'equipment_name': line[:50],  # First 50 chars as name
+                        'equipment_id': '',
+                        'location': '',
+                        'calibration_status': 'Valid'
+                    })
+        logger.info(f"Total extracted {len(equipment)} equipment items")
+        return equipment[:50]  # Limit to 50 items
+    
     def _extract_materials_with_regex(self) -> List[Dict]:
         """Extract materials using tables and regex"""
         materials = []
@@ -412,16 +411,33 @@ Return only the JSON, no other text.
         equipment = []
         for idx, table in enumerate(self.tables):
             df = table.df
-            headers = df.iloc[0].str.lower() if len(df) > 0 else []
-            equipment_keywords = ['equipment', 'instrument', 'machine', 'apparatus', 'balance', 'item']
-            is_equipment_table = any(
-                any(keyword in str(header).lower() for keyword in equipment_keywords)
-                for header in headers
-            )
-            if is_equipment_table:
-                for idx in range(1, len(df)):
-                    row = df.iloc[idx]
-                    equipment.append({h: str(row[i]).strip() if i < len(row) else '' for i, h in enumerate(headers)})
+            if df is None or len(df) == 0:
+                continue
+            headers = [str(h).strip() for h in df.iloc[0].tolist()]
+            # Hardcoded mapping for common equipment table headers
+            def find_idx(possibles):
+                for p in possibles:
+                    for i, h in enumerate(headers):
+                        if p.lower() == h.lower():
+                            return i
+                return None
+            name_idx = find_idx(["Equipment Name", "Equipment", "Name"])
+            id_idx = find_idx(["Equipment Id. No.", "Equipment ID", "ID", "No."])
+            loc_idx = find_idx(["Location"])
+            cal_idx = find_idx(["Calibration Status", "Status"])
+            # Only treat as equipment table if at least name and id columns are found
+            if name_idx is not None and id_idx is not None:
+                for row_idx in range(1, len(df)):
+                    row = df.iloc[row_idx]
+                    eq_name = str(row[name_idx]).strip() if name_idx < len(row) else ''
+                    eq_id = str(row[id_idx]).strip() if id_idx < len(row) else ''
+                    if eq_name and eq_name.upper() != 'N/A':
+                        equipment.append({
+                            'equipment_name': eq_name,
+                            'equipment_id': eq_id if eq_id else 'N/A',
+                            'location': str(row[loc_idx]).strip() if loc_idx is not None and loc_idx < len(row) else 'N/A',
+                            'calibration_status': str(row[cal_idx]).strip() if cal_idx is not None and cal_idx < len(row) else 'N/A',
+                        })
         return equipment
     
     def _extract_materials(self) -> List[Dict]:
@@ -516,16 +532,32 @@ Return only the JSON array, no other text.
         materials = []
         for table in self.tables:
             df = table.df
-            headers = df.iloc[0].str.lower() if len(df) > 0 else []
-            material_keywords = ['material', 'ingredient', 'component', 'item', 'api', 'excipient']
-            is_material_table = any(
-                any(keyword in str(header).lower() for keyword in material_keywords)
-                for header in headers
-            )
-            if is_material_table:
-                for idx in range(1, len(df)):
-                    row = df.iloc[idx]
-                    materials.append({h: str(row[i]).strip() if i < len(row) else '' for i, h in enumerate(headers)})
+            if df is None or len(df) == 0:
+                continue
+            headers = [str(h).strip() for h in df.iloc[0].tolist()]
+            def find_idx(possibles):
+                for p in possibles:
+                    for i, h in enumerate(headers):
+                        if p.lower() == h.lower():
+                            return i
+                return None
+            type_idx = find_idx(["Material Type", "Type"])
+            name_idx = find_idx(["Material Name", "Name"])
+            spec_idx = find_idx(["Specification", "Spec"])
+            qty_idx = find_idx(["Quantity", "Qty"])
+            # Only treat as material table if at least name and type columns are found
+            if name_idx is not None and type_idx is not None:
+                for row_idx in range(1, len(df)):
+                    row = df.iloc[row_idx]
+                    mat_name = str(row[name_idx]).strip() if name_idx < len(row) else ''
+                    mat_type = str(row[type_idx]).strip() if type_idx < len(row) else ''
+                    if mat_name and mat_name.upper() != 'N/A':
+                        materials.append({
+                            'material_type': mat_type if mat_type else 'N/A',
+                            'material_name': mat_name,
+                            'specification': str(row[spec_idx]).strip() if spec_idx is not None and spec_idx < len(row) else 'N/A',
+                            'quantity': str(row[qty_idx]).strip() if qty_idx is not None and qty_idx < len(row) else 'N/A',
+                        })
         return materials
     
     def _extract_stages(self) -> List[Dict]:
