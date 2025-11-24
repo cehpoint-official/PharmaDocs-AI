@@ -10,6 +10,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from werkzeug.utils import secure_filename
 import os
 import re
+import json
 from datetime import datetime
 from database import db
 from models import (
@@ -383,11 +384,37 @@ def view_pvr(report_id):
     template = report.template
     batch_data = PVR_Data.query.filter_by(pvr_report_id=report_id).all()
     
-    return render_template('view_pvr.html',
-                         report=report,
-                         template=template,
-                         batch_data=batch_data,
-                         user=user)
+        # --- normalize stored extracted JSON into the shape view_pvr.html expects ---
+    try:
+        extracted = json.loads(report.extracted) if getattr(report, 'extracted', None) else {}
+    except Exception:
+        extracted = {}
+
+    report_payload = {
+        "id": report.id,
+        "created_at": getattr(report, "created_at", None),
+        "status": getattr(report, "status", None),
+        "template": template,
+        "meta": extracted.get("meta", extracted.get("product_info", {})),
+        "batches": extracted.get("batches", extracted.get("batch_details", [])),
+        "test_ids": extracted.get("test_ids", []),
+        "data": extracted.get("data", []),
+        "materials_tables": extracted.get("materials_tables", []),
+        "equipment_tables": extracted.get("equipment_tables", []),
+        "calculations": extracted.get("calculations", extracted.get("calculation_sheet", [])),
+        "extracted": extracted,
+        "generated_filepath": getattr(report, "generated_filepath", "")
+    }
+
+    # Render template using the payload (template and batch_data still available)
+    return render_template(
+        "view_pvr.html",
+        report=report_payload,
+        template=template,
+        batch_data=batch_data,
+        user=user
+    )
+
 
 
 @pv_routes.route('/download/<int:report_id>/pdf')
