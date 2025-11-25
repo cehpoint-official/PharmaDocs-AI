@@ -106,6 +106,42 @@ def ensure_df(table):
         return None
     return df
 
+# New cleaning helper to avoid DB truncation errors
+def _clean_text_val(v: Optional[str], max_len: int = 190) -> str:
+    """Normalize whitespace, remove control chars, truncate to max_len."""
+    if v is None:
+        return ''
+    s = str(v)
+    # remove common page header/footer markers like 'Page 1 of 23' (optional)
+    s = s.replace('\r', ' ').replace('\n', ' ').strip()
+    # collapse whitespace
+    s = re.sub(r'\s+', ' ', s)
+    # remove non-printable control characters
+    s = ''.join(ch for ch in s if ch.isprintable())
+    # trim
+    s = s.strip()
+    if len(s) > max_len:
+        s = s[:max_len].rstrip()
+    return s
+
+def _is_obvious_heading(s: str) -> bool:
+    if not s:
+        return False
+    low = s.lower()
+    skip_prefixes = (
+        'cover page', 'table of contents', 'protocol approval', 'objective',
+        'scope', 'validation approach', 'reason for validation', 'revalidation',
+        'index', 'page', 'product standard', 'stability protocol', 'contents',
+        'cover', 'acknowledgement', 'references', 'appendix'
+    )
+    for p in skip_prefixes:
+        if low.startswith(p):
+            return True
+    # headers that are very short numeric headings or single characters
+    if re.fullmatch(r'[0-9\.\-]{1,4}', low):
+        return True
+    return False
+
 
 # -----------------------
 # Main extractor
@@ -206,12 +242,15 @@ class EnhancedPVPExtractor:
             # try lattice first, then stream
             tables = []
             try:
-                tables = camelot.read_pdf(self.pdf_path, pages='all', flavor='lattice')
-                logger.info("Camelot lattice found %d tables", len(tables))
+                if camelot:
+                    tables = camelot.read_pdf(self.pdf_path, pages='all', flavor='lattice')
+                    logger.info("Camelot lattice found %d tables", len(tables))
+                else:
+                    logger.debug("Camelot not available")
             except Exception as e:
                 logger.debug("Camelot lattice failed: %s", e)
 
-            if not tables:
+            if not tables and camelot:
                 try:
                     tables = camelot.read_pdf(self.pdf_path, pages='all', flavor='stream')
                     logger.info("Camelot stream found %d tables", len(tables))
@@ -321,9 +360,9 @@ Return ONLY a JSON object with the fields:
         if m:
             lines = [ln.strip() for ln in m.group(1).splitlines() if ln.strip()]
             for ln in lines:
-                if len(ln) > 4 and not ln.lower().startswith('s.no'):
+                if len(ln) > 4 and not ln.lower().startswith('s.no') and not _is_obvious_heading(ln):
                     equipment.append({
-                        'equipment_name': ln[:100],
+                        'equipment_name': _clean_text_val(ln, max_len=190),
                         'equipment_id': '',
                         'location': '',
                         'calibration_status': ''
@@ -331,35 +370,106 @@ Return ONLY a JSON object with the fields:
         return equipment
 
     def _extract_equipment_from_tables(self) -> List[Dict]:
+        """Robustly extract equipment from tables: normalize headers, drop junk rows, dedupe."""
         equipment = []
+        seen = set()
+
+        def is_junk_cell(text: str) -> bool:
+            if not text:
+                return True
+            t = str(text).strip().lower()
+            # common junk lines found in your PDFs - extend this list as needed
+            junk_starts = ('format no', 'process validation protocol', 'page', 'effective date', 'product name:', 'protocol no', 'no change is permitted', 'rev no')
+            if len(t) < 2:
+                return True
+            if any(t.startswith(js) for js in junk_starts):
+                return True
+            # too short or only punctuation/digits
+            if re.fullmatch(r'[\W\d]+', t):
+                return True
+            return False
+
         for df in self.tables_df:
-            # normalize headers
-            headers = [normalize_header(h) for h in df.iloc[0].tolist()] if df.shape[0] > 0 else []
+            try:
+                # normalize header row
+                headers = [normalize_header(h) for h in df.iloc[0].tolist()] if df.shape[0] > 0 else []
+            except Exception:
+                continue
             if not headers:
                 continue
-            # find likely columns
+
+            # fuzzy header-to-index mapping
             def find_idx(possibles):
                 for p in possibles:
                     for idx, h in enumerate(headers):
                         if p in h:
                             return idx
                 return None
-            name_idx = find_idx(['equipment', 'name'])
-            id_idx = find_idx(['id', 'no', 'equipment id'])
-            loc_idx = find_idx(['location'])
+
+            name_idx = find_idx(['equipment name', 'equipment', 'name'])
+            id_idx = find_idx(['equipment id', 'equipment id no', 'id', 'no'])
+            loc_idx = find_idx(['location', 'place', 'dept'])
             cal_idx = find_idx(['calibration', 'status'])
-            # If at least name column found treat as equipment table
-            if name_idx is not None:
-                for ridx in range(1, df.shape[0]):
+
+            # fallback: assume first column is name if not found
+            if name_idx is None:
+                name_idx = 0
+
+            # limit how many candidate rows we accept per table to avoid massive junk
+            max_rows_per_table = max(200, df.shape[0])
+
+            for ridx in range(1, min(df.shape[0], max_rows_per_table)):
+                try:
                     row = df.iloc[ridx].tolist()
-                    name = str(row[name_idx]) if name_idx < len(row) else ''
-                    if name and name.strip().upper() != 'N/A':
-                        equipment.append({
-                            'equipment_name': str(name).strip(),
-                            'equipment_id': str(row[id_idx]).strip() if id_idx is not None and id_idx < len(row) else '',
-                            'location': str(row[loc_idx]).strip() if loc_idx is not None and loc_idx < len(row) else '',
-                            'calibration_status': str(row[cal_idx]).strip() if cal_idx is not None and cal_idx < len(row) else ''
-                        })
+                except Exception:
+                    continue
+
+                # quickly join row cells to detect junk rows (repeated headers, footers)
+                row_text = " ".join([str(x) for x in row if str(x).strip() != '']).strip()
+                if not row_text:
+                    continue
+                if any(h in row_text.lower() for h in ['equipment name', 'sr no', 's.no', 'format no', 'page no', 'product name', 'protocol no']):
+                    continue
+                if is_junk_cell(row_text):
+                    continue
+
+                # read raw cells safely
+                eq_name_raw = str(row[name_idx]).strip() if name_idx is not None and name_idx < len(row) else ''
+                eq_id_raw = str(row[id_idx]).strip() if id_idx is not None and id_idx < len(row) else ''
+                location_raw = str(row[loc_idx]).strip() if loc_idx is not None and loc_idx < len(row) else ''
+                cal_status_raw = str(row[cal_idx]).strip() if cal_idx is not None and cal_idx < len(row) else ''
+
+                # try fallback to find a good name cell if eq_name looks invalid
+                if not eq_name_raw or re.fullmatch(r'[\W\d]+', eq_name_raw):
+                    for cell in row:
+                        c = str(cell).strip()
+                        if c and not re.fullmatch(r'[\W\d]+', c):
+                            eq_name_raw = c
+                            break
+                    if not eq_name_raw:
+                        continue
+
+                # Clean and truncate
+                eq_name = _clean_text_val(eq_name_raw, max_len=190)
+                eq_id = _clean_text_val(eq_id_raw, max_len=100)
+                location = _clean_text_val(location_raw, max_len=100)
+                cal_status = _clean_text_val(cal_status_raw, max_len=100)
+
+                # skip obvious headings or short garbage
+                if not eq_name or len(eq_name) < 2 or _is_obvious_heading(eq_name):
+                    continue
+
+                key = (eq_name.lower(), (eq_id or '').lower())
+                if key in seen:
+                    continue
+                seen.add(key)
+
+                equipment.append({
+                    'equipment_name': eq_name,
+                    'equipment_id': eq_id if eq_id else 'N/A',
+                    'location': location if location else 'N/A',
+                    'calibration_status': cal_status if cal_status else 'N/A'
+                })
         return equipment
 
     # -----------------------
@@ -446,7 +556,7 @@ Return ONLY a JSON object with the fields:
                     if name and name.upper() != 'N/A':
                         materials.append({
                             'material_type': str(row[type_idx]).strip() if type_idx is not None and type_idx < len(row) else '',
-                            'material_name': name,
+                            'material_name': _clean_text_val(name, max_len=190),
                             'specification': str(row[spec_idx]).strip() if spec_idx is not None and spec_idx < len(row) else '',
                             'quantity': str(row[qty_idx]).strip() if qty_idx is not None and qty_idx < len(row) else ''
                         })
@@ -555,10 +665,10 @@ Return ONLY a JSON object with the fields:
                     if name:
                         stages.append({
                             'stage_number': ridx,
-                            'stage_name': name,
-                            'equipment_used': str(row[eq_idx]).strip() if eq_idx is not None and eq_idx < len(row) else '',
-                            'parameters': str(row[param_idx]).strip() if param_idx is not None and param_idx < len(row) else '',
-                            'acceptance_criteria': str(row[crit_idx]).strip() if crit_idx is not None and crit_idx < len(row) else ''
+                            'stage_name': _clean_text_val(name, max_len=200),
+                            'equipment_used': _clean_text_val(str(row[eq_idx]).strip() if eq_idx is not None and eq_idx < len(row) else '', max_len=200),
+                            'parameters': _clean_text_val(str(row[param_idx]).strip() if param_idx is not None and param_idx < len(row) else '', max_len=400),
+                            'acceptance_criteria': _clean_text_val(str(row[crit_idx]).strip() if crit_idx is not None and crit_idx < len(row) else '', max_len=400)
                         })
         return stages
 
@@ -573,10 +683,10 @@ Return ONLY a JSON object with the fields:
                 for ridx in range(1, df.shape[0]):
                     row = df.iloc[ridx].tolist()
                     preparations.append({
-                        'test_name': str(row[0]).strip() if len(row) > 0 else '',
-                        'preparation': str(row[1]).strip() if len(row) > 1 else '',
-                        'area': str(row[2]).strip() if len(row) > 2 else '',
-                        'absorbance': str(row[3]).strip() if len(row) > 3 else ''
+                        'test_name': _clean_text_val(str(row[0]).strip() if len(row) > 0 else '', max_len=200),
+                        'preparation': _clean_text_val(str(row[1]).strip() if len(row) > 1 else '', max_len=400),
+                        'area': _clean_text_val(str(row[2]).strip() if len(row) > 2 else '', max_len=100),
+                        'absorbance': _clean_text_val(str(row[3]).strip() if len(row) > 3 else '', max_len=100)
                     })
         return preparations
 
@@ -589,11 +699,11 @@ Return ONLY a JSON object with the fields:
                 for ridx in range(1, df.shape[0]):
                     row = df.iloc[ridx].tolist()
                     calculations.append({
-                        'parameter': str(row[0]).strip() if len(row) > 0 else '',
-                        'mean': str(row[1]).strip() if len(row) > 1 else '',
-                        'sd': str(row[2]).strip() if len(row) > 2 else '',
-                        'rsd': str(row[3]).strip() if len(row) > 3 else '',
-                        'formula': str(row[4]).strip() if len(row) > 4 else ''
+                        'parameter': _clean_text_val(str(row[0]).strip() if len(row) > 0 else '', max_len=200),
+                        'mean': _clean_text_val(str(row[1]).strip() if len(row) > 1 else '', max_len=100),
+                        'sd': _clean_text_val(str(row[2]).strip() if len(row) > 2 else '', max_len=100),
+                        'rsd': _clean_text_val(str(row[3]).strip() if len(row) > 3 else '', max_len=100),
+                        'formula': _clean_text_val(str(row[4]).strip() if len(row) > 4 else '', max_len=400)
                     })
         return calculations
 
@@ -668,8 +778,8 @@ Return ONLY a JSON object with the fields:
                     if test_idx is not None and test_idx < len(row) and str(row[test_idx]).strip():
                         criteria.append({
                             'test_id': f'test_{len(criteria)+1}',
-                            'test_name': str(row[test_idx]).strip(),
-                            'acceptance_criteria': str(row[crit_idx]).strip() if crit_idx is not None and crit_idx < len(row) else ''
+                            'test_name': _clean_text_val(str(row[test_idx]).strip(), max_len=200),
+                            'acceptance_criteria': _clean_text_val(str(row[crit_idx]).strip() if crit_idx is not None and crit_idx < len(row) else '', max_len=400)
                         })
         return criteria
 
