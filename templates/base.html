@@ -12,20 +12,28 @@
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: '#2563eb', // Tailwind blue-600
+      // Defensive: set tailwind config only if the CDN script loaded successfully
+      if (typeof tailwind !== 'undefined') {
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                primary: '#2563eb', // Tailwind blue-600
+              }
             }
           }
         }
+      } else {
+        console.warn('Tailwind CDN not loaded; skipping tailwind.config assignment.');
       }
     </script>
 
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
           rel="stylesheet">
+
+    <!-- Local fallback stylesheet (in case CDN assets fail) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
 
     {% block head %}{% endblock %}
   </head>
