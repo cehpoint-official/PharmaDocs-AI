@@ -30,7 +30,6 @@ REPORT_FOLDER = 'uploads/pvr_reports'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(REPORT_FOLDER, exist_ok=True)
 
-
 @pv_routes.route('/upload', methods=['GET', 'POST'])
 def upload_pvp():
     """Upload and extract PVP document"""
@@ -87,13 +86,22 @@ def upload_pvp():
         product_type = extracted_data['product_type']
         batch_size = extracted_data['product_info'].get('batch_size', '')
 
+        # Extract company info
+        company_info = extracted_data.get('company_info', {})
+
         pvp_template = PVP_Template(
             template_name=template_name,
             original_filepath=filepath,
             user_id=session['user_id'],
             product_name=product_name,
             product_type=product_type,
-            batch_size=batch_size
+            batch_size=batch_size,
+            company_name=company_info.get('company_name', ''),
+            company_address=company_info.get('company_address', ''),
+            company_city=company_info.get('company_city', ''),
+            company_state=company_info.get('company_state', ''),
+            company_country=company_info.get('company_country', ''),
+            company_pincode=company_info.get('company_pincode', '')
         )
         db.session.add(pvp_template)
         db.session.flush()  # assign id
