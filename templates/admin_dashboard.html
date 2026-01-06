@@ -1,0 +1,240 @@
+<!--Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in> -->
+<!--All Rights Reserved-->
+
+{% extends "base.html" %}
+{% block title %}Admin Dashboard - PharmaDocs AI Platform{% endblock %}
+{% block content %}
+  <div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+      <div class="col">
+        <h1 class="h3 mb-0">Admin Dashboard</h1>
+        <p class="text-muted">Manage users, documents, and platform analytics.</p>
+      </div>
+    </div>
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+      <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+          <div class="card-body">
+            <div class="row no-gutters align-items-center">
+              <div class="col mr-2">
+                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Users</div>
+                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_users }}</div>
+              </div>
+              <div class="col-auto">
+                <i class="fas fa-users fa-2x text-gray-300"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+          <div class="card-body">
+            <div class="row no-gutters align-items-center">
+              <div class="col mr-2">
+                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Companies</div>
+                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_companies }}</div>
+              </div>
+              <div class="col-auto">
+                <i class="fas fa-building fa-2x text-gray-300"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+          <div class="card-body">
+            <div class="row no-gutters align-items-center">
+              <div class="col mr-2">
+                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Documents</div>
+                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_documents }}</div>
+              </div>
+              <div class="col-auto">
+                <i class="fas fa-file-alt fa-2x text-gray-300"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+          <div class="card-body">
+            <div class="row no-gutters align-items-center">
+              <div class="col mr-2">
+                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">New Users (30 days)</div>
+                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ new_users }}</div>
+              </div>
+              <div class="col-auto">
+                <i class="fas fa-user-plus fa-2x text-gray-300"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Management Links -->
+    <div class="row mb-4">
+      <div class="col-lg-4 mb-3">
+        <div class="card shadow">
+          <div class="card-body text-center">
+            <i class="fas fa-users fa-3x text-primary mb-3"></i>
+            <h5 class="card-title">User Management</h5>
+            <p class="card-text">Manage user accounts, permissions, and subscriptions.</p>
+            <a href="{{ url_for("admin.manage_users") }}" class="btn btn-primary">
+              <i class="fas fa-cog me-2"></i>Manage Users
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4 mb-3">
+        <div class="card shadow">
+          <div class="card-body text-center">
+            <i class="fas fa-file-alt fa-3x text-success mb-3"></i>
+            <h5 class="card-title">Document Management</h5>
+            <p class="card-text">View and manage all documents across the platform.</p>
+            <a href="{{ url_for("admin.manage_documents") }}"
+               class="btn btn-success">
+              <i class="fas fa-folder me-2"></i>View Documents
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4 mb-3">
+        <div class="card shadow">
+          <div class="card-body text-center">
+            <i class="fas fa-chart-bar fa-3x text-info mb-3"></i>
+            <h5 class="card-title">Analytics</h5>
+            <p class="card-text">View platform usage statistics and trends.</p>
+            <button class="btn btn-info" onclick="loadAnalytics()">
+              <i class="fas fa-chart-line me-2"></i>View Analytics
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Document Type Distribution -->
+    <div class="row mb-4">
+      <div class="col-lg-6">
+        <div class="card shadow">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-chart-pie me-2"></i>Document Type Distribution
+            </h5>
+          </div>
+          <div class="card-body">
+            {% if doc_types %}
+              <canvas id="docTypeChart" width="400" height="200"></canvas>
+            {% else %}
+              <div class="text-center py-4">
+                <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No document data available yet.</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card shadow">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-history me-2"></i>Recent Activity
+            </h5>
+          </div>
+          <div class="card-body">
+            {% if recent_activities %}
+              <div class="activity-list">
+                {% for activity in recent_activities %}
+                  <div class="activity-item d-flex align-items-center mb-3 pb-3 border-bottom">
+                    <div class="activity-icon me-3">
+                      {% if 'login' in activity.action %}
+                        <i class="fas fa-sign-in-alt text-success"></i>
+                      {% elif 'created' in activity.action %}
+                        <i class="fas fa-plus text-primary"></i>
+                      {% elif 'generated' in activity.action %}
+                        <i class="fas fa-file-export text-info"></i>
+                      {% else %}
+                        <i class="fas fa-activity text-muted"></i>
+                      {% endif %}
+                    </div>
+                    <div class="activity-content flex-grow-1">
+                      <div class="activity-text">{{ activity.details or activity.action }}</div>
+                      <small class="text-muted">{{ activity.user.name }} • {{ activity.timestamp.strftime("%d/%m/%Y %H:%M") }}</small>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-center py-4">
+                <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No recent activity to display.</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+// Document Type Chart
+{% if doc_types %}
+const docTypeData = {
+    labels: [{% for doc_type, count in doc_types %}'{{ doc_type }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+    datasets: [{
+        data: [{% for doc_type, count in doc_types %}{{ count }}{% if not loop.last %}, {% endif %}{% endfor %}],
+        backgroundColor: [
+            '#007bff',
+            '#28a745',
+            '#ffc107',
+            '#dc3545',
+            '#6f42c1'
+        ]
+    }]
+};
+
+const docTypeChart = new Chart(document.getElementById('docTypeChart'), {
+    type: 'doughnut',
+    data: docTypeData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+{% endif %}
+
+// Load Analytics
+function loadAnalytics() {
+    fetch('/admin/analytics')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Error loading analytics: ' + data.error);
+            } else {
+                // Display analytics in modal or new page
+                showAnalyticsModal(data);
+            }
+        })
+        .catch(error => {
+            console.error('Analytics error:', error);
+            alert('Failed to load analytics');
+        });
+}
+
+function showAnalyticsModal(data) {
+    // Create and show modal with analytics data
+    const modal = new bootstrap.Modal(document.createElement('div'));
+    // Implementation for analytics modal
+    console.log('Analytics data:', data);
+}
+  </script>
+{% endblock %}

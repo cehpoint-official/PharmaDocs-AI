@@ -1,0 +1,62 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    environment: "production"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: 'latest'
+
+      - name: Decode and write service account key
+        run: |
+          echo "${{ secrets.GCP_SA_KEY_BASE64 }}" | base64 --decode > $HOME/gcloud-key.json
+          cat $HOME/gcloud-key.json | jq .type || echo "JSON structure looks fine"
+
+      - name: Authenticate with Google Cloud
+        run: |
+          gcloud auth activate-service-account --key-file=$HOME/gcloud-key.json
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          gcloud auth configure-docker gcr.io --quiet
+
+      - name: Determine image tag
+        id: tag
+        run: |
+          COMMIT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          IMAGE_TAG=pharmadocsai:${COMMIT_SHA}
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          echo "IMAGE=gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}" >> $GITHUB_ENV
+          echo "Building Image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}"
+
+      - name: Build and push Docker image to GCR
+        run: |
+          gcloud builds submit --tag "gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}" --verbosity=info
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy pharmadocsai \
+            --image "gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}" \
+            --region asia-south1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --quiet
+
+      - name: Show deployed service URL
+        run: |
+          echo "Service URL:"
+          gcloud run services describe pharmadocsai \
+            --region asia-south1 \
+            --format="value(status.url)"

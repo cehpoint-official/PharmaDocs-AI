@@ -1,0 +1,682 @@
+<!--Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in> -->
+<!--All Rights Reserved-->
+
+{% extends "base.html" %}
+{% block title %}Company Profile - PharmaDocs AI Platform{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-6">
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">Company Profile</h1>
+      <p class="text-gray-500">Manage your company information, sub-brands, and equipment.</p>
+    </div>
+    <button
+      class="mt-3 md:mt-0 inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg shadow hover:bg-indigo-700 transition"
+      onclick="openModal('addCompanyModal')">
+      <i class="fas fa-plus mr-2"></i>Add Company
+    </button>
+  </div>
+
+  <!-- Companies Grid -->
+  {% if companies %}
+    <div class="grid md:grid-cols-2 gap-6">
+      {% for company in companies %}
+        <div class="bg-white shadow rounded-lg p-6">
+          <div class="flex items-start">
+            {% if company.logo_url %}
+              <img src="{{ company.logo_url }}" alt="Company Logo" class="w-16 h-16 object-cover rounded mr-4">
+            {% else %}
+              <div class="w-16 h-16 flex items-center justify-center bg-gray-100 rounded mr-4">
+                <i class="fas fa-building text-gray-400 text-xl"></i>
+              </div>
+            {% endif %}
+            <div class="flex-1">
+              <h5 class="font-semibold text-gray-800 text-lg">{{ company.name }}</h5>
+              
+              <!-- Company Address Information -->
+              <div class="mt-2 space-y-1">
+                {% if company.address %}
+                  <div class="flex items-center text-sm text-gray-600">
+                    <i class="fas fa-map-marker-alt mr-2 text-gray-400"></i>
+                    <span>{{ company.address }}</span>
+                  </div>
+                {% endif %}
+                {% if company.city %}
+                  <div class="flex items-center text-sm text-gray-600">
+                    <i class="fas fa-city mr-2 text-gray-400"></i>
+                    <span>{{ company.city }}</span>
+                  </div>
+                {% endif %}
+                {% if company.country %}
+                  <div class="flex items-center text-sm text-gray-600">
+                    <i class="fas fa-globe mr-2 text-gray-400"></i>
+                    <span>{{ company.country }}</span>
+                  </div>
+                {% endif %}
+                {% if company.phone %}
+                  <div class="flex items-center text-sm text-gray-600">
+                    <i class="fas fa-phone mr-2 text-gray-400"></i>
+                    <span>{{ company.phone }}</span>
+                  </div>
+                {% endif %}
+                {% if company.email %}
+                  <div class="flex items-center text-sm text-gray-600">
+                    <i class="fas fa-envelope mr-2 text-gray-400"></i>
+                    <span>{{ company.email }}</span>
+                  </div>
+                {% endif %}
+              </div>
+              
+              <p class="text-xs text-gray-400 mt-2">Created: {{ company.created_at.strftime("%d/%m/%Y") }}</p>
+            </div>
+            <div class="relative">
+              <button class="p-2 rounded-full hover:bg-gray-100" onclick="toggleDropdown(this)">
+                <i class="fas fa-ellipsis-v text-gray-500"></i>
+              </button>
+              <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded shadow border z-20">
+                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                   onclick="editCompany('{{ company.id }}')">
+                  <i class="fas fa-edit mr-2"></i>Edit Company
+                </a>
+                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                   onclick="manageSubBrands('{{ company.id }}')">
+                  <i class="fas fa-sitemap mr-2"></i>Manage Sub-brands
+                </a>
+                <div class="border-t my-1"></div>
+                <a href="/amv/settings/equipment?company_id={{ company.id }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <i class="fas fa-tools mr-2"></i>Manage Equipment
+                </a>
+                <a href="/amv/settings/materials?company_id={{ company.id }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <i class="fas fa-flask mr-2"></i>Manage Materials
+                </a>
+                <a href="/amv/settings/reagents?company_id={{ company.id }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <i class="fas fa-vial mr-2"></i>Manage Reagents
+                </a>
+                <a href="/amv/settings/reference-products?company_id={{ company.id }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <i class="fas fa-certificate mr-2"></i>Manage Reference Products
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sub-brands -->
+          {% if company.sub_brands %}
+            <div class="mt-4">
+              <h6 class="text-sm font-semibold text-gray-700 mb-2">Sub-brands:</h6>
+              <div class="grid grid-cols-2 gap-2">
+                {% for sub_brand in company.sub_brands %}
+                  <div class="border rounded p-2 flex items-center">
+                    {% if sub_brand.logo_url %}
+                      <img src="{{ sub_brand.logo_url }}" alt="Sub-brand Logo" class="w-6 h-6 object-cover rounded mr-2">
+                    {% else %}
+                      <i class="fas fa-tag text-gray-400 mr-2"></i>
+                    {% endif %}
+                    <span class="text-sm text-gray-700">{{ sub_brand.name }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Management Action Buttons -->
+          <div class="mt-6">
+            <h6 class="text-sm font-semibold text-gray-700 mb-3">Quick Management:</h6>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <a href="/amv/settings/equipment?company_id={{ company.id }}" 
+                 class="flex items-center justify-center px-3 py-2 text-xs border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition">
+                <i class="fas fa-tools mr-1"></i>Equipment
+              </a>
+              <a href="/amv/settings/materials?company_id={{ company.id }}" 
+                 class="flex items-center justify-center px-3 py-2 text-xs border border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition">
+                <i class="fas fa-flask mr-1"></i>Materials
+              </a>
+              <a href="/amv/settings/reagents?company_id={{ company.id }}" 
+                 class="flex items-center justify-center px-3 py-2 text-xs border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition">
+                <i class="fas fa-vial mr-1"></i>Reagents
+              </a>
+              <a href="/amv/settings/reference-products?company_id={{ company.id }}" 
+                 class="flex items-center justify-center px-3 py-2 text-xs border border-orange-600 text-orange-600 rounded-lg hover:bg-orange-50 transition">
+                <i class="fas fa-certificate mr-1"></i>References
+              </a>
+            </div>
+          </div>
+
+          <!-- Additional Action Buttons -->
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button class="text-sm px-3 py-1 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition"
+                    onclick="addSubBrand('{{ company.id }}')">
+              <i class="fas fa-plus mr-1"></i>Add Sub-brand
+            </button>
+            <button class="text-sm px-3 py-1 border border-gray-600 text-gray-600 rounded-lg hover:bg-gray-50 transition"
+                    onclick="viewCompanyDetails('{{ company.id }}')">
+              <i class="fas fa-eye mr-1"></i>View Details
+            </button>
+          </div>
+
+          <!-- Management Summary -->
+          <div class="mt-6 bg-gray-50 rounded-lg p-4">
+            <h6 class="text-sm font-semibold text-gray-700 mb-3">Management Summary:</h6>
+            
+            <!-- Debug Information (remove in production) -->
+           
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="text-center">
+                <div class="text-lg font-bold text-blue-600">{{ company.equipment_count or 0 }}</div>
+                <div class="text-xs text-gray-500">Equipment</div>
+              </div>
+              <div class="text-center">
+                <div class="text-lg font-bold text-green-600">{{ company.materials_count or 0 }}</div>
+                <div class="text-xs text-gray-500">Materials</div>
+              </div>
+              <div class="text-center">
+                <div class="text-lg font-bold text-purple-600">{{ company.reagents_count or 0 }}</div>
+                <div class="text-xs text-gray-500">Reagents</div>
+              </div>
+              <div class="text-center">
+                <div class="text-lg font-bold text-orange-600">{{ company.references_count or 0 }}</div>
+                <div class="text-xs text-gray-500">References</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Equipment Table -->
+          {% if company.equipment %}
+            <div class="mt-4">
+              <h6 class="text-sm font-semibold text-gray-700 mb-2">Equipment:</h6>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm border border-gray-200 rounded-lg">
+                  <thead class="bg-gray-100">
+                    <tr>
+                      <th class="p-2 border">Name</th>
+                      <th class="p-2 border">Instrument ID</th>
+                      <th class="p-2 border">Type</th>
+                      <th class="p-2 border">Make</th>
+                      <th class="p-2 border">Calibration</th>
+                      <th class="p-2 border text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for eq in company.equipment %}
+                      <tr>
+                        <td class="p-2 border">{{ eq.name }}</td>
+                        <td class="p-2 border">{{ eq.company_provided_id }}</td>
+                        <td class="p-2 border">{{ eq.type }}</td>
+                        <td class="p-2 border">{{ eq.make or '-' }}</td>
+                        <td class="p-2 border">
+                          {% if eq.next_calibration_due %}
+                            {{ eq.next_calibration_due.strftime("%d/%m/%Y") }}
+                          {% else %}
+                            -
+                          {% endif %}
+                        </td>
+                        <td class="p-2 border text-center">
+                          <button class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                                  onclick="editEquipment('{{ eq.id }}', '{{ company.id }}')">
+                            <i class="fas fa-edit mr-1"></i>Edit
+                          </button>
+                          <button class="px-2 py-1 text-xs rounded bg-red-100 text-red-700 hover:bg-red-200"
+                                  onclick="deleteEquipment('{{ eq.id }}')">
+                            <i class="fas fa-trash mr-1"></i>Delete
+                          </button>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- No Companies -->
+    <div class="bg-white shadow rounded-lg p-8 text-center">
+      <i class="fas fa-building text-gray-400 text-3xl mb-3"></i>
+      <h5 class="text-gray-600 font-medium">No Companies Added</h5>
+      <p class="text-gray-500 mb-4">Add your first company to start creating documents.</p>
+      <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700"
+              onclick="openModal('addCompanyModal')">
+        <i class="fas fa-plus mr-2"></i>Add First Company
+      </button>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Add Company Modal -->
+<div id="addCompanyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+    <div class="flex justify-between items-center bg-gray-100 border-b px-5 py-3 rounded-t-lg">
+      <h5 id="addCompanyModalTitle" class="text-xl font-semibold text-gray-900">Add Company</h5>
+      <button type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center" onclick="closeModal('addCompanyModal')">
+        <i class="fas fa-times"></i>
+        <span class="sr-only">Close modal</span>
+      </button>
+    </div>
+    <form id="addCompanyForm" class="p-5 space-y-4" enctype="multipart/form-data">
+      <div>
+        <label for="companyName" class="block mb-2 text-sm font-medium text-gray-900">Company Name *</label>
+        <input type="text" id="companyName" name="name" required
+               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+               placeholder="Enter company name">
+      </div>
+      <div>
+        <label for="companyAddress" class="block mb-2 text-sm font-medium text-gray-900">Address</label>
+        <textarea id="companyAddress" name="address"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+                  placeholder="Enter address"></textarea>
+      </div>
+      <div>
+        <label for="companyLogo" class="block mb-2 text-sm font-medium text-gray-900">Company Logo</label>
+        <input type="file" id="companyLogo" name="logo" accept="image/*"
+               class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+      </div>
+      <div class="flex justify-end items-center space-x-2 pt-4 border-t border-gray-200">
+        <button type="button" onclick="closeModal('addCompanyModal')" class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10">
+          Cancel
+        </button>
+        <button type="submit" class="text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:outline-none focus:ring-indigo-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center flex items-center">
+          <i class="fas fa-save mr-2"></i>Save Company
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Company Modal -->
+<div id="editCompanyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+    <div class="flex justify-between items-center bg-gray-100 border-b px-5 py-3 rounded-t-lg">
+      <h5 id="editCompanyModalTitle" class="text-xl font-semibold text-gray-900">Edit Company</h5>
+      <button type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center" onclick="closeModal('editCompanyModal')">
+        <i class="fas fa-times"></i>
+        <span class="sr-only">Close modal</span>
+      </button>
+    </div>
+    <form id="editCompanyForm" class="p-5 space-y-4" enctype="multipart/form-data">
+      <input type="hidden" id="editCompanyId" name="company_id">
+      <div>
+        <label for="editCompanyName" class="block mb-2 text-sm font-medium text-gray-900">Company Name *</label>
+        <input type="text" id="editCompanyName" name="name" required
+               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+               placeholder="Enter company name">
+      </div>
+      <div>
+        <label for="editCompanyAddress" class="block mb-2 text-sm font-medium text-gray-900">Address</label>
+        <textarea id="editCompanyAddress" name="address"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+                  placeholder="Enter address"></textarea>
+      </div>
+      <div>
+        <label for="editCompanyLogo" class="block mb-2 text-sm font-medium text-gray-900">Company Logo</label>
+        <input type="file" id="editCompanyLogo" name="logo" accept="image/*"
+               class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+      </div>
+      <div>
+        <label for="editCompanyGlassMaterials" class="block mb-2 text-sm font-medium text-gray-900">Glass Materials (JSON)</label>
+        <textarea id="editCompanyGlassMaterials" name="glass_materials"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+                  placeholder="Enter glass materials in JSON format"></textarea>
+      </div>
+      <div class="flex justify-end items-center space-x-2 pt-4 border-t border-gray-200">
+        <button type="button" onclick="closeModal('editCompanyModal')" class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10">
+          Cancel
+        </button>
+        <button type="submit" class="text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:outline-none focus:ring-indigo-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center flex items-center">
+          <i class="fas fa-save mr-2"></i>Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Sub-brand Modal -->
+<div id="addSubBrandModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg max-w-lg w-full">
+    <div class="flex justify-between items-center border-b px-4 py-2">
+      <h5 class="text-lg font-semibold">Add Sub-brand</h5>
+      <button onclick="closeModal('addSubBrandModal')" class="text-gray-400 hover:text-gray-600">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <form id="addSubBrandForm" class="p-4 space-y-4">
+      <input type="hidden" id="subBrandCompanyId" name="company_id">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Sub-brand Name *</label>
+        <input type="text" name="name" required
+               class="mt-1 block w-full rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button type="button" onclick="closeModal('addSubBrandModal')" class="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-100">
+          Cancel
+        </button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 flex items-center">
+          <i class="fas fa-save mr-2"></i>Add Sub-brand
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- View Company Details Modal -->
+<div id="viewCompanyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg max-w-lg w-full">
+    <div class="flex justify-between items-center border-b px-4 py-2">
+      <h5 class="text-lg font-semibold">Company Details</h5>
+      <button onclick="closeModal('viewCompanyModal')" class="text-gray-400 hover:text-gray-600">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="p-4 space-y-4">
+      <!-- Company Logo -->
+      <div class="text-center">
+        <img id="viewCompanyLogo" class="w-20 h-20 rounded-lg mx-auto mb-2" alt="Company Logo">
+        <div id="viewCompanyNoLogo" class="w-20 h-20 bg-gray-200 rounded-lg mx-auto mb-2 flex items-center justify-center">
+          <i class="fas fa-building text-gray-400 text-2xl"></i>
+        </div>
+      </div>
+      
+      <!-- Company Information -->
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Company Name</label>
+          <p id="viewCompanyName" class="mt-1 text-gray-900 font-semibold"></p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Address</label>
+          <p id="viewCompanyAddress" class="mt-1 text-gray-600"></p>
+        </div>
+      </div>
+      
+      <div class="flex justify-end pt-2 border-t">
+        <button onclick="closeModal('viewCompanyModal')" class="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-100">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Equipment Modal -->
+<div id="equipmentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+    <div class="flex justify-between items-center bg-gray-100 border-b px-5 py-3 rounded-t-lg">
+      <h5 id="equipmentModalTitle" class="text-xl font-semibold text-gray-900 ">Add Equipment</h5>
+      <button type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center" onclick="closeModal('equipmentModal')">
+        <i class="fas fa-times"></i>
+        <span class="sr-only">Close modal</span>
+      </button>
+    </div>
+    <form id="equipmentForm" class="p-5 space-y-4">
+      <input type="hidden" id="equipmentId" name="equipment_id">
+      <input type="hidden" id="equipmentCompanyId" name="company_id">
+
+      <!-- Name -->
+      <div>
+        <label for="equipmentName" class="block mb-2 text-sm font-medium text-gray-900">Name *</label>
+        <input type="text" id="equipmentName" name="name" required
+               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+               placeholder="Enter equipment name">
+      </div>
+
+      <!-- Instrument ID -->
+      <div>
+        <label for="equipmentInstrumentId" class="block mb-2 text-sm font-medium text-gray-900">Instrument ID *</label>
+        <input type="text" id="equipmentInstrumentId" name="company_provided_id" required
+               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+               placeholder="Enter unique instrument ID">
+      </div>
+
+      <!-- Type and Make -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="equipmentType" class="block mb-2 text-sm font-medium text-gray-900">Type *</label>
+          <input type="text" id="equipmentType" name="type" required
+                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+                 placeholder="e.g., Microscope">
+        </div>
+        <div>
+          <label for="equipmentMake" class="block mb-2 text-sm font-medium text-gray-900 ">Make</label>
+          <input type="text" id="equipmentMake" name="make"
+                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+                 placeholder="Optional">
+        </div>
+      </div>
+
+      <!-- Calibration Dates -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="equipmentCalibrationDate" class="block mb-2 text-sm font-medium text-gray-900 ">Calibration Date</label>
+          <input type="date" id="equipmentCalibrationDate" name="calibration_date"
+                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+                 placeholder="DD/MM/YYYY">
+        </div>
+
+        <!-- Next Calibration Due -->
+        <div>
+          <label for="equipmentNextCalibration" class="block mb-2 text-sm font-medium text-gray-900 ">Next Calibration Due</label>
+          <input type="date" id="equipmentNextCalibration" name="next_calibration_due"
+                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+                 placeholder="DD/MM/YYYY">
+        </div>
+      </div>
+
+
+      <div class="flex justify-end items-center space-x-2 pt-4 border-t border-gray-200">
+        <button type="button" onclick="closeModal('equipmentModal')" class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10">
+          Cancel
+        </button>
+        <button type="submit" class="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center flex items-center">
+          <i class="fas fa-save mr-2"></i>Save
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Add Company
+document.getElementById('addCompanyForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  const submitBtn = this.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+  try {
+    const res = await fetch('/company/create', { method: 'POST', body: formData });
+    const result = await res.json();
+    if (result.success) {
+      location.reload();
+    } else {
+      alert('Error: ' + (result.error || 'Failed to create company'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Failed to create company');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Company';
+  }
+});
+
+// Add Sub-brand
+function addSubBrand(companyId) {
+  document.getElementById('subBrandCompanyId').value = companyId;
+  document.getElementById('addSubBrandForm').reset();
+  openModal('addSubBrandModal');
+}
+
+// View Company Details
+async function viewCompanyDetails(companyId) {
+  try {
+    const res = await fetch(`/company/get/${companyId}`);
+    const result = await res.json();
+    if (!result.success) {
+      alert('Failed to fetch company details');
+      return;
+    }
+
+    const company = result.company;
+    
+    // Populate modal with company data
+    document.getElementById('viewCompanyName').textContent = company.name;
+    document.getElementById('viewCompanyAddress').textContent = company.address || 'No address provided';
+    
+    // Handle logo display
+    const logoImg = document.getElementById('viewCompanyLogo');
+    const noLogoDiv = document.getElementById('viewCompanyNoLogo');
+    
+    if (company.logo_url) {
+      logoImg.src = company.logo_url;
+      logoImg.style.display = 'block';
+      noLogoDiv.style.display = 'none';
+    } else {
+      logoImg.style.display = 'none';
+      noLogoDiv.style.display = 'flex';
+    }
+    
+    // Show the modal
+    openModal('viewCompanyModal');
+  } catch (err) {
+    console.error(err);
+    alert('Error fetching company details');
+  }
+}
+
+// Toggle dropdown menu
+function toggleDropdown(button) {
+  const dropdown = button.nextElementSibling;
+  const isHidden = dropdown.classList.contains('hidden');
+  
+  // Close all other dropdowns
+  document.querySelectorAll('.absolute.right-0.mt-2').forEach(dropdown => {
+    dropdown.classList.add('hidden');
+  });
+  
+  // Toggle current dropdown
+  if (isHidden) {
+    dropdown.classList.remove('hidden');
+  } else {
+    dropdown.classList.add('hidden');
+  }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(event) {
+  if (!event.target.closest('.relative')) {
+    document.querySelectorAll('.absolute.right-0.mt-2').forEach(dropdown => {
+      dropdown.classList.add('hidden');
+    });
+  }
+});
+
+document.getElementById('addSubBrandForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  const submitBtn = this.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding...';
+
+  try {
+    const res = await fetch('/subbrand/create', { method: 'POST', body: formData });
+    const result = await res.json();
+    if (result.success) {
+      location.reload();
+    } else {
+      alert('Error: ' + (result.error || 'Failed to add sub-brand'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Failed to add sub-brand');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Add Sub-brand';
+  }
+});
+function manageSubBrands(id) {
+  alert('Manage sub-brands not yet implemented');
+}
+
+// Equipment functions
+function addEquipment(companyId) {
+  document.getElementById('equipmentModalTitle').innerText = "Add Equipment";
+  document.getElementById('equipmentForm').reset();
+  document.getElementById('equipmentId').value = "";
+  document.getElementById('equipmentCompanyId').value = companyId;
+  openModal('equipmentModal');
+}
+
+// Edit Equipment
+async function editEquipment(eqId, companyId) {
+  try {
+    const res = await fetch(`/equipment/${eqId}`);
+    const data = await res.json();
+    if (!data.success) return alert("Failed to fetch equipment");
+
+    const eq = data.equipment;
+    document.getElementById('equipmentModalTitle').innerText = "Edit Equipment";
+    document.getElementById('equipmentId').value = eq.id;
+    document.getElementById('equipmentCompanyId').value = companyId;
+    document.getElementById('equipmentName').value = eq.name;
+    document.getElementById('equipmentType').value = eq.type;
+    document.getElementById('equipmentMake').value = eq.make || "";
+    document.getElementById('equipmentCalibrationDate').value = eq.calibration_date || "";
+    document.getElementById('equipmentNextCalibration').value = eq.next_calibration_due || "";
+    openModal('equipmentModal');
+  } catch (err) {
+    console.error(err);
+    alert("Error fetching equipment");
+  }
+}
+
+// Save Equipment (Add or Edit)
+document.getElementById('equipmentForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  const eqId = document.getElementById('equipmentId').value;
+  const url = eqId ? `/equipment/update/${eqId}` : '/equipment/create';
+
+  const submitBtn = this.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+
+  try {
+    const res = await fetch(url, { method: 'POST', body: formData });
+    const result = await res.json();
+    if (result.success) {
+      location.reload();
+    } else {
+      alert('Error: ' + (result.error || 'Failed to save equipment'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Failed to save equipment');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save';
+  }
+});
+
+// Delete Equipment
+async function deleteEquipment(eqId) {
+  if (!confirm("Are you sure you want to delete this equipment?")) return;
+  try {
+    const res = await fetch(`/equipment/delete/${eqId}`, { method: 'POST' });
+    const result = await res.json();
+    if (result.success) {
+      location.reload();
+    } else {
+      alert('Error: ' + (result.error || 'Failed to delete equipment'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Failed to delete equipment');
+  }
+}
+</script>
+<script src="{{ url_for('static', filename='js/company/edit-profile.js') }}"></script>
+{% endblock %}
