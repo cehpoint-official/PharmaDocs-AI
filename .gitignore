@@ -15,9 +15,14 @@ venv/
 # Generated documents
 *.pdf
 *.docx
+*.xls
+*.xlsx
 
 # Databases
 *.db
+instance/
+uploads/
+*.db.bak
 
 # ReportLab temp files
 *.rltemp
