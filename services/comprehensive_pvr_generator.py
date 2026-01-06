@@ -31,7 +31,7 @@ class ComprehensivePVRGenerator:
     def __init__(self, pvp_template, batch_data: List[Dict], pvr_report=None, equipment_list=None,
         materials_list=None):
         """
-        Initialize generator
+        Initialize generator 
         
         Args:
             pvp_template: PVP_Template database object
@@ -68,6 +68,17 @@ class ComprehensivePVRGenerator:
             textColor=colors.HexColor('#283593'),
             spaceAfter=12,
             spaceBefore=12,
+            fontName='Helvetica-Bold'
+        ))
+
+        self.styles.add(ParagraphStyle(
+            name='TOCHeading',
+            parent=self.styles['Heading1'],
+            fontSize=16,
+            textColor=colors.HexColor('#283593'),
+            spaceAfter=18,
+            spaceBefore=12,
+            alignment=TA_CENTER,         
             fontName='Helvetica-Bold'
         ))
         
@@ -259,8 +270,8 @@ class ComprehensivePVRGenerator:
     def _build_toc(self):
         elements = []
 
-        elements.append(Paragraph("TABLE OF CONTENTS", self.styles['CustomHeading1']))
-        elements.append(Spacer(1, 0.3 * inch))
+        elements.append(Paragraph("TABLE OF CONTENTS", self.styles['TOCHeading']))
+        elements.append(Spacer(1, 0.25 * inch))
 
         toc_data = [
             ["1.", "Objective"],
@@ -284,17 +295,21 @@ class ComprehensivePVRGenerator:
 
         table = Table(
             toc_data,
-            colWidths=[1.2 * inch, 4.8 * inch],
+            colWidths=[1.6 * inch, 5.2 * inch],
             repeatRows=0
         )
 
         table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('FONT', (0, 0), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5)
         ]))
 
         elements.append(table)
