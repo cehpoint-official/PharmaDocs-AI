@@ -729,6 +729,51 @@ class ComprehensivePVRGenerator:
         elements.append(h)
         elements.append(Spacer(1, 0.2*inch))
         
+        # -------- 12.1 Testing and Methodology --------
+        h_method = self._heading(
+            "12.1 Testing and Methodology",
+            self.styles['CustomHeading2'],
+            1
+        )
+        elements.append(h_method)
+        elements.append(Spacer(1, 0.1 * inch))
+
+        methodology_text = """
+        Quality control testing was performed on in-process and finished product samples
+        in accordance with approved specifications and validated analytical methods.
+
+        Samples were collected as per the approved sampling plan by the Quality Control
+        department. All tests were executed following current Good Manufacturing Practices
+        (cGMP) and applicable Standard Operating Procedures (SOPs).
+
+        Physical tests such as appearance and clarity were evaluated by visual inspection
+        under controlled conditions. Chemical tests including assay and pH were carried out
+        using validated analytical instruments.
+
+        Where applicable, microbiological testing was conducted under controlled
+        environmental conditions to ensure compliance with sterility and microbial
+        limit requirements.
+
+        All instruments used for testing were calibrated prior to analysis. Test results
+        were reviewed against predefined acceptance criteria and approved by the Quality
+        Assurance department.
+        """
+
+        for para in methodology_text.strip().split("\n\n"):
+            elements.append(Paragraph(para, self.styles['CustomBody']))
+            elements.append(Spacer(1, 6))
+
+        elements.append(Spacer(1, 0.2 * inch))
+
+        # -------- 12.2 Test Results --------
+        h_results = self._heading(
+            "12.2 Test Results",
+            self.styles['CustomHeading2'],
+            1
+        )
+        elements.append(h_results)
+        elements.append(Spacer(1, 0.1 * inch))
+
         # Get test criteria
         criteria = self.pvp.criteria
         
