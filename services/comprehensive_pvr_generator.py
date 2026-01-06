@@ -14,6 +14,7 @@ from reportlab.platypus import Image as RLImage
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
 from typing import Dict, List
 import logging
+from reportlab.platypus.tableofcontents import TableOfContents
 from models import PVP_Extracted_Stage
 from reportlab.platypus import Table, TableStyle
 from reportlab.lib.enums import TA_LEFT
@@ -23,6 +24,15 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 
 logger = logging.getLogger(__name__)
+
+class TOCDocTemplate(SimpleDocTemplate):
+    def __init__(self, *args, generator=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.generator = generator
+
+    def afterFlowable(self, flowable):
+        if self.generator:
+            self.generator.after_flowable(flowable, self)
 
 
 class ComprehensivePVRGenerator:
@@ -117,13 +127,14 @@ class ComprehensivePVRGenerator:
         logger.info(f"Generating comprehensive PVR PDF: {output_path}")
         
         # Create PDF document
-        doc = SimpleDocTemplate(
+        doc = TOCDocTemplate(
             output_path,
             pagesize=A4,
             rightMargin=0.75*inch,
             leftMargin=0.75*inch,
             topMargin=0.75*inch,
-            bottomMargin=0.75*inch
+            bottomMargin=0.75*inch,
+            generator=self
         )
         
         # Build content
@@ -169,7 +180,7 @@ class ComprehensivePVRGenerator:
         story.extend(self._build_batch_manufacturing())
         story.append(PageBreak())
         
-        # 11. Manufacturing Process Validation (Keep old section too)
+        # 11. Manufacturing Process Validation
         story.extend(self._build_process_validation())
         story.append(PageBreak())
         
@@ -205,7 +216,7 @@ class ComprehensivePVRGenerator:
         story.extend(self._build_signatures())
         
         # Build PDF
-        doc.build(story,onFirstPage=self._add_header_footer,
+        doc.multiBuild(story,onFirstPage=self._add_header_footer,
             onLaterPages=self._add_header_footer)
         logger.info(f"✅ PDF generated successfully: {output_path}")
         
@@ -267,53 +278,47 @@ class ComprehensivePVRGenerator:
         
         return elements
     
-    def _build_toc(self):
+    def _build_toc(self) -> List:
         elements = []
 
         elements.append(Paragraph("TABLE OF CONTENTS", self.styles['TOCHeading']))
-        elements.append(Spacer(1, 0.25 * inch))
+        elements.append(Spacer(1, 0.3 * inch))
 
-        toc_data = [
-            ["1.", "Objective"],
-            ["2.", "Scope"],
-            ["3.", "Product Information"],
-            ["4.", "Roles and Responsibilities"],
-            ["5.", "Equipment List"],
-            ["6.", "Materials List"],
-            ["7.", "Validation Protocol"],
-            ["8.", "Batch Manufacturing Record"],
-            ["9.", "Manufacturing Process Validation"],
-            ["10.", "Hold Time Study"],
-            ["11.", "Environmental Monitoring"],
-            ["12.", "Quality Testing Results"],
-            ["13.", "Statistical Analysis"],
-            ["14.", "Conclusion"],
-            ["15.", "Recommendations"],
-            ["16.", "Annexures"],
-            ["17.", "Approval Signatures"],
+        toc = TableOfContents()
+
+        toc.levelStyles = [
+            ParagraphStyle(
+                name='TOCLevel1',
+                fontSize=10,
+                leftIndent=20,
+                firstLineIndent=-20,
+                spaceAfter=6
+            ),
+            ParagraphStyle(
+                name='TOCLevel2',
+                fontSize=9,
+                leftIndent=40,
+                firstLineIndent=-20,
+                spaceAfter=4
+            )
         ]
 
-        table = Table(
-            toc_data,
-            colWidths=[1.6 * inch, 5.2 * inch],
-            repeatRows=0
-        )
-
-        table.setStyle(TableStyle([
-            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('FONT', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('LEFTPADDING', (0, 0), (-1, -1), 4),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5)
-        ]))
-
-        elements.append(table)
+        elements.append(toc)
         return elements
+    
+    def _heading(self, text, style, level):
+        para = Paragraph(text, style)
+        para._toc_level = level
+        return para
+    
+    def after_flowable(self, flowable, doc):
+        """
+        Registers headings into Table of Contents
+        """
+        if hasattr(flowable, '_toc_level'):
+            text = flowable.getPlainText()
+            level = flowable._toc_level
+            doc.notify('TOCEntry', (level, text, doc.page))
     
     def _p(self, text):
         """
@@ -326,7 +331,8 @@ class ComprehensivePVRGenerator:
         
         elements = []
         
-        elements.append(Paragraph("1. OBJECTIVE", self.styles['CustomHeading1']))
+        h = self._heading("1. OBJECTIVE", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         
         objective_text = f"""
         The objective of this validation study is to demonstrate that the manufacturing 
@@ -349,7 +355,8 @@ class ComprehensivePVRGenerator:
         
         elements = []
         
-        elements.append(Paragraph("2. SCOPE", self.styles['CustomHeading1']))
+        h = self._heading("2. SCOPE", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         
         scope_text = f"""
         This validation report covers the complete manufacturing process of 
@@ -397,10 +404,8 @@ class ComprehensivePVRGenerator:
 
         elements = []
 
-        elements.append(Paragraph(
-            "4. ROLES AND RESPONSIBILITIES",
-            self.styles['CustomHeading1']
-        ))
+        h = self._heading("4. ROLES AND RESPONSIBILITIES", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         elements.append(Spacer(1, 0.2 * inch))
 
         intro_text = """
@@ -532,8 +537,8 @@ class ComprehensivePVRGenerator:
         
         elements = []
         
-        elements.append(Paragraph("3. PRODUCT INFORMATION", self.styles['CustomHeading1']))
-        elements.append(Spacer(1, 0.2*inch))
+        h = self._heading("3. PRODUCT INFORMATION", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         
         # Product details table
         product_data = [
@@ -568,7 +573,8 @@ class ComprehensivePVRGenerator:
         
         elements = []
         
-        elements.append(Paragraph("5. EQUIPMENT LIST", self.styles['CustomHeading1']))
+        h = self._heading("5. EQUIPMENT LIST", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         elements.append(Spacer(1, 0.2*inch))
         
         # Get equipment from database
@@ -611,7 +617,8 @@ class ComprehensivePVRGenerator:
         
         elements = []
         
-        elements.append(Paragraph("6. MATERIALS LIST", self.styles['CustomHeading1']))
+        h = self._heading("6. MATERIALS LIST", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         elements.append(Spacer(1, 0.2*inch))
         
         # Get materials from database
@@ -654,7 +661,8 @@ class ComprehensivePVRGenerator:
         
         elements = []
         
-        elements.append(Paragraph("9. MANUFACTURING PROCESS VALIDATION", self.styles['CustomHeading1']))
+        h = self._heading("9. MANUFACTURING PROCESS VALIDATION", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         elements.append(Spacer(1, 0.2*inch))
         
         # Get extracted stages
@@ -664,7 +672,7 @@ class ComprehensivePVRGenerator:
             for stage in stages:
                 # Stage heading
                 stage_title = f"9.{stage.stage_number} {stage.stage_name}"
-                elements.append(Paragraph(stage_title, self.styles['CustomHeading2']))
+                elements.append(self._heading(stage_title, self.styles['CustomHeading2'], 1))
                 elements.append(Spacer(1, 0.1*inch))
                 
                 # Stage details
@@ -717,7 +725,8 @@ class ComprehensivePVRGenerator:
         
         elements = []
         
-        elements.append(Paragraph("12. QUALITY TESTING RESULTS", self.styles['CustomHeading1']))
+        h = self._heading("12. QUALITY TESTING RESULTS", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         elements.append(Spacer(1, 0.2*inch))
         
         # Get test criteria
@@ -771,7 +780,8 @@ class ComprehensivePVRGenerator:
         
         elements = []
         
-        elements.append(Paragraph("14. CONCLUSION", self.styles['CustomHeading1']))
+        h = self._heading("14. CONCLUSION", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         
         conclusion_text = f"""
         Based on the validation data from {len(self.batch_data)} consecutive batches of 
@@ -798,7 +808,8 @@ class ComprehensivePVRGenerator:
         
         elements = []
         
-        elements.append(Paragraph("15. RECOMMENDATIONS", self.styles['CustomHeading1']))
+        h = self._heading("15. RECOMMENDATION", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         
         recommendations_text = """
         Based on this validation study, the following recommendations are made:
@@ -862,7 +873,8 @@ class ComprehensivePVRGenerator:
         """Build hold time study section"""
         elements = []
         
-        elements.append(Paragraph("10. HOLD TIME STUDY", self.styles['CustomHeading1']))
+        h = self._heading("10. HOLD TIME STUDY", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         elements.append(Spacer(1, 0.2*inch))
         
         hold_time_text = """
@@ -899,7 +911,8 @@ class ComprehensivePVRGenerator:
         """Build environmental monitoring section"""
         elements = []
         
-        elements.append(Paragraph("11. ENVIRONMENTAL MONITORING", self.styles['CustomHeading1']))
+        h = self._heading("11. ENVIRONMENTAL MONITORING", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         elements.append(Spacer(1, 0.2*inch))
         
         env_text = """
@@ -936,7 +949,8 @@ class ComprehensivePVRGenerator:
         """Build validation protocol section"""
         elements = []
         
-        elements.append(Paragraph("7. VALIDATION PROTOCOL", self.styles['CustomHeading1']))
+        h = self._heading("7. VALIDATION PROTOCOL", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         elements.append(Spacer(1, 0.2*inch))
         
         elements.append(Paragraph(
@@ -947,7 +961,7 @@ class ComprehensivePVRGenerator:
         ))
         elements.append(Spacer(1, 0.2*inch))
         
-        elements.append(Paragraph("7.1 Validation Approach", self.styles['CustomHeading2']))
+        elements.append(self._heading("7.1 Validation Approach", self.styles['CustomHeading2'], 1))
         elements.append(Spacer(1, 0.1*inch))
         elements.append(Paragraph(
             'Prospective validation approach was followed, where the process was validated '
@@ -956,7 +970,7 @@ class ComprehensivePVRGenerator:
         ))
         elements.append(Spacer(1, 0.2*inch))
         
-        elements.append(Paragraph("7.2 Acceptance Criteria", self.styles['CustomHeading2']))
+        elements.append(self._heading("7.2 Acceptance Criteria", self.styles['CustomHeading2'], 1))
         elements.append(Spacer(1, 0.1*inch))
         
         criteria = self.pvp.criteria
@@ -991,7 +1005,8 @@ class ComprehensivePVRGenerator:
         """Build batch manufacturing record section"""
         elements = []
         
-        elements.append(Paragraph("8. BATCH MANUFACTURING RECORD", self.styles['CustomHeading1']))
+        h = self._heading("8. BATCH MANUFACTURING RECORD", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         elements.append(Spacer(1, 0.2*inch))
         
         stages = PVP_Extracted_Stage.query.filter_by(
@@ -1001,7 +1016,7 @@ class ComprehensivePVRGenerator:
         if stages:
             for stage in stages:
                 stage_title = f"8.{stage.stage_number} {stage.stage_name}"
-                elements.append(Paragraph(stage_title, self.styles['CustomHeading2']))
+                elements.append(self._heading(stage_title, self.styles['CustomHeading2'], 1))
                 elements.append(Spacer(1, 0.1*inch))
                 
                 # Stage details table
@@ -1036,7 +1051,8 @@ class ComprehensivePVRGenerator:
         """Build statistical analysis section"""
         elements = []
         
-        elements.append(Paragraph("13. STATISTICAL ANALYSIS", self.styles['CustomHeading1']))
+        h = self._heading("13. STATISTICAL ANALYSIS", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         elements.append(Spacer(1, 0.2*inch))
         
         elements.append(Paragraph(
@@ -1046,7 +1062,7 @@ class ComprehensivePVRGenerator:
         ))
         elements.append(Spacer(1, 0.2*inch))
         
-        elements.append(Paragraph("13.1 Process Capability", self.styles['CustomHeading2']))
+        elements.append(self._heading("13.1 Process Capability", self.styles['CustomHeading2'],1))
         elements.append(Spacer(1, 0.1*inch))
         elements.append(Paragraph(
             'Process capability indices (Cp and Cpk) were calculated for critical parameters. '
@@ -1055,7 +1071,7 @@ class ComprehensivePVRGenerator:
         ))
         elements.append(Spacer(1, 0.2*inch))
         
-        elements.append(Paragraph("13.2 Trend Analysis", self.styles['CustomHeading2']))
+        elements.append(self._heading("13.2 Trend Analysis", self.styles['CustomHeading2'],1))
         elements.append(Spacer(1, 0.1*inch))
         elements.append(Paragraph(
             'Trend analysis of results across batches showed no significant drift or patterns, '
@@ -1069,7 +1085,8 @@ class ComprehensivePVRGenerator:
         """Build annexures section"""
         elements = []
         
-        elements.append(Paragraph("16. ANNEXURES", self.styles['CustomHeading1']))
+        h = self._heading("16. ANNEXURES", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         elements.append(Spacer(1, 0.2*inch))
         
         annexures = [
@@ -1092,7 +1109,8 @@ class ComprehensivePVRGenerator:
         
         elements = []
         
-        elements.append(Paragraph("17. APPROVAL SIGNATURES", self.styles['CustomHeading1']))
+        h = self._heading("17. APPROVAL SIGNATURE", self.styles['CustomHeading1'], 0)
+        elements.append(h)
         elements.append(Spacer(1, 0.5*inch))
         
         # Get signature names from report if available
