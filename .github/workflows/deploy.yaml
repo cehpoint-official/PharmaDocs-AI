@@ -21,43 +21,27 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Decode and write service account key
+      - name: Build and Deploy
         run: |
           echo "${{ secrets.GCP_SA_KEY_BASE64 }}" | base64 --decode > $HOME/gcloud-key.json
-          cat $HOME/gcloud-key.json | jq .type || echo "JSON structure looks fine"
-
-      - name: Authenticate with Google Cloud
-        run: |
           gcloud auth activate-service-account --key-file=$HOME/gcloud-key.json
           gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
           gcloud auth configure-docker gcr.io --quiet
-          echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-key.json" >> $GITHUB_ENV
 
-      - name: Determine image tag
-        id: tag
-        run: |
           COMMIT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
           IMAGE_TAG=pharmadocsai:${COMMIT_SHA}
-          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
-          echo "IMAGE=gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}" >> $GITHUB_ENV
-          echo "Building Image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}"
+          IMAGE_URI=gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}
 
-      - name: Build and push Docker image to GCR
-        run: |
-          gcloud builds submit --tag "gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}" --verbosity=info
+          gcloud builds submit --tag "$IMAGE_URI" --verbosity=info
 
-      - name: Deploy to Cloud Run
-        run: |
           gcloud run deploy pharmadocsai-assessment \
-            --image "gcr.io/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_TAG}" \
+            --image "$IMAGE_URI" \
             --region asia-south1 \
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
             --quiet
 
-      - name: Show deployed service URL
-        run: |
           echo "Service URL:"
           gcloud run services describe pharmadocsai-assessment \
             --region asia-south1 \
