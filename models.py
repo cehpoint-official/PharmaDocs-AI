@@ -431,12 +431,13 @@ class PVP_Template(db.Model):
     product_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     batch_size: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     
-    company_name: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
-    company_address: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    company_city: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    company_state: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    company_country: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    company_pincode: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    # Schema Mismatch Fix: Commenting out fields not present in SQLite DB
+    # company_name: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    # company_address: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    # company_city: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # company_state: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # company_country: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # company_pincode: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
