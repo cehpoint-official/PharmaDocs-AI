@@ -52,6 +52,7 @@ jobs:
             --region asia-south1 \
             --platform managed \
             --allow-unauthenticated \
+            --set-env-vars GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
             --quiet
 
       - name: Show deployed service URL
