@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Validation Documents{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">
+            <i class="fas fa-robot text-purple-600 mr-2"></i>
+            Upload Validation Documents - AI Powered
+        </h2>
+
+        <!-- Step Indicator -->
+        <div class="flex items-center justify-between mb-8 relative">
+            <div class="absolute top-4 left-0 right-0 h-1 bg-gray-200 -z-10"></div>
+            
+            <div class="flex flex-col items-center relative z-10">
+                <div class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
+                    1
+                </div>
+                <span class="text-xs mt-1 font-medium text-purple-600">Upload Files</span>
+            </div>
+            
+            <div class="flex flex-col items-center relative z-10">
+                <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-bold">
+                    2
+                </div>
+                <span class="text-xs mt-1 font-medium text-gray-500">AI Processing</span>
+            </div>
+            
+            <div class="flex flex-col items-center relative z-10">
+                <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-bold">
+                    3
+                </div>
+                <span class="text-xs mt-1 font-medium text-gray-500">Review</span>
+            </div>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+            <!-- Product Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Template Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Template Name <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        name="template_name" 
+                        required
+                        placeholder="e.g., Fluorouracil Injection 50mg/ml PVP"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                </div>
+
+                <!-- Product Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Product Name <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        name="product_name" 
+                        required
+                        placeholder="e.g., Fluorouracil Injection"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Dosage Form -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Dosage Form <span class="text-red-500">*</span>
+                    </label>
+                    <select 
+                        name="dosage_form" 
+                        required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                        <option value="">Select dosage form...</option>
+                        {% for product_type in product_types %}
+                        <option value="{{ product_type }}">{{ product_type|title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Batch Size -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Batch Size
+                    </label>
+                    <input 
+                        type="text" 
+                        name="batch_size" 
+                        placeholder="e.g., 500,000 vials"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                </div>
+            </div>
+
+            <!-- File Upload Sections -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- STP Upload -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Standard Testing Procedure (STP) <span class="text-red-500">*</span>
+                    </label>
+                    <div class="mt-1 flex justify-center px-6 pt-8 pb-8 border-2 border-gray-300 border-dashed rounded-lg hover:border-purple-400 transition cursor-pointer" 
+                         onclick="document.getElementById('stp_file').click()"
+                         id="stp-drop-area">
+                        <div class="space-y-2 text-center">
+                            <i class="fas fa-file-pdf text-3xl text-purple-500"></i>
+                            <div class="flex text-sm text-gray-600">
+                                <label class="relative cursor-pointer bg-white rounded-md font-medium text-purple-600 hover:text-purple-500">
+                                    <span>Upload STP PDF</span>
+                                    <input type="file" name="stp_file" accept=".pdf,.txt" required class="sr-only" id="stp-file">
+                                </label>
+                                <p class="pl-1">or drag and drop</p>
+                            </div>
+                            <p class="text-xs text-gray-500">PDF or TXT up to 50MB</p>
+                            <p id="stp-file-name" class="text-sm text-green-600 font-medium mt-2"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MFR Upload -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Master Formula Record (MFR) <span class="text-red-500">*</span>
+                    </label>
+                    <div class="mt-1 flex justify-center px-6 pt-8 pb-8 border-2 border-gray-300 border-dashed rounded-lg hover:border-purple-400 transition cursor-pointer"
+                         onclick="document.getElementById('mfr_file').click()"
+                         id="mfr-drop-area">
+                        <div class="space-y-2 text-center">
+                            <i class="fas fa-file-alt text-3xl text-purple-500"></i>
+                            <div class="flex text-sm text-gray-600">
+                                <label class="relative cursor-pointer bg-white rounded-md font-medium text-purple-600 hover:text-purple-500">
+                                    <span>Upload MFR PDF</span>
+                                    <input type="file" name="mfr_file" accept=".pdf,.txt" required class="sr-only" id="mfr-file">
+                                </label>
+                                <p class="pl-1">or drag and drop</p>
+                            </div>
+                            <p class="text-xs text-gray-500">PDF or TXT up to 50MB</p>
+                            <p id="mfr-file-name" class="text-sm text-green-600 font-medium mt-2"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Company Information -->
+            <div class="border-t pt-4">
+                <h3 class="text-lg font-medium text-gray-700 mb-4">
+                    <i class="fas fa-building text-gray-500 mr-2"></i>
+                    Company Information (Optional)
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Company Name
+                        </label>
+                        <input 
+                            type="text" 
+                            name="company_name" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Manufacturing Site
+                        </label>
+                        <input 
+                            type="text" 
+                            name="manufacturing_site" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Info Box -->
+            <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-robot text-purple-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-purple-700 font-medium">
+                            What happens next:
+                        </p>
+                        <p class="text-sm text-purple-600 mt-1">
+                            Our AI will analyze your documents and automatically extract:
+                        </p>
+                        <ul class="mt-2 text-sm text-purple-600 list-disc list-inside space-y-1">
+                            <li>Test parameters and acceptance criteria</li>
+                            <li>Critical process parameters</li>
+                            <li>Quality control specifications</li>
+                            <li>Manufacturing steps and equipment</li>
+                            <li>Raw material specifications</li>
+                            <li>Regulatory compliance requirements</li>
+                        </ul>
+                        <p class="text-xs text-purple-500 mt-2">
+                            <i class="fas fa-clock mr-1"></i>
+                            Processing time: 30-60 seconds
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex gap-4">
+                <button 
+                    type="submit" 
+                    class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center"
+                    onclick="showLoading()"
+                >
+                    <i class="fas fa-robot mr-2"></i>
+                    Process with AI
+                </button>
+                <a 
+                    href="{{ url_for('pv.list_templates') }}" 
+                    class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition duration-200"
+                >
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-8 text-center max-w-sm">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Processing Documents with AI</h3>
+            <p class="text-gray-600">This may take 30-60 seconds...</p>
+            <p class="text-sm text-gray-500 mt-2">Please don't close this window</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Handle file selection for both STP and MFR
+document.getElementById('stp-file').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name;
+    if (fileName) {
+        document.getElementById('stp-file-name').textContent = '✓ ' + fileName;
+        document.getElementById('stp-drop-area').classList.add('border-green-400');
+    }
+});
+
+document.getElementById('mfr-file').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name;
+    if (fileName) {
+        document.getElementById('mfr-file-name').textContent = '✓ ' + fileName;
+        document.getElementById('mfr-drop-area').classList.add('border-green-400');
+    }
+});
+
+// Drag and drop functionality
+['stp-drop-area', 'mfr-drop-area'].forEach(id => {
+    const dropArea = document.getElementById(id);
+    const fileInput = id === 'stp-drop-area' ? document.getElementById('stp-file') : document.getElementById('mfr-file');
+    const fileNameDisplay = id === 'stp-drop-area' ? document.getElementById('stp-file-name') : document.getElementById('mfr-file-name');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight() {
+        dropArea.classList.add('border-purple-500', 'bg-purple-50');
+    }
+
+    function unhighlight() {
+        dropArea.classList.remove('border-purple-500', 'bg-purple-50');
+    }
+
+    dropArea.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        
+        if (files[0]) {
+            fileNameDisplay.textContent = '✓ ' + files[0].name;
+            dropArea.classList.add('border-green-400');
+        }
+    }
+});
+
+// Auto-complete product name from template
+document.querySelector('input[name="template_name"]').addEventListener('input', function(e) {
+    const templateName = e.target.value;
+    const productInput = document.querySelector('input[name="product_name"]');
+    
+    if (templateName && !productInput.value) {
+        // Extract product name from template (remove "PVP" and version numbers)
+        let productName = templateName.replace(/PVP.*$/i, '').trim();
+        productInput.value = productName;
+    }
+});
+
+// Auto-detect dosage form from product name
+document.querySelector('input[name="product_name"]').addEventListener('input', function(e) {
+    const productName = e.target.value.toLowerCase();
+    const dosageSelect = document.querySelector('select[name="dosage_form"]');
+    
+    if (dosageSelect.value === '') {
+        if (productName.includes('tablet') || productName.includes('tab')) {
+            dosageSelect.value = 'tablet';
+        } else if (productName.includes('capsule') || productName.includes('cap')) {
+            dosageSelect.value = 'capsule';
+        } else if (productName.includes('injection') || productName.includes('injectable') || productName.includes('vial')) {
+            dosageSelect.value = 'injection';
+        } else if (productName.includes('syrup') || productName.includes('suspension')) {
+            dosageSelect.value = 'syrup';
+        }
+    }
+});
+
+// Show loading overlay
+function showLoading() {
+    const form = document.querySelector('form');
+    if (form.checkValidity()) {
+        document.getElementById('loadingOverlay').classList.remove('hidden');
+        return true;
+    }
+    return false;
+}
+</script>
+{% endblock %}
