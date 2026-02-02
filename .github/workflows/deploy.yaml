@@ -41,7 +41,7 @@ jobs:
             --region asia-south1 \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
+            --set-env-vars GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }},FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }},FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }},FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }} \
             --quiet
 
           echo "Service URL:"
