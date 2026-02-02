@@ -108,3 +108,6 @@ pytesseract>=0.3.10
 weasyprint>=54.0.0
 python-dateutil>=2.8.2
 stripe
+pdf2image
+razorpay
+
