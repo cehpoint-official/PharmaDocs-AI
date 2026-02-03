@@ -38,7 +38,7 @@ jobs:
 
           gcloud run deploy pharmadocsai-assessment \
             --image "$IMAGE_URI" \
-            --region asia-south1 \
+            --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
             --memory 2Gi \
@@ -48,5 +48,5 @@ jobs:
 
           echo "Service URL:"
           gcloud run services describe pharmadocsai-assessment \
-            --region asia-south1 \
+            --region us-central1 \
             --format="value(status.url)"
