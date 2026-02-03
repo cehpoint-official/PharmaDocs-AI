@@ -32,9 +32,7 @@ with app.app_context():
     import models
     db.create_all()
 
-@app.route('/google215dea7272f51f3b.html')
-def google_verification():
-    return send_from_directory('static', 'google215dea7272f51f3b.html')
+
 # Register context processor on the main app (not blueprint)
 @app.context_processor
 def utility_processor():
@@ -76,7 +74,9 @@ def percentage_filter(value):
         return f"{value:.1f}%"
     except (TypeError, ValueError):
         return "0.0%"
-
+@app.route('/google215dea7272f51f3b.html')
+def google_verification():
+    return send_from_directory('static', 'google215dea7272f51f3b.html')
 # Root route
 @app.route('/')
 def index():
