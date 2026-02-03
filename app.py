@@ -3,6 +3,7 @@
 import models
 from database import create_app, db
 import json
+from flask import send_from_directory
 
 # Create the app
 app = create_app()
@@ -31,6 +32,9 @@ with app.app_context():
     import models
     db.create_all()
 
+@app.route('/google215dea7272f51f3b.html')
+def google_verification():
+    return send_from_directory('static', 'google215dea7272f51f3b.html')
 # Register context processor on the main app (not blueprint)
 @app.context_processor
 def utility_processor():
