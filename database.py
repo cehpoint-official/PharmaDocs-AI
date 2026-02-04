@@ -13,7 +13,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
+# Silence specific noisy loggers that cause performance issues
+logging.getLogger("pdfminer").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 class Base(DeclarativeBase):
     pass
