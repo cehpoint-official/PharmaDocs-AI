@@ -37,6 +37,7 @@ class AMVProtocolGenerator:
         self.current_page = 1
         self.total_pages = 20
         self.setup_document_margins()
+        self.setup_header_footer()
         
         # Parse JSON data from form
         self.selected_equipment = self._parse_json_data(form_data.get('selected_equipment_json'))
@@ -190,81 +191,100 @@ class AMVProtocolGenerator:
         except Exception as e:
             print(f"Warning: Could not set margins: {e}")
     
-    def add_header_section(self, page_number=None):
-        """Add header with company info and product details - SAFE VERSION"""
-        if page_number is not None:
-            self.current_page = page_number
+    def _create_page_number(self, run):
+        """Helper to insert page number field"""
+        fldChar = qn('w:fldChar')
+        instrText = qn('w:instrText')
         
-        try:
-            # Company header table
-            header_table = self.doc.add_table(rows=1, cols=2)
-            header_table.autofit = False
-            
-            # Left cell - Company name and address
-            left_cell = header_table.rows[0].cells[0]
-            left_para = left_cell.paragraphs[0]
-            
-            company_name = self.form_data.get('company_name', '')
-            company_address = self.form_data.get('company_location', '')
-            
-            company_run = left_para.add_run(f"{company_name}\n")
-            company_run.bold = True
-            company_run.font.size = Pt(10)
-            
-            address_run = left_para.add_run(f"{company_address}\n")
-            address_run.font.size = Pt(9)
-            
-            # Protocol title
-            title_run = left_para.add_run("ANALYTICAL METHOD VALIDATION PROTOCOL")
-            title_run.bold = True
-            title_run.font.size = Pt(10)
-            
-            # Right cell - Product info
-            right_cell = header_table.rows[0].cells[1]
-            right_para = right_cell.paragraphs[0]
-            right_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-            
-            # Product info table
-            product_table = self.doc.add_table(rows=3, cols=2)
-            product_table.style = 'Table Grid'
-            
-            # Product name
-            product_table.rows[0].cells[0].text = "NAME OF PRODUCT"
-            product_name = self.form_data.get('product_name', '')
-            product_table.rows[0].cells[1].text = str(product_name)[:100]  # Limit length
-            
-            # Label claim
-            product_table.rows[1].cells[0].text = "LABEL CLAIM"
-            active_ingredient = self.form_data.get('active_ingredient', '')
-            label_claim = self.form_data.get('label_claim', '')
-            label_text = f"{active_ingredient}\t{label_claim}"
-            product_table.rows[1].cells[1].text = str(label_text)[:200]  # Limit length
-            
-            # Protocol number and page
-            protocol_no = self.form_data.get('protocol_number', '')
-            product_table.rows[2].cells[0].text = f"PROTOCOL NO. {protocol_no}"
-            product_table.rows[2].cells[1].text = f"PAGE {self.current_page} OF {self.total_pages}"
-            
-            self.doc.add_paragraph()
-            
-        except Exception as e:
-            print(f"Error in header section: {e}")
-            # Add basic header as fallback
-            self.doc.add_paragraph("ANALYTICAL METHOD VALIDATION PROTOCOL")
-    
+        # Current Page
+        run._r.append(self._create_element(fldChar, {'w:fldCharType': 'begin'}))
+        run._r.append(self._create_element(instrText, {}, 'PAGE'))
+        run._r.append(self._create_element(fldChar, {'w:fldCharType': 'separate'}))
+        run._r.append(self._create_element(fldChar, {'w:fldCharType': 'end'}))
+        
+        # ' OF '
+        run.add_text(' OF ')
+        
+        # Total Pages
+        run._r.append(self._create_element(fldChar, {'w:fldCharType': 'begin'}))
+        run._r.append(self._create_element(instrText, {}, 'NUMPAGES'))
+        run._r.append(self._create_element(fldChar, {'w:fldCharType': 'separate'}))
+        run._r.append(self._create_element(fldChar, {'w:fldCharType': 'end'}))
+
+    def _create_element(self, name, attrs=None, text=None):
+        """Helper to create OXML element"""
+        from docx.oxml import OxmlElement
+        element = OxmlElement(name)
+        if attrs:
+            for key, value in attrs.items():
+                element.set(key, value)
+        if text:
+            element.text = text
+        return element
+
+    def setup_header_footer(self):
+        """Setup native document header and footer"""
+        section = self.doc.sections[0]
+        
+        # Header setup
+        header = section.header
+        header_table = header.add_table(rows=1, cols=2, width=Inches(7.0))
+        header_table.autofit = False
+        
+        # Left cell - Company Info
+        left_cell = header_table.rows[0].cells[0]
+        left_para = left_cell.paragraphs[0]
+        
+        company_name = self.form_data.get('company_name', 'PHARMA UTILITY')
+        run = left_para.add_run(f"{company_name}\n")
+        run.bold = True
+        run.font.size = Pt(10)
+        
+        address = self.form_data.get('company_location', '')
+        run = left_para.add_run(f"{address}\n")
+        run.font.size = Pt(8)
+        
+        run = left_para.add_run("ANALYTICAL METHOD VALIDATION PROTOCOL")
+        run.bold = True
+        run.font.size = Pt(9)
+
+        # Right cell - Product and Protocol Info
+        right_cell = header_table.rows[0].cells[1]
+        right_para = right_cell.paragraphs[0]
+        right_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        
+        product_name = self.form_data.get('product_name', 'TEST PRODUCT')
+        run = right_para.add_run(f"PRODUCT: {product_name}\n")
+        run.bold = True
+        run.font.size = Pt(9)
+        
+        protocol_no = self.form_data.get('protocol_number', 'AMV/P/XXX')
+        run = right_para.add_run(f"PROTOCOL: {protocol_no}")
+        run.font.size = Pt(9)
+
+        # Footer setup
+        footer = section.footer
+        footer_para = footer.paragraphs[0]
+        footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        run = footer_para.add_run("PAGE ")
+        run.font.size = Pt(9)
+        self._create_page_number(run)
+        
+        run = footer_para.add_run(f" | {company_name} | CONFIDENTIAL")
+        run.font.size = Pt(8)
+        run.font.color.rgb = RGBColor(128, 128, 128)
+
     def add_page_break(self):
-        """Add page break and increment page counter safely"""
+        """Add page break safely"""
         try:
             self.doc.add_page_break()
-            self.current_page += 1
         except Exception as e:
             print(f"Error adding page break: {e}")
     
     def generate_protocol_cover(self):
         """Generate protocol cover page safely"""
         try:
-            self.add_header_section(1)
-            
             # Add title
             title_para = self.doc.add_paragraph()
             title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -281,10 +301,8 @@ class AMVProtocolGenerator:
             print(f"Error generating cover: {e}")
     
     def add_table_of_contents(self):
-        """Add table of contents safely"""
+        """Add table of contents with proper tab stops for alignment"""
         try:
-            self.add_header_section(2)
-            
             # Title
             title_para = self.doc.add_paragraph()
             title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -319,6 +337,8 @@ class AMVProtocolGenerator:
             
             for content, page in toc_content:
                 para = self.doc.add_paragraph()
+                para.paragraph_format.tab_stops.add_tab_stop(Inches(6.0), alignment=WD_ALIGN_PARAGRAPH.RIGHT)
+                
                 para.add_run(str(content))
                 para.add_run(f"\t{page}")
                 
@@ -336,8 +356,6 @@ class AMVProtocolGenerator:
     def add_approval_section(self):
         """Add approval section with signatures safely"""
         try:
-            self.add_header_section(3)
-            
             # Title
             title_para = self.doc.add_paragraph()
             title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -413,8 +431,6 @@ class AMVProtocolGenerator:
     def add_overview_section(self):
         """Add overview section safely"""
         try:
-            self.add_header_section(4)
-            
             # Main title
             title_para = self.doc.add_paragraph()
             title_run = title_para.add_run("2. Overview")
@@ -732,7 +748,6 @@ class AMVProtocolGenerator:
             self.doc.add_paragraph(method_text)
             
             self.add_page_break()
-            self.add_header_section(6)
             
             # Continue methodology
             method_cont_text = (
@@ -874,7 +889,6 @@ class AMVProtocolGenerator:
     def add_validation_parameters_section(self):
         """Add validation parameters section that reflects user selections"""
         try:
-            self.add_header_section(7)
             
             # Main title
             title_para = self.doc.add_paragraph()
@@ -956,7 +970,6 @@ class AMVProtocolGenerator:
     def add_specificity_section(self):
         """Add specificity section safely"""
         try:
-            self.add_header_section(9)
             
             # Title
             title_para = self.doc.add_paragraph()
@@ -1094,7 +1107,6 @@ class AMVProtocolGenerator:
     def add_method_precision_section(self):
         """Simplified method precision section"""
         try:
-            self.add_header_section(10)
             self.doc.add_heading("6.3 Method Precision", level=2)
             self.doc.add_paragraph("Method precision will be evaluated using six sample preparations.")
             self.doc.add_paragraph("Acceptance criteria: %RSD ≤ 2.0%")
@@ -1105,7 +1117,6 @@ class AMVProtocolGenerator:
     def add_intermediate_precision_section(self):
         """Simplified intermediate precision section"""
         try:
-            self.add_header_section(12)
             self.doc.add_heading("6.4 Intermediate Precision", level=2)
             self.doc.add_paragraph("Intermediate precision will be evaluated by different analysts on different days.")
             self.doc.add_paragraph("Acceptance criteria: %RSD ≤ 2.0%")
@@ -1116,7 +1127,6 @@ class AMVProtocolGenerator:
     def add_linearity_range_section(self):
         """Simplified linearity and range section"""
         try:
-            self.add_header_section(15)
             self.doc.add_heading("6.5 Linearity and Range", level=2)
             self.doc.add_paragraph("Linearity will be evaluated from 80% to 120% of target concentration.")
             self.doc.add_paragraph("Acceptance criteria: r ≥ 0.999")
@@ -1127,7 +1137,6 @@ class AMVProtocolGenerator:
     def add_accuracy_recovery_section(self):
         """Simplified accuracy/recovery section"""
         try:
-            self.add_header_section(17)
             self.doc.add_heading("6.6 Accuracy/Recovery", level=2)
             self.doc.add_paragraph("Recovery will be evaluated at 80%, 100%, and 120% levels.")
             self.doc.add_paragraph("Acceptance criteria: 98.0% - 102.0%")
@@ -1138,7 +1147,6 @@ class AMVProtocolGenerator:
     def add_robustness_section(self):
         """Simplified robustness section"""
         try:
-            self.add_header_section(19)
             self.doc.add_heading("6.7 Robustness", level=2)
             self.doc.add_paragraph("Robustness will be evaluated for critical method parameters.")
             self.doc.add_paragraph("Acceptance criteria: No significant impact on results")
@@ -1149,7 +1157,6 @@ class AMVProtocolGenerator:
     def add_validation_report_section(self):
         """Simplified validation report section"""
         try:
-            self.add_header_section(20)
             self.doc.add_heading("7. Validation Report", level=1)
             self.doc.add_paragraph("A comprehensive validation report will be generated summarizing all results.")
         except Exception as e:
@@ -1157,7 +1164,6 @@ class AMVProtocolGenerator:
     def add_lod_loq_section(self):
         """Add LOD and LOQ section"""
         try:
-            self.add_header_section(self.current_page)
             self.doc.add_heading("6.10 LOD and LOQ", level=2)
             self.doc.add_paragraph("Limit of Detection (LOD) and Limit of Quantitation (LOQ) will be determined.")
             self.doc.add_paragraph("Acceptance criteria: LOD: S/N ≥ 3, LOQ: S/N ≥ 10")
@@ -1168,7 +1174,6 @@ class AMVProtocolGenerator:
     def add_lod_loq_precision_section(self):
         """Add LOD and LOQ Precision section"""
         try:
-            self.add_header_section(self.current_page)
             self.doc.add_heading("6.11 LOD and LOQ Precision", level=2)
             self.doc.add_paragraph("Precision at LOD and LOQ levels will be evaluated.")
             self.doc.add_paragraph("Acceptance criteria: %RSD ≤ 10.0% at LOQ")

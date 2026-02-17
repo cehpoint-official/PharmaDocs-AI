@@ -6,290 +6,317 @@
 {% block title %}{{ document.title }} - PharmaDocs AI Platform{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
   <!-- Breadcrumb + Header -->
-  <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-    <div>
-      <nav class="text-sm mb-2 text-gray-500" aria-label="Breadcrumb">
-        <ol class="flex space-x-2">
-          <li><a href="{{ url_for('dashboard.user_dashboard') }}" class="hover:underline">Dashboard</a></li>
-          <li>/</li>
-          {% if document.document_type == 'AMV_VERIFICATION' %}
-          <li><a href="{{ url_for('amv_bp.list_amv_verification_documents') }}" class="hover:underline">AMV
-              Verification</a></li>
-          {% else %}
-          <li><a href="{{ url_for('amv_bp.list_amv_documents') }}" class="hover:underline">AMV Documents</a></li>
-          {% endif %}
-          <li>/</li>
-          <li class="text-gray-700">{{ document.title }}</li>
-        </ol>
-      </nav>
-      <h1 class="text-2xl font-semibold text-gray-800">{{ document.title }}</h1>
-      <p class="text-gray-500">{{ document.document_type.replace('_', ' ').title() }} Document</p>
-    </div>
-    {% if document.status == 'draft' %}
-    <button id="generateDocumentBtn" data-document-id="{{ document.id }}"
-      data-document-type="{{ document.document_type }}"
-      class="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow">
-      <i class="fas fa-magic mr-2"></i> Generate Document
-    </button>
-    {% endif %}
-  </div>
-
-  <!-- Info + Downloads -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-    <!-- Document Info -->
-    <div class="lg:col-span-2 bg-white shadow rounded-xl">
-      <div class="px-6 py-4 border-b">
-        <h2 class="text-lg font-semibold text-gray-700 flex items-center">
-          <i class="fas fa-info-circle mr-2 text-gray-500"></i> Document Information
-        </h2>
-      </div>
-      <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-700">
-        <table class="w-full">
-          <tbody>
-            <tr>
-              <td class="font-medium pr-2">Document Number:</td>
-              <td>{{ document.document_number or 'Auto-generated' }}</td>
-            </tr>
-            <tr>
-              <td class="font-medium pr-2">Type:</td>
-              <td><span class="px-2 py-1 bg-gray-200 rounded text-xs">{{ document.document_type.replace('_', '
-                  ').title() }}</span></td>
-            </tr>
-            <tr>
-              <td class="font-medium pr-2">Status:</td>
-              <td>
-                {% if document.status == 'completed' %}
-                <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">✔ Completed</span>
-                {% elif document.status == 'generated' %}
-                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">⬇ Generated</span>
-                {% else %}
-                <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">✎ Draft</span>
-                {% endif %}
-              </td>
-            </tr>
-            <tr>
-              <td class="font-medium pr-2">Company:</td>
-              <td class="flex items-center">
-                {% if document.company.logo_url %}
-                <img src="{{ document.company.logo_url }}" class="w-6 h-6 rounded mr-2">
-                {% else %}
-                <i class="fas fa-building text-gray-400 mr-2"></i>
-                {% endif %}
-                {{ document.company.name }}
-              </td>
-            </tr>
-            <!-- AMV Specific Details -->
-            {% if document.document_type == 'AMV' and amv_details %}
-            <tr>
-              <td class="font-medium pr-2">Product:</td>
-              <td>{{ amv_details.product_name }}</td>
-            </tr>
-            <tr>
-              <td class="font-medium pr-2">Active Ingredient:</td>
-              <td>{{ amv_details.active_ingredient }}</td>
-            </tr>
-            {% elif document.document_type == 'AMV_VERIFICATION' and amv_verification %}
-            <tr>
-              <td class="font-medium pr-2">Product:</td>
-              <td>{{ amv_verification.product_name }}</td>
-            </tr>
-            <tr>
-              <td class="font-medium pr-2">Test Method:</td>
-              <td>{{ amv_verification.test_method }}</td>
-            </tr>
-            {% endif %}
-          </tbody>
-        </table>
-
-        <table class="w-full">
-          <tbody>
-            <tr>
-              <td class="font-medium pr-2">Created:</td>
-              <td>{{ document.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
-            </tr>
-            <tr>
-              <td class="font-medium pr-2">Updated:</td>
-              <td>{{ document.updated_at.strftime("%d/%m/%Y %H:%M") }}</td>
-            </tr>
-            <tr>
-              <td class="font-medium pr-2">Created by:</td>
-              <td>{{ document.user.name }}</td>
-            </tr>
-            <!-- AMV Specific Details -->
-            {% if document.document_type == 'AMV' and amv_details %}
-            <tr>
-              <td class="font-medium pr-2">Instrument:</td>
-              <td>{{ amv_details.instrument_type|upper }}</td>
-            </tr>
-            {% elif document.document_type == 'AMV_VERIFICATION' and amv_verification %}
-            <tr>
-              <td class="font-medium pr-2">Protocol Number:</td>
-              <td>{{ amv_verification.protocol_number }}</td>
-            </tr>
-            {% endif %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Downloads -->
-    <div class="bg-white shadow rounded-xl">
-      <div class="px-6 py-4 border-b">
-        <h2 class="text-lg font-semibold text-gray-700 flex items-center">
-          <i class="fas fa-download mr-2 text-gray-500"></i> Downloads
-        </h2>
-      </div>
-      <div class="p-6">
-        {% if document.generated_doc_url %}
-        <div class="flex flex-col space-y-3">
-          {% if document.document_type == 'AMV_VERIFICATION' %}
-          <a href="{{ url_for('amv_bp.download_verification_protocol', document_id=document.id) }}"
-            class="flex items-center px-4 py-2 border rounded-lg text-indigo-600 hover:bg-indigo-50">
-            <i class="fas fa-file-word mr-2"></i> Verification Protocol
-          </a>
-          {% else %}
-          <a href="{{ url_for('amv_bp.download_amv_report', document_id=document.id) }}"
-            class="flex items-center px-4 py-2 border rounded-lg text-indigo-600 hover:bg-indigo-50">
-            <i class="fas fa-file-word mr-2"></i> AMV Report
-          </a>
-          {% endif %}
-
-          {% if document.generated_excel_url %}
-          <a href="{{ document.generated_excel_url }}" target="_blank"
-            class="flex items-center px-4 py-2 border rounded-lg text-green-600 hover:bg-green-50">
-            <i class="fas fa-file-excel mr-2"></i> Excel Sheet
-          </a>
-          {% endif %}
-        </div>
+  <div class="flex flex-col md:flex-row md:items-end md:justify-between mb-8 space-y-4 md:space-y-0">
+    <div class="space-y-1">
+      <nav class="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+        <a href="{{ url_for('dashboard.user_dashboard') }}" class="hover:text-blue-600 transition-colors">Dashboard</a>
+        <i class="fas fa-chevron-right text-[8px]"></i>
+        {% if document.document_type == 'AMV_VERIFICATION' %}
+        <a href="{{ url_for('amv_bp.list_amv_verification_documents') }}"
+          class="hover:text-blue-600 transition-colors">Verification</a>
         {% else %}
-        <div class="text-center text-gray-500">
-          <i class="fas fa-file-alt fa-2x mb-2"></i>
-          <p>No generated documents available yet.</p>
-          {% if document.status == 'draft' %}
-          <button id="generateDocumentBtnAlt" data-document-id="{{ document.id }}"
-            data-document-type="{{ document.document_type }}"
-            class="mt-2 inline-flex items-center px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded">
-            <i class="fas fa-magic mr-2"></i> Generate Now
-          </button>
-          {% endif %}
-        </div>
+        <a href="{{ url_for('amv_bp.list_amv_documents') }}" class="hover:text-blue-600 transition-colors">AMV
+          Archive</a>
         {% endif %}
+        <i class="fas fa-chevron-right text-[8px]"></i>
+        <span class="text-blue-600">{{ document.document_number or 'Unassigned' }}</span>
+      </nav>
+      <div class="flex items-center gap-3">
+        <div class="w-1.5 h-8 bg-blue-600 rounded-full"></div>
+        <h1 class="text-3xl font-black text-gray-900 tracking-tight">{{ document.title }}</h1>
       </div>
+      <p class="text-sm font-bold text-gray-500 ml-4">{{ document.document_type.replace('_', ' ').title() }} Protocol
+      </p>
     </div>
-  </div>
 
-  <!-- Uploaded Files -->
-  <div class="bg-white shadow rounded-xl mb-6">
-    <div class="px-6 py-4 border-b">
-      <h2 class="text-lg font-semibold text-gray-700 flex items-center">
-        <i class="fas fa-paperclip mr-2 text-gray-500"></i> Uploaded Files
-      </h2>
-    </div>
-    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-      {% if document.method_analysis_file_url %}
-      <div class="border rounded-lg p-4 flex items-start">
-        <i class="fas fa-file-pdf text-red-500 text-2xl mr-3"></i>
-        <div>
-          <h6 class="font-medium">Method Analysis</h6>
-          <p class="text-gray-500 text-sm">PDF Document</p>
-          <a href="{{ document.method_analysis_file_url }}" target="_blank"
-            class="text-indigo-600 hover:underline text-sm">View File</a>
-        </div>
-      </div>
-      {% endif %}
-      {% if document.stp_file_url %}
-      <div class="border rounded-lg p-4 flex items-start">
-        <i class="fas fa-file-word text-blue-500 text-2xl mr-3"></i>
-        <div>
-          <h6 class="font-medium">Standard Testing Procedure</h6>
-          <p class="text-gray-500 text-sm">STP Document</p>
-          <a href="{{ document.stp_file_url }}" target="_blank" class="text-indigo-600 hover:underline text-sm">View
-            File</a>
-        </div>
-      </div>
-      {% endif %}
-      {% if document.raw_data_url %}
-      <div class="border rounded-lg p-4 flex items-start">
-        <i class="fas fa-file-excel text-green-600 text-2xl mr-3"></i>
-        <div>
-          <h6 class="font-medium">Raw Data File</h6>
-          <p class="text-gray-500 text-sm">Analytical Data</p>
-          <a href="{{ document.raw_data_url }}" target="_blank" class="text-green-600 hover:underline text-sm">View
-            File</a>
-        </div>
-      </div>
-      {% endif %}
-      {% if not document.method_analysis_file_url and not document.stp_file_url and not document.raw_data_url %}
-      <div class="text-center text-gray-500 col-span-2 py-6">
-        <i class="fas fa-paperclip fa-2x mb-2"></i>
-        <p>No files uploaded for this document.</p>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Document Metadata -->
-  {% if metadata %}
-  <div class="bg-white shadow rounded-xl mb-6">
-    <div class="px-6 py-4 border-b">
-      <h2 class="text-lg font-semibold text-gray-700 flex items-center">
-        <i class="fas fa-tags mr-2 text-gray-500"></i> Document Parameters
-      </h2>
-    </div>
-    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
-      {% for key, value in metadata.items() %}
-      {% if value and key not in ['document_type', 'title', 'company_id'] %}
-      <div>
-        <span class="font-medium">{{ key.replace('_', ' ').title() }}:</span> {{ value }}
-      </div>
-      {% endif %}
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Actions -->
-  <div class="flex justify-between items-center">
-    {% if document.document_type == 'AMV_VERIFICATION' %}
-    <a href="{{ url_for('amv_bp.list_amv_verification_documents') }}"
-      class="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100">
-      <i class="fas fa-arrow-left mr-2"></i> Back to Verification Protocols
-    </a>
-    {% else %}
-    <a href="{{ url_for('amv_bp.list_amv_documents') }}"
-      class="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100">
-      <i class="fas fa-arrow-left mr-2"></i> Back to AMV Documents
-    </a>
-    {% endif %}
-    <div class="space-x-2">
+    <div class="flex items-center gap-3">
       {% if document.status == 'draft' %}
-      {% if document.document_type == 'AMV_VERIFICATION' %}
-      <a href="{{ url_for('amv_bp.amv_verification_protocol_page') }}?edit={{ document.id }}"
-        class="px-4 py-2 border rounded-lg text-indigo-600 hover:bg-indigo-50">
-        <i class="fas fa-edit mr-2"></i> Edit Document
-      </a>
-      {% else %}
-      <a href="{{ url_for('amv_bp.create_amv_form') }}?edit={{ document.id }}"
-        class="px-4 py-2 border rounded-lg text-indigo-600 hover:bg-indigo-50">
-        <i class="fas fa-edit mr-2"></i> Edit Document
-      </a>
-      {% endif %}
-      {% endif %}
-
-      {% if document.stp_file_url or document.raw_data_url or document.method_analysis_file_url %}
-      <button id="cleanupFilesBtn" data-document-id="{{ document.id }}"
-        class="px-4 py-2 border rounded-lg text-orange-600 hover:bg-orange-50">
-        <i class="fas fa-trash-alt mr-2"></i> Cleanup Files
+      <button id="generateDocumentBtn" data-document-id="{{ document.id }}"
+        data-document-type="{{ document.document_type }}"
+        class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5 active:scale-95">
+        <i class="fas fa-sparkles mr-2 text-[10px]"></i>
+        <span>Execute Generation</span>
       </button>
       {% endif %}
+    </div>
+  </div>
 
+  <!-- Perspective Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+    <!-- LEFT COLUMN: Main Info -->
+    <div class="lg:col-span-8 space-y-8">
+
+      <!-- Primary Matrix Card -->
+      <div class="bg-white/70 backdrop-blur-xl border border-white/40 shadow-2xl rounded-3xl overflow-hidden">
+        <div class="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-white/50">
+          <h2 class="text-xs font-black text-gray-900 uppercase tracking-widest flex items-center">
+            <span class="bg-blue-600 w-2 h-2 rounded-full mr-3 animate-pulse"></span>
+            Matrix Specifications
+          </h2>
+          <div class="flex items-center gap-2">
+            {% if document.status == 'completed' %}
+            <span
+              class="px-3 py-1 bg-green-500/10 text-green-600 border border-green-500/20 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-sm whitespace-nowrap">
+              <i class="fas fa-check-double mr-1 text-[8px]"></i> Certified
+            </span>
+            {% elif document.status == 'generated' %}
+            <span
+              class="px-3 py-1 bg-blue-500/10 text-blue-600 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-sm whitespace-nowrap">
+              <i class="fas fa-file-export mr-1 text-[8px]"></i> Exported
+            </span>
+            {% else %}
+            <span
+              class="px-3 py-1 bg-orange-500/10 text-orange-600 border border-orange-500/20 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-sm whitespace-nowrap">
+              <i class="fas fa-pen-nib mr-1 text-[8px]"></i> Draft Mode
+            </span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="p-8">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+            <!-- Data Point -->
+            <div class="space-y-1 group">
+              <p
+                class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] transition-colors group-hover:text-blue-500">
+                Registry ID</p>
+              <p class="text-sm font-bold text-gray-800 font-mono">{{ document.document_number or 'PENDING_REG_001' }}
+              </p>
+            </div>
+
+            <!-- Data Point -->
+            <div class="space-y-1 group">
+              <p
+                class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] transition-colors group-hover:text-blue-500">
+                Affiliated Entity</p>
+              <div class="flex items-center gap-3">
+                {% if document.company.logo_url %}
+                <img src="{{ document.company.logo_url }}"
+                  class="w-6 h-6 rounded-lg object-contain bg-gray-50 border p-0.5">
+                {% else %}
+                <div class="w-6 h-6 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100">
+                  <i class="fas fa-building text-blue-400 text-[10px]"></i>
+                </div>
+                {% endif %}
+                <span class="text-sm font-bold text-gray-800">{{ document.company.name }}</span>
+              </div>
+            </div>
+
+            <!-- Context Specific Details -->
+            {% if document.document_type == 'AMV' and amv_details %}
+            <div class="space-y-1 group">
+              <p
+                class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] transition-colors group-hover:text-blue-500">
+                Target Product</p>
+              <p class="text-sm font-bold text-gray-800">{{ amv_details.product_name }}</p>
+            </div>
+            <div class="space-y-1 group">
+              <p
+                class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] transition-colors group-hover:text-blue-500">
+                Active Compound</p>
+              <p class="text-sm font-bold text-blue-700">{{ amv_details.active_ingredient }}</p>
+            </div>
+            {% elif document.document_type == 'AMV_VERIFICATION' and amv_verification %}
+            <div class="space-y-1 group">
+              <p
+                class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] transition-colors group-hover:text-blue-500">
+                Verification Target</p>
+              <p class="text-sm font-bold text-gray-800">{{ amv_verification.product_name }}</p>
+            </div>
+            <div class="space-y-1 group">
+              <p
+                class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] transition-colors group-hover:text-blue-500">
+                Methodology</p>
+              <p class="text-sm font-bold text-indigo-600">{{ amv_verification.test_method }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Temporal Data -->
+            <div class="space-y-1 group">
+              <p
+                class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] transition-colors group-hover:text-blue-500">
+                Initialization</p>
+              <p class="text-sm font-bold text-gray-800">{{ document.created_at.strftime("%b %d, %Y") }} <span
+                  class="text-[10px] text-gray-400 ml-1 font-normal">{{ document.created_at.strftime("%H:%M") }}</span>
+              </p>
+            </div>
+            <div class="space-y-1 group">
+              <p
+                class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] transition-colors group-hover:text-blue-500">
+                Last Synchronization</p>
+              <p class="text-sm font-bold text-gray-800">{{ document.updated_at.strftime("%b %d, %Y") }} <span
+                  class="text-[10px] text-gray-400 ml-1 font-normal">{{ document.updated_at.strftime("%H:%M") }}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Asset Manifest Section -->
+      <div class="bg-white/60 backdrop-blur-xl border border-white/40 shadow-xl rounded-3xl overflow-hidden">
+        <div class="px-8 py-5 border-b border-gray-100 flex items-center bg-white/40">
+          <h2 class="text-xs font-black text-gray-900 uppercase tracking-widest flex items-center">
+            <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+            Attachment Manifest
+          </h2>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% if document.method_analysis_file_url %}
+            <div
+              class="bg-white p-4 rounded-2xl border border-gray-100 hover:border-blue-200 transition-all group flex items-center shadow-sm">
+              <div
+                class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center mr-4 group-hover:bg-red-100 transition-colors">
+                <i class="fas fa-file-pdf text-red-500"></i>
+              </div>
+              <div class="flex-grow min-w-0">
+                <h4 class="text-xs font-black text-gray-800 uppercase tracking-tight truncate">Method Analysis</h4>
+                <a href="{{ document.method_analysis_file_url }}" target="_blank"
+                  class="text-[10px] font-bold text-blue-600 hover:underline">ACCESS ASSET</a>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if document.stp_file_url %}
+            <div
+              class="bg-white p-4 rounded-2xl border border-gray-100 hover:border-blue-200 transition-all group flex items-center shadow-sm">
+              <div
+                class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center mr-4 group-hover:bg-blue-100 transition-colors">
+                <i class="fas fa-file-word text-blue-500"></i>
+              </div>
+              <div class="flex-grow min-w-0">
+                <h4 class="text-xs font-black text-gray-800 uppercase tracking-tight truncate">STP Protocol</h4>
+                <a href="{{ document.stp_file_url }}" target="_blank"
+                  class="text-[10px] font-bold text-blue-600 hover:underline">ACCESS ASSET</a>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if document.raw_data_url %}
+            <div
+              class="bg-white p-4 rounded-2xl border border-gray-100 hover:border-blue-200 transition-all group flex items-center shadow-sm">
+              <div
+                class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center mr-4 group-hover:bg-green-100 transition-colors">
+                <i class="fas fa-file-excel text-green-600"></i>
+              </div>
+              <div class="flex-grow min-w-0">
+                <h4 class="text-xs font-black text-gray-800 uppercase tracking-tight truncate">Raw Analytical Data</h4>
+                <a href="{{ document.raw_data_url }}" target="_blank"
+                  class="text-[10px] font-bold text-green-600 hover:underline">ACCESS ASSET</a>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if not document.method_analysis_file_url and not document.stp_file_url and not document.raw_data_url %}
+            <div class="col-span-full py-8 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+              <i class="fas fa-cloud-upload-alt text-gray-300 text-3xl mb-3"></i>
+              <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">No attached assets found</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Sidebar -->
+    <div class="lg:col-span-4 space-y-8">
+
+      <!-- Deployment Control -->
+      <div class="bg-white/80 backdrop-blur-xl border border-white/40 shadow-2xl rounded-3xl overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-100 bg-white/50">
+          <h2 class="text-xs font-black text-gray-900 uppercase tracking-widest">Deployment Control</h2>
+        </div>
+        <div class="p-6 space-y-4">
+          {% if document.generated_doc_url %}
+          <div class="space-y-3">
+            {% if document.document_type == 'AMV_VERIFICATION' %}
+            <a href="{{ url_for('amv_bp.download_verification_protocol', document_id=document.id) }}"
+              class="w-full flex items-center justify-center p-4 bg-blue-50 text-blue-700 rounded-2xl border border-blue-100 font-black text-xs uppercase tracking-widest hover:bg-blue-100 transition-all group">
+              <i class="fas fa-file-word mr-3 text-lg group-hover:scale-110 transition-transform"></i>
+              Verification Word
+            </a>
+            {% else %}
+            <a href="{{ url_for('amv_bp.download_amv_report', document_id=document.id) }}"
+              class="w-full flex items-center justify-center p-4 bg-blue-50 text-blue-700 rounded-2xl border border-blue-100 font-black text-xs uppercase tracking-widest hover:bg-blue-100 transition-all group">
+              <i class="fas fa-file-word mr-3 text-lg group-hover:scale-110 transition-transform"></i>
+              AMV Report Word
+            </a>
+            {% endif %}
+
+            {% if document.generated_excel_url %}
+            <a href="{{ document.generated_excel_url }}" target="_blank"
+              class="w-full flex items-center justify-center p-4 bg-green-50 text-green-700 rounded-2xl border border-green-100 font-black text-xs uppercase tracking-widest hover:bg-green-100 transition-all group">
+              <i class="fas fa-file-excel mr-3 text-lg group-hover:scale-110 transition-transform"></i>
+              Analytical Excel
+            </a>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="py-12 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 text-center px-4">
+            <div
+              class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-200 shadow-sm">
+              <i class="fas fa-file-signature text-gray-300 text-2xl"></i>
+            </div>
+            <h3 class="text-sm font-black text-gray-700 uppercase tracking-tight mb-2">Awaiting Generation</h3>
+            <p class="text-[10px] text-gray-400 font-bold uppercase leading-relaxed mb-6">Initialize the AI computation
+              matrix to generate regulatory files.</p>
+            {% if document.status == 'draft' %}
+            <button id="generateDocumentBtnAlt" data-document-id="{{ document.id }}"
+              data-document-type="{{ document.document_type }}"
+              class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl shadow-md transition-all active:scale-95">
+              Force Initialize
+            </button>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Quick Parameters -->
+      {% if metadata %}
+      <div class="bg-white/60 backdrop-blur-xl border border-white/40 shadow-xl rounded-3xl overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-100 bg-white/40">
+          <h2 class="text-xs font-black text-gray-900 uppercase tracking-widest">Metadata Tags</h2>
+        </div>
+        <div class="p-6">
+          <div class="flex flex-wrap gap-2">
+            {% for key, value in metadata.items() %}
+            {% if value and key not in ['document_type', 'title', 'company_id'] %}
+            <div class="px-3 py-1.5 bg-white border border-gray-100 rounded-lg shadow-sm flex flex-col">
+              <span class="text-[8px] font-black text-gray-400 uppercase tracking-tighter">{{ key.replace('_', ' ')
+                }}</span>
+              <span class="text-[10px] font-bold text-gray-800">{{ value }}</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Cleanup Activity -->
+      {% if document.stp_file_url or document.raw_data_url or document.method_analysis_file_url %}
+      <div class="bg-orange-50/50 border border-orange-100 rounded-3xl p-6 text-center">
+        <h4 class="text-xs font-black text-orange-800 uppercase tracking-widest mb-2">Asset Maintenance</h4>
+        <p class="text-[10px] text-orange-600 font-bold uppercase mb-4 leading-relaxed">System uploaded files occupy
+          cloud storage. Execute cleanup after documentation is finalized.</p>
+        <button id="cleanupFilesBtn" data-document-id="{{ document.id }}"
+          class="w-full py-2 border border-orange-200 text-orange-600 bg-white hover:bg-orange-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest rounded-xl">
+          Cleanup Matrix
+        </button>
+      </div>
+      {% endif %}
+
+      <!-- Critical Deletion -->
       <button id="deleteDocumentBtn" data-document-id="{{ document.id }}"
         data-document-type="{{ document.document_type }}"
-        class="px-4 py-2 border rounded-lg text-red-600 hover:bg-red-50">
-        <i class="fas fa-trash mr-2"></i> Delete
+        class="w-full py-3 text-red-500 hover:text-white hover:bg-red-500 border border-red-200 transition-all text-xs font-black uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2">
+        <i class="fas fa-trash-alt text-[10px]"></i>
+        Purge Record
       </button>
     </div>
   </div>

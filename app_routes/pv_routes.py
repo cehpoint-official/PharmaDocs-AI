@@ -526,6 +526,49 @@ def view_pvp_template(template_id):
                          criteria=criteria,
                          user=user)
 
+@pv_routes.route('/template/<int:template_id>/add_criteria', methods=['POST'])
+def add_pvp_criteria(template_id):
+    """Add a new test criterion to a PVP template"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+        
+    try:
+        template = PVP_Template.query.get_or_404(template_id)
+        
+        test_name = request.form.get('test_name')
+        acceptance_criteria = request.form.get('acceptance_criteria')
+        
+        if not test_name or not acceptance_criteria:
+            flash('Test Name and Acceptance Criteria are required', 'error')
+            return redirect(url_for('pv.view_pvp_template', template_id=template_id))
+            
+        # Create unique ID from name
+        test_id = secure_filename(test_name).lower().replace('-', '_')
+        
+        # Check for duplicates
+        existing = PVP_Criteria.query.filter_by(pvp_template_id=template_id, test_id=test_id).first()
+        if existing:
+            test_id = f"{test_id}_{int(datetime.now().timestamp())}"
+            
+        new_criteria = PVP_Criteria(
+            pvp_template_id=template_id,
+            test_id=test_id,
+            test_name=test_name,
+            acceptance_criteria=acceptance_criteria
+        )
+        
+        db.session.add(new_criteria)
+        db.session.commit()
+        
+        flash('Test parameter added successfully', 'success')
+        return redirect(url_for('pv.view_pvp_template', template_id=template_id))
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error adding criteria: {e}")
+        flash(f'Error adding criteria: {str(e)}', 'error')
+        return redirect(url_for('pv.view_pvp_template', template_id=template_id))
+
 @pv_routes.route('/generate/<int:template_id>', methods=['GET', 'POST'])
 def generate_pvr(template_id):
     """Generate PVR report from PVP template"""
@@ -553,7 +596,181 @@ def generate_pvr(template_id):
                              user=user)
     
     # Handle POST - generate report (existing logic)
-    # ... [keep existing generation logic] ...
+    try:
+        # 1. Capture Form Data
+        company_name = request.form.get('company_name')
+        company_address = request.form.get('company_address')
+        company_city = request.form.get('company_city')
+        company_state = request.form.get('company_state')
+        company_country = request.form.get('company_country')
+        company_pincode = request.form.get('company_pincode')
+        
+        product_name = request.form.get('product_name')
+        protocol_number = request.form.get('protocol_number')
+        batch_size = request.form.get('batch_size')
+        manufacturing_site = request.form.get('manufacturing_site')
+        validation_type = request.form.get('validation_type')
+        
+        prepared_by = request.form.get('prepared_by')
+        checked_by = request.form.get('checked_by')
+        approved_by = request.form.get('approved_by')
+        
+        # 2. Extract Batches
+        batches = []
+        # We'll check for batch_1_number up to batch_10_number
+        for i in range(1, 11):
+            b_num = request.form.get(f'batch_{i}_number')
+            if not b_num:
+                break
+            
+            b_date = request.form.get(f'batch_{i}_date')
+            b_size = request.form.get(f'batch_{i}_size')
+            
+            batches.append({
+                'number': b_num,
+                'date': b_date,
+                'size': b_size,
+                'results': {}
+            })
+            
+        if not batches:
+             flash('At least one batch is required', 'error')
+             return redirect(request.url)
+
+        # 3. Create Report Record
+        report = PVR_Report(
+            pvp_template_id=template.id,
+            user_id=session['user_id'],
+            protocol_number=protocol_number,
+            validation_type=validation_type,
+            manufacturing_site=manufacturing_site,
+            prepared_by=prepared_by,
+            checked_by=checked_by,
+            approved_by=approved_by,
+            status='Generated',
+            created_at=datetime.now()
+        )
+        db.session.add(report)
+        db.session.flush() # Get ID
+        
+        # 4. Process Test Results
+        # Get all criteria to map test IDs
+        criteria = PVP_Criteria.query.filter_by(pvp_template_id=template.id).all()
+        
+        for i, batch in enumerate(batches):
+            idx = i + 1
+            batch_obj = batch
+            
+            # For each criterion/test
+            for criterion in criteria:
+                test_id = criterion.test_id
+                # Form input name: result_{test_id}_{batch_number}
+                # But wait, logic in HTML: resInp.name = `result_${testId}_${batchNo}`;
+                # So key is result_<test_id>_<batch_number>
+                
+                input_name = f"result_{test_id}_{batch['number']}"
+                result_val = request.form.get(input_name)
+                
+                if result_val:
+                    # Save to DB
+                    pvr_data = PVR_Data(
+                        pvr_report_id=report.id,
+                        batch_number=batch['number'],
+                        manufacturing_date=batch['date'],
+                        batch_size=batch['size'],
+                        test_id=test_id,
+                        test_result=result_val
+                    )
+                    db.session.add(pvr_data)
+                    
+                    # Add to batch dict for PDF generation
+                    batch_obj['results'][test_id] = {
+                        'result': result_val,
+                        'specification': criterion.acceptance_criteria,
+                        'status': 'PASS' # You might want real logic here
+                    }
+        
+        db.session.commit()
+        
+        # 5. Generate PDF
+        try:
+            # Construct data structure expected by generator using available info
+            # We recreate a structure similar to what 'results' had in upload_ai_validation
+            
+            # Reconstruct batch results list for PDF generator
+            batch_results_for_pdf = []
+            for batch in batches:
+                 test_results = []
+                 overall_result = 'PASS'
+                 
+                 for test_id, res_data in batch['results'].items():
+                     # Find test name
+                     crit = next((c for c in criteria if c.test_id == test_id), None)
+                     test_name = crit.test_name if crit else test_id
+                     
+                     test_results.append({
+                         'test_name': test_name,
+                         'result': res_data['result'],
+                         'specification': res_data['specification'],
+                         'status': 'PASS'
+                     })
+                 
+                 batch_results_for_pdf.append({
+                     'batch_number': batch['number'],
+                     'manufacturing_date': batch['date'],
+                     'test_results': test_results,
+                     'overall_result': overall_result,
+                     'batch_size': batch['size']
+                 })
+
+            pvr_data_for_pdf = {
+                'report_number': protocol_number, # Using protocol number as report ref for now
+                'product_info': {
+                    'name': product_name,
+                    'dosage_form': template.product_type
+                },
+                'company_info': {
+                    'name': company_name,
+                    'address': company_address, 
+                    'city': company_city
+                },
+                'batch_results': batch_results_for_pdf,
+                'protocol_number': protocol_number,
+                'conclusion': 'The process is validated based on the results.',
+                'signatories': {
+                    'prepared_by': prepared_by,
+                    'checked_by': checked_by,
+                    'approved_by': approved_by
+                }
+            }
+            
+            # Generate
+            pdf_gen = EnhancedPDFGenerator()
+            # method seems to be generate_pvr(pvr_data)
+            buffer = pdf_gen.generate_pvr(pvr_data_for_pdf)
+            
+            # Save
+            filename = f"PVR_{report.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+            filepath = os.path.join(REPORT_FOLDER, filename)
+            
+            with open(filepath, 'wb') as f:
+                f.write(buffer.getvalue())
+                
+            report.pdf_filepath = filepath
+            db.session.commit()
+            
+        except Exception as e:
+            logger.error(f"PDF Generation failed: {e}")
+            flash('Report saved but PDF generation failed. Please contact support.', 'warning')
+            
+        flash(f'✅ Process Validation Report generated successfully!', 'success')
+        return redirect(url_for('pv.view_pvr', report_id=report.id))
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error generating PVR: {e}", exc_info=True)
+        flash(f'Error generating report: {str(e)}', 'error')
+        return redirect(request.url)
 
 @pv_routes.route('/report/<int:report_id>')
 def view_pvr(report_id):
@@ -579,13 +796,39 @@ def view_pvr(report_id):
         except:
             extracted = {}
     
+    # Prepare enhanced payload for the complex template
+    # 1. Extract unique batches
+    unique_batches = sorted(list(set(d.batch_number for d in batch_data)))
+    batches_list = [{'batch_number': b} for b in unique_batches]
+    
+    # 2. Extract unique tests
+    unique_tests = sorted(list(set(d.test_id for d in batch_data)))
+    
+    # 3. Serialize data
+    data_list = [{
+        'batch_number': d.batch_number,
+        'test_id': d.test_id,
+        'test_result': d.test_result,
+        # 'status': ... # logic if needed
+    } for d in batch_data]
+
     report_payload = {
         "id": report.id,
         "created_at": getattr(report, "created_at", None),
         "status": getattr(report, "status", None),
         "template": template,
         "extracted": extracted,
-        "batch_data": batch_data
+        "meta": {
+            "product_name": template.product_name,
+            "protocol_no": report.protocol_number
+        },
+        "batches": batches_list,
+        "test_ids": unique_tests,
+        "data": data_list,
+        "materials_tables": [], # Placeholder for now
+        "equipment_tables": [], # Placeholder for now
+        "calculations": {},     # Placeholder for now
+        "generated_filepath": report.pdf_filepath
     }
     
     return render_template(

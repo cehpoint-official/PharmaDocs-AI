@@ -1435,13 +1435,73 @@ def generate_verification_protocol():
             flash('Error generating verification protocol. Please try again.', 'error')
             return redirect(url_for('amv_bp.amv_verification_protocol_page'))
         
-        # Save protocol to file and database (your existing code)
-        # [Keep your existing file saving and database code]
+        
+        # **CRITICAL FIX: Save to database**
+        company_name = protocol_data.get('company_name', '')
+        company = Company.query.filter_by(name=company_name, user_id=session.get('user_id')).first()
+        if not company:
+            company = Company.query.filter_by(user_id=session.get('user_id')).first()
+        
+        # Generate document number if not provided
+        document_number = protocol_data.get('protocol_number')
+        if not document_number:
+            document_number = f"AMV-P-{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+        
+        # 1. Create main Document record for AMV Verification
+        document = Document(
+            user_id=session.get('user_id'),
+            company_id=company.id if company else 1,
+            document_type='AMV_VERIFICATION',
+            document_number=document_number,
+            title=f"AMV Verification Protocol - {protocol_data.get('product_name', 'Unknown Product')}",
+            status='generated',
+            document_metadata=json.dumps(protocol_data),
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        db.session.add(document)
+        db.session.flush()  # Get the document ID
+        
+        # 2. Create AMVVerificationDocument record
+        amv_verification = AMVVerificationDocument(
+            document_id=document.id,
+            product_name=protocol_data.get('product_name', ''),
+            test_method=protocol_data.get('test_method', ''),
+            protocol_number=document_number,
+            specification_range=protocol_data.get('specification_range', ''),
+            validation_params=json.dumps(val_params),
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        db.session.add(amv_verification)
+        
+        # 3. Save protocol to file
+        reports_dir = os.path.join(current_app.root_path, 'reports')
+        os.makedirs(reports_dir, exist_ok=True)
+        
+        output_filename = f"AMV_Verification_Protocol_{protocol_data['product_name'].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+        output_path = os.path.join(reports_dir, output_filename)
+        
+        # Save buffer to file
+        with open(output_path, 'wb') as f:
+            protocol_buffer.seek(0)
+            f.write(protocol_buffer.read())
+        
+        # 4. Update document with generated file path
+        document.generated_doc_url = output_path
+        
+        # 5. COMMIT TO DATABASE
+        db.session.commit()
+        
+        current_app.logger.info(f"AMV Verification Protocol saved to database. Document ID: {document.id}")
         
         flash('AMV Verification Protocol generated and saved successfully!', 'success')
         
         # Return the file for download
-        output_filename = f"AMV_Verification_Protocol_{protocol_data['product_name'].replace(' ', '_')}.docx"
+        output_filename = f"AMV_Verification_Protocol_{protocol_data['product_name'].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+        protocol_buffer.seek(0)  # Reset buffer position for sending
         return send_file(
             protocol_buffer,
             as_attachment=True,

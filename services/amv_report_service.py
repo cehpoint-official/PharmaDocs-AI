@@ -41,6 +41,7 @@ class AMVReportGenerator:
         self.sections_pages = {}
         self.total_pages = 0
         self.setup_document_margins()
+        self.setup_header_footer()
         
     def setup_document_margins(self):
         """Set document margins"""
@@ -268,131 +269,102 @@ class AMVReportGenerator:
         
         return results
     
-    def calculate_statistics(self, data_list):
-        """Calculate mean, std, CV from data list"""
-        data_array = np.array(data_list)
-        mean = np.mean(data_array)
-        std = np.std(data_array)
-        cv = (std / mean) * 100
+    def _create_page_number(self, run):
+        """Helper to insert page number field"""
+        fldChar = 'w:fldChar'
+        instrText = 'w:instrText'
         
-        return {
-            'mean': round(mean, 2),
-            'std': round(std, 3),
-            'cv': round(cv, 2)
-        }
-    
-    def add_header_section(self, page_number=None):
-        """Add header with company logo and info - tracks current page"""
-        if page_number is not None:
-            self.current_page = page_number
+        # Current Page
+        run._r.append(self._create_element(fldChar, {'w:fldCharType': 'begin'}))
+        run._r.append(self._create_element(instrText, {}, 'PAGE'))
+        run._r.append(self._create_element(fldChar, {'w:fldCharType': 'separate'}))
+        run._r.append(self._create_element(fldChar, {'w:fldCharType': 'end'}))
         
-        # Create header table
-        table = self.doc.add_table(rows=1, cols=2)
-        table.autofit = False
-        table.allow_autofit = False
+        # ' OF '
+        run.add_text(' OF ')
+        
+        # Total Pages
+        run._r.append(self._create_element(fldChar, {'w:fldCharType': 'begin'}))
+        run._r.append(self._create_element(instrText, {}, 'NUMPAGES'))
+        run._r.append(self._create_element(fldChar, {'w:fldCharType': 'separate'}))
+        run._r.append(self._create_element(fldChar, {'w:fldCharType': 'end'}))
+
+    def _create_element(self, name, attrs=None, text=None):
+        """Helper to create OXML element"""
+        from docx.oxml import OxmlElement
+        element = OxmlElement(name)
+        if attrs:
+            from docx.oxml.ns import qn
+            for key, value in attrs.items():
+                if ':' in key:
+                    element.set(qn(key), value)
+                else:
+                    element.set(key, value)
+        if text:
+            element.text = text
+        return element
+
+    def setup_header_footer(self):
+        """Setup native document header and footer"""
+        section = self.doc.sections[0]
+        
+        # Header setup
+        header = section.header
+        header_table = header.add_table(rows=1, cols=2, width=Inches(7.0))
+        header_table.autofit = False
         
         # Left cell - Company Logo
-        left_cell = table.rows[0].cells[0]
+        left_cell = header_table.rows[0].cells[0]
         left_para = left_cell.paragraphs[0]
-        left_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
         
-        # Try to add company logo if available
-        logo_url = (
-            self.form_data.get('company_logo_url') or 
-            self.company_data.get('logo_url')
-        )
-        
+        logo_url = self.form_data.get('company_logo_url') or self.company_data.get('logo_url')
         if logo_url:
             try:
-                # Download and insert logo image
-                response = requests.get(logo_url, timeout=10)
+                response = requests.get(logo_url, timeout=5)
                 if response.status_code == 200:
-                    # Process image to ensure consistent size (150 × 84 pixels)
-                    image_data = BytesIO(response.content)
-                    
-                    # Open image with PIL to resize to exact dimensions
-                    img = Image.open(image_data)
-                    
-                    # Resize image to exactly 150 × 84 pixels
-                    resized_img = img.resize((150, 84), Image.Resampling.LANCZOS)
-                    
-                    # Save resized image to BytesIO
-                    resized_image_data = BytesIO()
-                    resized_img.save(resized_image_data, format='PNG')
-                    resized_image_data.seek(0)
-                    
-                    # Add image to paragraph with exact pixel dimensions
-                    logo_run = left_para.add_run()
-                    logo_run.add_picture(resized_image_data, width=Inches(1.56), height=Inches(0.875))
-                else:
-                    # Fallback to text if image fails to load
-                    left_para.text = "[COMPANY LOGO]"
-            except Exception as e:
-                # Fallback to text if any error occurs
-                print(f"Error loading company logo: {e}")
-                left_para.text = "[COMPANY LOGO]"
-        else:
-            # No logo URL provided
-            left_para.text = "[COMPANY LOGO]"
-        
-        # Right cell - Company info
-        right_cell = table.rows[0].cells[1]
+                    img_data = BytesIO(response.content)
+                    img = Image.open(img_data)
+                    resized_img = img.resize((120, 67), Image.Resampling.LANCZOS)
+                    resized_io = BytesIO()
+                    resized_img.save(resized_io, format='PNG')
+                    resized_io.seek(0)
+                    run = left_para.add_run()
+                    run.add_picture(resized_io, width=Inches(1.25))
+            except:
+                left_para.add_run("[LOGO]").bold = True
+
+        # Right cell - Title and Product Info
+        right_cell = header_table.rows[0].cells[1]
         right_para = right_cell.paragraphs[0]
-        
-        # Get company name from form data first, then company_data, then default
-        company_name = (
-            self.form_data.get('company_name') or 
-            self.company_data.get('name') or 
-            'PHARMACEUTICAL COMPANY LTD.'
-        )
-        
-        right_run = right_para.add_run(f"{company_name}\n")
-        right_run.bold = True
-        right_run.font.size = Pt(12)
-        
-        # Get company address from form data first, then company_data, then default
-        company_address = (
-            self.form_data.get('company_address') or 
-            self.company_data.get('address') or 
-            "ADDRESS LINE, CITY - PIN CODE (COUNTRY)"
-        )
-        
-        address_run = right_para.add_run(f"{company_address}\n")
-        address_run.font.size = Pt(9)
         right_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         
-        # Add title row
-        title_table = self.doc.add_table(rows=1, cols=1)
-        title_cell = title_table.rows[0].cells[0]
-        title_cell.vertical_alignment = 1  # Center
-        title_para = title_cell.paragraphs[0]
-        title_run = title_para.add_run("ANALYTICAL METHOD VALIDATION REPORT")
-        title_run.bold = True
-        title_run.font.size = Pt(12)
-        title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        company_name = self.form_data.get('company_name') or self.company_data.get('name', 'PHARMA UTILITY')
+        run = right_para.add_run(f"{company_name}\n")
+        run.bold = True
+        run.font.size = Pt(11)
         
-        # Product info table
-        info_table = self.doc.add_table(rows=3, cols=2)
-        info_table.style = 'Table Grid'
+        doc_no = self.form_data.get('document_number', 'AMV/R/XXX')
+        run = right_para.add_run(f"REPORT: {doc_no}\n")
+        run.font.size = Pt(9)
         
-        # Product name
-        info_table.rows[0].cells[0].text = "NAME OF PRODUCT"
-        product_para = info_table.rows[0].cells[1].paragraphs[0]
-        product_run = product_para.add_run(self.form_data.get('product_name', ''))
-        product_run.bold = True
+        product = self.form_data.get('product_name', 'TEST PRODUCT')
+        run = right_para.add_run(f"PRODUCT: {product}")
+        run.font.size = Pt(9)
+        run.bold = True
+
+        # Footer setup
+        footer = section.footer
+        footer_para = footer.paragraphs[0]
+        footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         
-        # Label claim
-        info_table.rows[1].cells[0].text = "LABEL"
-        label_para = info_table.rows[1].cells[1].paragraphs[0]
-        label_text = f"EACH TAB CONTAINS:\n{self.form_data.get('active_ingredient', '')} ... {self.form_data.get('label_claim', '')}"
-        label_run = label_para.add_run(label_text)
-        label_run.bold = True
+        run = footer_para.add_run("PAGE ")
+        run.font.size = Pt(9)
+        self._create_page_number(run)
         
-        # Report number and page
-        info_table.rows[2].cells[0].text = f"REPORT NO. {self.form_data.get('document_number', 'AMV/R/XXX')}"
-        info_table.rows[2].cells[1].text = f"PAGE {self.current_page} OF {{TOTAL_PAGES}}"
-        
-        self.doc.add_paragraph()
+        run = footer_para.add_run(f" | {company_name} | CONFIDENTIAL")
+        run.font.size = Pt(8)
+        run.font.color.rgb = RGBColor(128, 128, 128)
+    
     
     def add_page_break(self):
         """Add page break and increment page counter"""
@@ -401,33 +373,11 @@ class AMVReportGenerator:
         self.current_page += 1
     
     def add_table_of_contents(self):
-        """Add table of contents with proper page numbers"""
-        self.add_header_section(2)
-        
+        """Add table of contents with proper tab stops for alignment"""
         heading = self.doc.add_heading('CONTENTS', level=1)
         heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
         
-        # Create table of contents with page numbers
-        toc_table = self.doc.add_table(rows=1, cols=2)
-        toc_table.style = 'Table Grid'
-        toc_table.autofit = False
-        
-        # Set column widths
-        toc_table.columns[0].width = Inches(5.0)  # Content column
-        toc_table.columns[1].width = Inches(1.0)  # Page number column
-        
-        # Header row
-        header_row = toc_table.rows[0]
-        header_row.cells[0].text = "CONTENT"
-        header_row.cells[1].text = "PAGE"
-        
-        # Make header bold
-        for cell in header_row.cells:
-            for paragraph in cell.paragraphs:
-                for run in paragraph.runs:
-                    run.bold = True
-        
-        # Define contents with their expected page numbers (corrected to match actual document structure)
+        # Define contents with their expected page numbers
         contents = [
             (f"Active Ingredient: {self.form_data.get('active_ingredient', '')}", 3),
             ("Product and Code", 4),
@@ -436,10 +386,10 @@ class AMVReportGenerator:
             ("  Glass or Other Materials", 5),
             ("  Reagents", 6),
             ("  Reference Products", 7),
-            ("Results of Each Validation Parameter Evaluated, Statistical Calculations and Acceptance Criteria", 8),
+            ("Results of Each Validation Parameter Evaluated", 8),
             ("Discussion of the Results", 9),
             ("  Suitability of the System", 9),
-            ("  Selectivity of the Method: Interference and Stress", 9),
+            ("  Selectivity of the Method", 9),
             ("  Precision", 10),
             ("  Linearity of the System and The Method", 10),
             ("  Accuracy of the Method", 11),
@@ -449,21 +399,23 @@ class AMVReportGenerator:
             ("Post-Approval", 12)
         ]
         
-        # Add content rows
         for content, page_num in contents:
-            row = toc_table.add_row()
-            row.cells[0].text = content
-            row.cells[1].text = str(page_num)
+            p = self.doc.add_paragraph()
+            p.paragraph_format.tab_stops.add_tab_stop(Inches(6.0), alignment=WD_ALIGN_PARAGRAPH.RIGHT)
             
-            # Add indentation for sub-items
+            run = p.add_run(content)
+            run.font.size = Pt(10)
+            
+            # Add dots (leader) manually or use tab
+            p.add_run(f"\t{page_num}")
+            
             if content.startswith('  '):
-                row.cells[0].paragraphs[0].paragraph_format.left_indent = Inches(0.3)
+                p.paragraph_format.left_indent = Inches(0.3)
         
         self.add_page_break()
     
     def add_active_ingredient_section(self):
         """Add active ingredient section with chemical structure"""
-        self.add_header_section(3)
         
         self.doc.add_heading('Active Ingredient: ' + self.form_data.get('active_ingredient', ''), level=1)
         
@@ -486,7 +438,6 @@ class AMVReportGenerator:
     
     def add_equipment_section(self):
         """Add equipment and materials section"""
-        self.add_header_section(4)
         
         self.doc.add_heading('List of Equipment, Materials, Reagents and Reference Standards', level=1)
         
@@ -635,7 +586,6 @@ class AMVReportGenerator:
     
     def add_validation_results_section(self):
         """Add mathematically generated validation results section"""
-        self.add_header_section()
         
         self.doc.add_heading('Results of Each Validation Parameter Evaluated, Statistical Calculations and Acceptance Criteria', level=1)
         
@@ -1242,7 +1192,6 @@ class AMVReportGenerator:
     
     def add_discussion_section(self):
         """Add discussion section"""
-        self.add_header_section()
         
         self.doc.add_heading('Discussion of the Results', level=1)
         
@@ -1293,7 +1242,6 @@ class AMVReportGenerator:
         self.doc.add_paragraph(selectivity_text)
         
         self.add_page_break()
-        self.add_header_section()
         
         # Precision Discussion
         self.doc.add_heading('Precision:', level=2)
@@ -1342,7 +1290,6 @@ class AMVReportGenerator:
         self.doc.add_paragraph(accuracy_text)
         
         self.add_page_break()
-        self.add_header_section()
         
         # Robustness Discussion
         val_params = self.form_data.get('val_params', [])
@@ -1372,7 +1319,6 @@ class AMVReportGenerator:
 
     def add_conclusion_section(self, signature_paths={}):
         """Add conclusion and approval section"""
-        self.add_header_section()
 
         self.doc.add_heading('Conclusions', level=1)
 
@@ -1482,7 +1428,6 @@ class AMVReportGenerator:
     def generate_report(self, output_filename, signature_paths={}):
         """Generate the complete AMV report with mathematically generated results"""
         # Cover page
-        self.add_header_section(1)
         
         # Add title on cover page
         title_para = self.doc.add_paragraph()
@@ -1525,7 +1470,6 @@ class AMVReportGenerator:
     
     def add_chemical_structure_section(self):
         """Add active ingredient section with chemical structure"""
-        self.add_header_section()
         
         self.doc.add_heading(f'Active Ingredient: {self.form_data.get("active_ingredient", "")}', level=1)
         
@@ -1613,7 +1557,6 @@ class AMVReportGenerator:
     
     def add_equipment_section(self):
         """Add equipment section with company-selected equipment"""
-        self.add_header_section()
         
         self.doc.add_heading('Product and Code', level=1)
         
@@ -1690,7 +1633,6 @@ class AMVReportGenerator:
             self.doc.add_paragraph()
         
         self.add_page_break()
-        self.add_header_section(5)
         
         # Glass materials section
         self.doc.add_heading('Glass or Other Materials', level=2)
@@ -1724,7 +1666,6 @@ class AMVReportGenerator:
             row.cells[1].text = material.get('characteristics', '')
         
         self.add_page_break()
-        self.add_header_section(6)
         
         # Reagents section
         self.doc.add_heading('Reagents:', level=2)
@@ -1749,7 +1690,6 @@ class AMVReportGenerator:
         self.doc.add_paragraph()
         
         self.add_page_break()
-        self.add_header_section(7)
         
         # Reference products section
         self.doc.add_heading('Reference Products:', level=2)
