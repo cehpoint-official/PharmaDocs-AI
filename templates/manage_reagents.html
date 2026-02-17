@@ -1,0 +1,129 @@
+<!--Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in> -->
+<!--All Rights Reserved-->
+
+{% extends "base.html" %}
+{% block title %}Manage Reagents - PharmaDocs AI Platform{% endblock %}
+{% block content %}
+<div class="px-6 py-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Manage Reagents</h1>
+            <p class="text-gray-600 mt-2">Add and manage chemical reagents for AMV reports.</p>
+        </div>
+        <a href="{{ url_for('amv_bp.create_amv_form') }}"
+            class="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Create AMV
+        </a>
+    </div>
+
+    <!-- Add Reagent Form -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-plus-circle text-green-600 mr-3"></i>
+                Add New Reagent
+            </h2>
+            <button type="button" onclick="fillReagentDemo()"
+                class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 focus:ring-2 focus:ring-amber-400 font-semibold shadow-sm transition-all transform hover:scale-105 text-sm uppercase">
+                <i class="fas fa-flask mr-2"></i>Fill Demo Data
+            </button>
+        </div>
+
+        <form method="POST" class="space-y-6">
+            <input type="hidden" name="action" value="add">
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reagent Name/Brand *</label>
+                    <input type="text" name="name" required placeholder="e.g., HPLC Grade Water"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Batch Number *</label>
+                    <input type="text" name="batch" required placeholder="e.g., 6531-18"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Expiration Date *</label>
+                    <input type="date" name="expiry_date" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit"
+                    class="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Add Reagent
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Reagents List -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+            <i class="fas fa-list text-green-600 mr-3"></i>
+            Existing Reagents
+        </h2>
+
+        {% if reagents %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Reagent Name/Brand</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Expiration Date</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for reagent in reagents %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ reagent.name }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ reagent.batch }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ reagent.expiry_date }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <i class="fas fa-vial text-gray-300 text-6xl mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No Reagents Found</h3>
+            <p class="text-gray-500">Add your first reagent to get started.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function fillReagentDemo() {
+        const data = {
+            'name': 'HPLC Grade Acetonitrile (Sigma-Aldrich)',
+            'batch': 'LB-889-2024',
+            'expiry_date': '2026-12-31'
+        };
+
+        for (const [key, value] of Object.entries(data)) {
+            const el = document.querySelector(`input[name="${key}"]`);
+            if (el) {
+                el.value = value;
+                el.style.backgroundColor = '#fffbeb'; // amber-50
+                el.style.transition = 'all 0.3s';
+            }
+        }
+
+        if (typeof showNotification === 'function') {
+            showNotification('Reagent demo data filled!', 'success');
+        } else {
+            alert('Reagent demo data filled!');
+        }
+    }
+</script>
+{% endblock %}

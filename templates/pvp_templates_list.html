@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}PVP Templates{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">
+            <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+            PVP Templates
+        </h2>
+        <a href="{{ url_for('pv.upload_pvp') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+            <i class="fas fa-plus mr-2"></i>Upload New Template
+        </a>
+    </div>
+
+    {% if templates %}
+    <div class="grid gap-4">
+        {% for template in templates %}
+        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-800">{{ template.product_name }}</h3>
+                    <p class="text-sm text-gray-500 mt-1">
+                        <i class="far fa-calendar mr-1"></i>
+                        Uploaded: {{ template.created_at.strftime('%d %b %Y, %I:%M %p') }}
+                    </p>
+                    <p class="text-sm text-gray-600 mt-2">
+                        <i class="fas fa-list-check mr-1"></i>
+                        Product Type: {{ template.product_type }}
+                    </p>
+                </div>
+                <div class="flex gap-2">
+                    <a href="{{ url_for('pv.view_pvp_template', template_id=template.id) }}" 
+                       class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition">
+                        <i class="fas fa-eye mr-1"></i>View
+                    </a>
+                    <a href="{{ url_for('pv.generate_pvr', template_id=template.id) }}" 
+                       class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition">
+                        <i class="fas fa-file-medical mr-1"></i>Generate PVR
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12 bg-gray-50 rounded-lg">
+        <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
+        <p class="text-gray-500 text-lg">No PVP templates uploaded yet</p>
+        <a href="{{ url_for('pv.upload_pvp') }}" class="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
+            Upload Your First Template
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,1347 @@
+<!--Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in> -->
+<!--All Rights Reserved-->
+
+{% extends "base.html" %}
+{% block title %}AMV Verification Protocol Generator - PharmaDocs AI Platform{% endblock %}
+{% block content %}
+<div class="px-6 py-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Create AMV Verification Protocol</h1>
+            <p class="text-gray-600 mt-2">Generate Analytical Method Verification Protocol Document using mathematical
+                calculations and ICH Q2(R1) guidelines.</p>
+        </div>
+    </div>
+
+    <form method="POST" action="/amv/generate-verification-protocol" enctype="multipart/form-data" class="space-y-8">
+
+        <!-- Basic Information -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-info-circle text-indigo-600 mr-3"></i>
+                    Basic Information
+                </h2>
+                <button type="button" onclick="fillProtocolDemo()"
+                    class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 focus:ring-2 focus:ring-amber-400 font-semibold shadow-sm transition-all transform hover:scale-105 text-sm uppercase">
+                    <i class="fas fa-flask mr-2"></i>Fill Demo Data
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
+                    <input type="text" name="product_name" required
+                        placeholder="e.g., Fluorouracil Injection BP 50mg/ml"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Active Ingredient *</label>
+                    <div class="flex space-x-2">
+                        <input type="text" name="active_ingredient" id="active_ingredient" required
+                            placeholder="e.g., Fluorouracil"
+                            class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <button type="button" onclick="generateSMILES()" id="generate_smiles_btn"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            <i class="fas fa-magic mr-2"></i>Generate SMILES
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Enter ingredient name and click "Generate SMILES" to
+                        automatically get SMILES notation</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Test Method *</label>
+                    <select name="test_method" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Select Test Method</option>
+                        <option value="UV">UV Spectroscopy</option>
+                        <option value="HPLC">HPLC</option>
+                        <option value="UPLC">UPLC</option>
+                        <option value="GC">Gas Chromatography</option>
+                        <option value="Titration">Titration</option>
+                        <option value="AAS">Atomic Absorption Spectroscopy</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Label Claim *</label>
+                    <input type="text" name="label_claim" required placeholder="e.g., 25 mg"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Molecular Weight</label>
+                    <input type="text" name="molecular_weight"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Molecular Formula</label>
+                    <input type="text" name="molecular_formula"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">SMILES (for chemical structure
+                        generation)</label>
+                    <div class="space-y-3">
+                        <div class="flex space-x-2">
+                            <input type="text" name="smiles" id="smiles_input" placeholder="e.g., C1=CC=C(C=C1)C(=O)O"
+                                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <button type="button" onclick="generateStructure()" id="generate_structure_btn"
+                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                                <i class="fas fa-atom mr-2"></i>Generate Structure
+                            </button>
+                        </div>
+                        <div id="chemical_structure_display" class="hidden">
+                            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                <h4 class="text-sm font-medium text-gray-700 mb-2">Chemical Structure:</h4>
+                                <div id="structure_image_container" class="flex justify-center">
+                                    <!-- Structure image will be displayed here -->
+                                </div>
+                                <div id="structure_properties" class="mt-2 text-xs text-gray-600">
+                                    <!-- Molecular properties will be displayed here -->
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500">Enter SMILES notation or use "Generate SMILES" button above to
+                            automatically fill this field</p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Protocol Number *</label>
+                    <input type="text" name="protocol_number" required placeholder="e.g., KPL/AMVN/P/21/001-00"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Company Name *</label>
+                    <input type="text" name="company_name" required placeholder="e.g., Kwality Pharmaceutical Ltd."
+                        list="company_options" value="{{ user.company.name if user and user.company else '' }}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+
+                    <datalist id="company_options">
+                        {% if user and user.company %}
+                        <option value="{{ user.company.name }}"></option>
+                        {% endif %}
+                        {% for company in companies %}
+                        <option value="{{ company.name }}"></option>
+                        {% endfor %}
+                    </datalist>
+
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Company Location *</label>
+                    <input type="text" name="company_location" required placeholder="e.g., Raja ka Bagh H.P."
+                        value="{{ user.company.location if user and user.company else '' }}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Specification Range *</label>
+                    <input type="text" name="specification_range" required placeholder="e.g., 90.0% to 110.0%"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+        </div>
+
+        <!-- Method PDF Upload -->
+        <div class="bg-blue-50 rounded-xl border border-blue-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                <i class="fas fa-file-pdf text-blue-600 mr-3"></i>
+                Upload Method PDF <span class="text-red-500">*</span>
+            </h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Method Analysis PDF</label>
+                    <div class="flex items-center space-x-4">
+                        <input type="file" id="method_pdf" name="method_pdf" accept=".pdf" required
+                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <button type="button" onclick="extractMethodData()"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            <i class="fas fa-magic mr-2"></i>Extract Data
+                        </button>
+                    </div>
+                </div>
+                <input type="hidden" name="extracted_method_data" id="extracted_method_data">
+                <div id="extracted_data_display" class="mt-4"></div>
+            </div>
+        </div>
+
+        <!-- Instrument-Specific Parameters -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                <i class="fas fa-sliders-h text-purple-600 mr-3"></i>
+                Instrument-Specific Parameters
+            </h2>
+
+            <!-- Common Parameters -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Weight of Standard (mg)</label>
+                    <div class="relative">
+                        <input type="number" step="0.001" name="weight_standard"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon"
+                                title="Auto-filled from PDF"></i>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Weight of Sample (mg)</label>
+                    <div class="relative">
+                        <input type="number" step="0.001" name="weight_sample"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon"
+                                title="Auto-filled from PDF"></i>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Final Concentration of Standard
+                        (mg/ml)</label>
+                    <div class="relative">
+                        <input type="number" step="0.001" name="final_concentration_standard"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon"
+                                title="Auto-filled from PDF"></i>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Final Concentration of Sample
+                        (mg/ml)</label>
+                    <div class="relative">
+                        <input type="number" step="0.001" name="final_concentration_sample"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon"
+                                title="Auto-filled from PDF"></i>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Potency %</label>
+                    <div class="relative">
+                        <input type="number" step="0.01" name="potency"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon"
+                                title="Auto-filled from PDF"></i>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Average Weight (mg)</label>
+                    <div class="relative">
+                        <input type="number" step="0.001" name="average_weight"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon"
+                                title="Auto-filled from PDF"></i>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Weight per ml (mg)</label>
+                    <div class="relative">
+                        <input type="number" step="0.001" name="weight_per_ml"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon"
+                                title="Auto-filled from PDF"></i>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Wavelength (nm)</label>
+                    <div class="relative">
+                        <input type="number" name="wavelength"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <i class="fas fa-magic text-blue-500 opacity-0 auto-fill-icon"
+                                title="Auto-filled from PDF"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UV/AAS Specific Parameters -->
+            <div id="uv-aas-params" class="hidden">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">UV/AAS Specific Parameters</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Reference Absorbance of
+                            Standard</label>
+                        <input type="number" step="0.001" name="reference_absorbance_standard"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- HPLC/UPLC/GC Specific Parameters -->
+            <div id="hplc-uplc-gc-params" class="hidden">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">HPLC/UPLC/GC Specific Parameters</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Reference Area of Standard</label>
+                        <input type="number" step="0.001" name="reference_area_standard"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Flow Rate (ml/min)</label>
+                        <input type="number" step="0.1" name="flow_rate"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Injection Volume (μL)</label>
+                        <input type="number" step="0.1" name="injection_volume"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Titration Specific Parameters -->
+            <div id="titration-params" class="hidden">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Titration Specific Parameters</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Reference Volume (ml)</label>
+                        <input type="number" step="0.1" name="reference_volume"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Weight of Sample (gm)</label>
+                        <input type="number" step="0.001" name="weight_sample_gm"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Standard Factor (gm)</label>
+                        <input type="number" step="0.001" name="standard_factor"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Equipment Selection - UPDATED -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-tools text-blue-600 mr-3"></i>
+                    Equipment Selection
+                </h2>
+                <a href="/amv/settings/equipment" target="_blank"
+                    class="text-sm text-indigo-600 hover:text-indigo-800 flex items-center">
+                    <i class="fas fa-external-link-alt mr-1"></i>Manage Equipment
+                </a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for equipment in equipment_list %}
+                <div class="flex items-start">
+                    <input type="checkbox" name="selected_equipment" value="{{ equipment.id }}"
+                        data-code="{{ equipment.code }}" data-brand="{{ equipment.brand }}"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1">
+                    <div class="ml-3">
+                        <label class="text-sm font-medium text-gray-700">{{ equipment.name }}</label>
+                        {% if equipment.code %}
+                        <p class="text-xs text-gray-500">Code: {{ equipment.code }}</p>
+                        {% endif %}
+                        {% if equipment.brand %}
+                        <p class="text-xs text-gray-500">Brand: {{ equipment.brand }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Glass Materials Selection - UPDATED -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-flask text-green-600 mr-3"></i>
+                    Glass Materials Selection
+                </h2>
+                <a href="/amv/settings/materials" target="_blank"
+                    class="text-sm text-indigo-600 hover:text-indigo-800 flex items-center">
+                    <i class="fas fa-external-link-alt mr-1"></i>Manage Materials
+                </a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for glass in glass_materials_list %}
+                <div class="flex items-start">
+                    <input type="checkbox" name="selected_glass_materials" value="{{ glass.id }}"
+                        data-characteristics="{{ glass.characteristics }}"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1">
+                    <div class="ml-3">
+                        <label class="text-sm font-medium text-gray-700">{{ glass.name }}</label>
+                        {% if glass.characteristics %}
+                        <p class="text-xs text-gray-500">{{ glass.characteristics }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Other Materials Selection - NEW -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-tools text-orange-600 mr-3"></i>
+                    Other Materials Selection
+                </h2>
+                <a href="/amv/settings/materials" target="_blank"
+                    class="text-sm text-indigo-600 hover:text-indigo-800 flex items-center">
+                    <i class="fas fa-external-link-alt mr-1"></i>Manage Materials
+                </a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for other in other_materials_list %}
+                <div class="flex items-start">
+                    <input type="checkbox" name="selected_other_materials" value="{{ other.id }}"
+                        data-characteristics="{{ other.characteristics }}"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1">
+                    <div class="ml-3">
+                        <label class="text-sm font-medium text-gray-700">{{ other.name }}</label>
+                        {% if other.characteristics %}
+                        <p class="text-xs text-gray-500">{{ other.characteristics }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Reagents Selection - UPDATED -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-vial text-purple-600 mr-3"></i>
+                    Reagents Selection
+                </h2>
+                <a href="/amv/settings/reagents" target="_blank"
+                    class="text-sm text-indigo-600 hover:text-indigo-800 flex items-center">
+                    <i class="fas fa-external-link-alt mr-1"></i>Manage Reagents
+                </a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for reagent in reagents_list %}
+                <div class="flex items-start">
+                    <input type="checkbox" name="selected_reagents" value="{{ reagent.id }}"
+                        data-batch="{{ reagent.batch }}" data-expiry="{{ reagent.expiry_date }}"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1">
+                    <div class="ml-3">
+                        <label class="text-sm font-medium text-gray-700">{{ reagent.name }}</label>
+                        <p class="text-xs text-gray-500">Batch: {{ reagent.batch }}</p>
+                        <p class="text-xs text-gray-500">Expiry: {{ reagent.expiry_date }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Reference Product Selection - UPDATED -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-certificate text-orange-600 mr-3"></i>
+                    Reference Product Selection
+                </h2>
+                <a href="/amv/settings/reference-products" target="_blank"
+                    class="text-sm text-indigo-600 hover:text-indigo-800 flex items-center">
+                    <i class="fas fa-external-link-alt mr-1"></i>Manage Reference Products
+                </a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for reference in references_list %}
+                <div class="flex items-start">
+                    <input type="radio" name="selected_reference" value="{{ reference.id }}"
+                        data-standard-name="{{ reference.standard_name }}" data-potency="{{ reference.potency }}"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1">
+                    <div class="ml-3">
+                        <label class="text-sm font-medium text-gray-700">{{ reference.standard_name }}</label>
+                        <p class="text-xs text-gray-500">Potency: {{ reference.potency }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+
+
+
+
+
+
+
+        <!-- Verification Parameters Selection -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                <i class="fas fa-check-circle text-green-600 mr-3"></i>
+                Verification Parameters
+            </h2>
+
+            <!-- Auto-selection notification -->
+            <div id="auto-selection-notification" class="hidden mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex items-center">
+                    <i class="fas fa-magic text-blue-600 mr-2"></i>
+                    <span class="text-sm text-blue-700">
+                        <strong>Auto-selected validation parameters</strong> based on your instrument type selection.
+                        You can modify these selections as needed.
+                    </span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex items-center">
+                    <input type="checkbox" name="val_params" value="system_suitability" checked
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label class="ml-3 text-sm font-medium text-gray-700">System Suitability</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="val_params" value="specificity"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label class="ml-3 text-sm font-medium text-gray-700">Specificity</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="val_params" value="system_precision"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label class="ml-3 text-sm font-medium text-gray-700">System Precision</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="val_params" value="method_precision"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label class="ml-3 text-sm font-medium text-gray-700">Method Precision</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="val_params" value="intermediate_precision"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label class="ml-3 text-sm font-medium text-gray-700">Intermediate Precision</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="val_params" value="linearity"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label class="ml-3 text-sm font-medium text-gray-700">Linearity</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="val_params" value="recovery"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label class="ml-3 text-sm font-medium text-gray-700">Accuracy/Recovery</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="val_params" value="robustness"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label class="ml-3 text-sm font-medium text-gray-700">Robustness</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="val_params" value="range"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label class="ml-3 text-sm font-medium text-gray-700">Range</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="val_params" value="lod_loq"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label class="ml-3 text-sm font-medium text-gray-700">LOD and LOQ</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="val_params" value="lod_loq_precision"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label class="ml-3 text-sm font-medium text-gray-700">LOD and LOQ Precision</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Information -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                <i class="fas fa-users text-blue-600 mr-3"></i>
+                Verification Team
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Prepared By - Name</label>
+                    <input type="text" name="prepared_by_name" placeholder="Officer/Executive/Sr. Executive QC"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Prepared By - Department</label>
+                    <input type="text" name="prepared_by_dept" value="Quality Control"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reviewed By - Name</label>
+                    <input type="text" name="reviewed_by_name" placeholder="Manager QC/Designee"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reviewed By - Department</label>
+                    <input type="text" name="reviewed_by_dept" value="Quality Control"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Approved By - Name</label>
+                    <input type="text" name="approved_by_name" placeholder="Assistant Manager/Designee"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Approved By - Department</label>
+                    <input type="text" name="approved_by_dept" value="Quality Assurance"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Authorized By - Name</label>
+                    <input type="text" name="authorized_by_name" placeholder="Head QA/Designee"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Authorized By - Department</label>
+                    <input type="text" name="authorized_by_dept" value="Quality Assurance"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+        </div>
+
+        <div class="hidden">
+            <input type="hidden" name="selected_equipment_json" id="selected_equipment_json">
+            <input type="hidden" name="selected_glass_materials_json" id="selected_glass_materials_json">
+            <input type="hidden" name="selected_other_materials_json" id="selected_other_materials_json">
+            <input type="hidden" name="selected_reagents_json" id="selected_reagents_json">
+            <input type="hidden" name="selected_reference_json" id="selected_reference_json">
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex justify-center pt-6">
+            <button type="submit" onclick="return validateForm()"
+                class="px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
+                <i class="fas fa-file-alt mr-2"></i>Generate Verification Protocol
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+
+    // Copy all JavaScript functions from create_amv.html
+    function extractMethodData() {
+        const formData = new FormData();
+        const fileInput = document.getElementById('method_pdf');
+
+        // Auto-test functionality: If no PDF is uploaded, use test data
+        if (fileInput.files.length === 0) {
+            console.log('No PDF uploaded, running auto-test with sample data...');
+            showNotification('No PDF uploaded. Running auto-test with sample titration data...', 'info');
+
+            // Use test data that simulates a titration PDF
+            const testData = {
+                'detected_instrument_type': 'Titration',
+                'weight_standard': '50.0',
+                'weight_sample': '25.0',
+                'final_concentration_standard': '0.5',
+                'final_concentration_sample': '0.25',
+                'potency': '99.5',
+                'wavelength': '254',
+                'reference_volume': '100.0',
+                'weight_sample_gm': '1.0',
+                'standard_factor': '36.95',
+                'raw_text_length': 511,
+                'text_preview': 'By Titration: Weigh and powder 20 tablets. Add a quantity of the powder containing 1 g of Lithium carbonate to 100ml of water, add 50ml of 1M hydrochloric acid VS and boil for 1 minute to remove the carbon dioxide. Cool and titrate the excess of acid with 1M sodium hydroxide VS using methyl orange solution as indicator. Each ml of 1M hydrochloric acid VS is equivalent to 36.95mg of Lithium Carbonate.'
+            };
+
+            // Simulate extraction delay
+            setTimeout(() => {
+                displayExtractedData(testData);
+                showNotification('Auto-test completed! All parameters filled with sample titration data.', 'success');
+            }, 1000);
+
+            return;
+        }
+
+        formData.append('method_pdf', fileInput.files[0]);
+
+        // Show loading state
+        const button = event.target;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Extracting...';
+        button.disabled = true;
+
+        fetch('/amv/extract-method', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Parsed data:', data);
+                if (data.success) {
+                    document.getElementById('extracted_method_data').value = JSON.stringify(data.data);
+                    displayExtractedData(data.data);
+                    showNotification('Method data extracted successfully from PDF!', 'success');
+                } else {
+                    showNotification('Error extracting data: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                showNotification('Error: ' + error.message, 'error');
+            })
+            .finally(() => {
+                // Reset button state
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+    }
+
+    function displayExtractedData(data) {
+        let html = '<div class="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg"><h3 class="font-semibold text-green-800 mb-2">All Parameters Auto-Filled from PDF:</h3><ul class="list-disc list-inside space-y-1">';
+
+        // Field mappings for form fields
+        const fieldMappings = {
+            'weight_standard': 'weight_standard',
+            'weight_sample': 'weight_sample',
+            'final_concentration_standard': 'final_concentration_standard',
+            'final_concentration_sample': 'final_concentration_sample',
+            'potency': 'potency',
+            'average_weight': 'average_weight',
+            'weight_per_ml': 'weight_per_ml',
+            'wavelength': 'wavelength',
+            'molecular_weight': 'molecular_weight',
+            'molecular_formula': 'molecular_formula',
+            'reference_absorbance_standard': 'reference_absorbance_standard',
+            'reference_area_standard': 'reference_area_standard',
+            'flow_rate': 'flow_rate',
+            'injection_volume': 'injection_volume',
+            'reference_volume': 'reference_volume',
+            'weight_sample_gm': 'weight_sample_gm',
+            'standard_factor': 'standard_factor'
+        };
+
+        let filledFields = [];
+        let extractedCount = 0;
+
+        // Auto-fill instrument type first if detected
+        if (data.detected_instrument_type) {
+            console.log('Auto-filling instrument type:', data.detected_instrument_type);
+            const instrumentSelect = document.querySelector('select[name="testMethod"]');
+            if (instrumentSelect) {
+                instrumentSelect.value = data.detected_instrument_type;
+                instrumentSelect.style.backgroundColor = '#f0f9ff';
+                instrumentSelect.style.borderColor = '#3b82f6';
+                instrumentSelect.title = 'Auto-filled from PDF';
+
+                // Trigger change event to show relevant parameters
+                instrumentSelect.dispatchEvent(new Event('change'));
+
+                html += `<li class="text-sm text-green-700"><strong>INSTRUMENT TYPE:</strong> ${data.detected_instrument_type} (detected from PDF)</li>`;
+                filledFields.push('testMethod');
+                extractedCount++;
+            }
+        }
+
+        // Auto-fill ALL form fields with extracted data
+        for (let key in data) {
+            if (key !== 'raw_text_length' && key !== 'text_preview' && key !== 'error' && key !== 'detected_instrument_type') {
+                console.log(`Processing key: ${key}, value: ${data[key]}`);
+                html += `<li class="text-sm text-green-700"><strong>${key.replace(/_/g, ' ').toUpperCase()}:</strong> ${data[key]}</li>`;
+
+                // Auto-fill corresponding form field
+                if (fieldMappings[key]) {
+                    console.log(`Field mapping found for ${key}: ${fieldMappings[key]}`);
+                    const field = document.querySelector(`input[name="${fieldMappings[key]}"]`);
+                    if (field) {
+                        console.log(`Found field for ${key}, setting value: ${data[key]}`);
+                        field.value = data[key];
+                        console.log(`Field value after setting: ${field.value}`);
+
+                        // Add visual indicator that field was auto-filled
+                        field.style.backgroundColor = '#f0f9ff';
+                        field.style.borderColor = '#3b82f6';
+                        field.title = 'Auto-filled from PDF';
+                        filledFields.push(fieldMappings[key]);
+
+                        // Show the magic icon
+                        const icon = field.parentElement.querySelector('.auto-fill-icon');
+                        if (icon) {
+                            icon.classList.remove('opacity-0');
+                            icon.classList.add('opacity-100');
+                        }
+
+                        if (data[key] && data[key] !== '') {
+                            extractedCount++;
+                        }
+                    } else {
+                        console.log(`Field not found for ${fieldMappings[key]}`);
+                    }
+                } else {
+                    console.log(`No field mapping for ${key}`);
+                }
+            }
+        }
+
+        html += '</ul>';
+        html += `<div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+        <p class="text-sm text-blue-700 mb-2"><i class="fas fa-magic mr-1"></i><strong>All Parameters Auto-Filled!</strong></p>
+        <p class="text-xs text-blue-600 mb-2">Total fields filled: ${filledFields.length}</p>
+        <p class="text-xs text-blue-600 mb-1">Extracted from PDF: ${extractedCount}</p>
+        <p class="text-xs text-blue-600 mb-2">Fields: ${filledFields.join(', ')}</p>
+    </div>`;
+
+        html += '</div>';
+        document.getElementById('extracted_data_display').innerHTML = html;
+
+        showNotification('All instrument parameters have been automatically filled from PDF!', 'success');
+    }
+
+    // Show notification
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500 text-white' :
+            type === 'error' ? 'bg-red-500 text-white' :
+                'bg-blue-500 text-white'
+            }`;
+        notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mr-2"></i>
+            <span>${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+        document.body.appendChild(notification);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    // SMILES Generation Functions
+    function generateSMILES() {
+        const ingredientInput = document.getElementById('active_ingredient');
+        const smilesInput = document.getElementById('smiles_input');
+        const generateBtn = document.getElementById('generate_smiles_btn');
+        const molecularFormulaInput = document.querySelector('input[name="molecular_formula"]');
+        const molecularWeightInput = document.querySelector('input[name="molecular_weight"]');
+
+        const ingredientName = ingredientInput.value.trim();
+
+        if (!ingredientName) {
+            showNotification('Please enter an active ingredient name first', 'error');
+            ingredientInput.focus();
+            return;
+        }
+
+        // Show loading state
+        const originalText = generateBtn.innerHTML;
+        generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+        generateBtn.disabled = true;
+
+        // Make API request
+        fetch('/amv/api/generate-smiles', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                ingredient_name: ingredientName
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Fill in the SMILES and other fields
+                    smilesInput.value = data.smiles;
+                    if (molecularFormulaInput) {
+                        molecularFormulaInput.value = data.molecular_formula || '';
+                    }
+                    if (molecularWeightInput) {
+                        molecularWeightInput.value = data.molecular_weight || '';
+                    }
+
+                    // Highlight the filled fields
+                    smilesInput.style.backgroundColor = '#f0f9ff';
+                    smilesInput.style.borderColor = '#3b82f6';
+                    if (molecularFormulaInput) {
+                        molecularFormulaInput.style.backgroundColor = '#f0f9ff';
+                        molecularFormulaInput.style.borderColor = '#3b82f6';
+                    }
+                    if (molecularWeightInput) {
+                        molecularWeightInput.style.backgroundColor = '#f0f9ff';
+                        molecularWeightInput.style.borderColor = '#3b82f6';
+                    }
+
+                    showNotification(`Successfully generated SMILES for ${ingredientName}`, 'success');
+
+                    // Auto-generate structure if SMILES is available
+                    if (data.smiles) {
+                        setTimeout(() => {
+                            generateStructure();
+                        }, 1000);
+                    }
+                } else {
+                    let errorMsg = data.error || 'Failed to generate SMILES';
+                    if (data.alternatives && data.alternatives.length > 0) {
+                        errorMsg += `\n\nDid you mean one of these?\n${data.alternatives.slice(0, 5).join('\n')}`;
+                    }
+                    showNotification(errorMsg, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error generating SMILES:', error);
+                showNotification('Error generating SMILES: ' + error.message, 'error');
+            })
+            .finally(() => {
+                // Reset button state
+                generateBtn.innerHTML = originalText;
+                generateBtn.disabled = false;
+            });
+    }
+
+    function generateStructure() {
+        const smilesInput = document.getElementById('smiles_input');
+        const generateBtn = document.getElementById('generate_structure_btn');
+        const structureDisplay = document.getElementById('chemical_structure_display');
+        const imageContainer = document.getElementById('structure_image_container');
+        const propertiesContainer = document.getElementById('structure_properties');
+
+        const smiles = smilesInput.value.trim();
+
+        if (!smiles) {
+            showNotification('Please enter SMILES notation first', 'error');
+            smilesInput.focus();
+            return;
+        }
+
+        // Show loading state
+        const originalText = generateBtn.innerHTML;
+        generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+        generateBtn.disabled = true;
+
+        // Make API request
+        fetch('/amv/api/generate-structure', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                smiles: smiles
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Display the structure image
+                    imageContainer.innerHTML = `<img src="${data.image}" alt="Chemical Structure" class="max-w-full h-auto">`;
+
+                    // Display molecular properties
+                    if (data.properties && Object.keys(data.properties).length > 0) {
+                        let propertiesHtml = '<div class="grid grid-cols-2 gap-2">';
+                        for (const [key, value] of Object.entries(data.properties)) {
+                            propertiesHtml += `<div><span class="font-medium">${key.replace(/_/g, ' ')}:</span> ${value}</div>`;
+                        }
+                        propertiesHtml += '</div>';
+                        propertiesContainer.innerHTML = propertiesHtml;
+                    } else {
+                        propertiesContainer.innerHTML = '<div class="text-gray-500">No additional properties available</div>';
+                    }
+
+                    // Show the structure display
+                    structureDisplay.classList.remove('hidden');
+
+                    showNotification('Chemical structure generated successfully!', 'success');
+                } else {
+                    showNotification('Error generating structure: ' + (data.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error generating structure:', error);
+                showNotification('Error generating structure: ' + error.message, 'error');
+            })
+            .finally(() => {
+                // Reset button state
+                generateBtn.innerHTML = originalText;
+                generateBtn.disabled = false;
+            });
+    }
+
+    // Form validation to ensure method PDF is uploaded
+    function validateForm() {
+        const methodPdfInput = document.getElementById('method_pdf');
+        if (!methodPdfInput.files || methodPdfInput.files.length === 0) {
+            alert('Method PDF is required. Please upload a method analysis PDF file.');
+            methodPdfInput.focus();
+            return false;
+        }
+
+        const file = methodPdfInput.files[0];
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+            alert('Please upload a valid PDF file for method analysis.');
+            methodPdfInput.focus();
+            return false;
+        }
+
+        return true;
+    }
+
+    // Auto-select validation parameters based on instrument type
+    function autoSelectValidationParameters(instrumentType) {
+        // Define validation parameters for each instrument type
+        const validationParameters = {
+            'UV': [
+                'specificity',
+                'system_suitability',
+                'system_precision',
+                'method_precision',
+                'intermediate_precision',
+                'linearity',
+                'lod_loq',
+                'lod_loq_precision',
+                'range',
+                'recovery',
+                'robustness'
+            ],
+            'AAS': [
+                'specificity',
+                'system_suitability',
+                'system_precision',
+                'method_precision',
+                'intermediate_precision',
+                'linearity',
+                'lod_loq',
+                'lod_loq_precision',
+                'range',
+                'recovery',
+                'robustness'
+            ],
+            'HPLC': [
+                'specificity',
+                'system_suitability',
+                'system_precision',
+                'method_precision',
+                'intermediate_precision',
+                'linearity',
+                'lod_loq',
+                'lod_loq_precision',
+                'range',
+                'recovery',
+                'robustness'
+            ],
+            'UPLC': [
+                'specificity',
+                'system_suitability',
+                'system_precision',
+                'method_precision',
+                'intermediate_precision',
+                'linearity',
+                'lod_loq',
+                'lod_loq_precision',
+                'range',
+                'recovery',
+                'robustness'
+            ],
+            'GC': [
+                'specificity',
+                'system_suitability',
+                'system_precision',
+                'method_precision',
+                'intermediate_precision',
+                'linearity',
+                'lod_loq',
+                'lod_loq_precision',
+                'range',
+                'recovery',
+                'robustness'
+            ],
+            'Titration': [
+                'specificity',
+                'system_suitability',
+                'system_precision',
+                'method_precision',
+                'intermediate_precision',
+                'linearity',
+                'lod_loq',
+                'lod_loq_precision',
+                'range',
+                'recovery',
+                'robustness'
+            ]
+        };
+
+        // Get the parameters for the selected instrument type
+        const selectedParams = validationParameters[instrumentType] || [];
+
+        if (selectedParams.length > 0) {
+            // First, uncheck all validation parameter checkboxes
+            document.querySelectorAll('input[name="val_params"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+
+            // Then check the ones for the selected instrument type
+            selectedParams.forEach(paramValue => {
+                const checkbox = document.querySelector(`input[name="val_params"][value="${paramValue}"]`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+
+            // Show the auto-selection notification
+            const notification = document.getElementById('auto-selection-notification');
+            if (notification) {
+                notification.classList.remove('hidden');
+
+                // Auto-hide the notification after 5 seconds
+                setTimeout(() => {
+                    notification.classList.add('hidden');
+                }, 5000);
+            }
+
+            // Show a success message
+            showNotification(`Auto-selected ${selectedParams.length} validation parameters for ${instrumentType}`, 'success');
+        }
+    }
+
+    // Add form validation on submit
+    function fillProtocolDemo() {
+        const data = {
+            'product_name': 'Metformin Hydrochloride Tablets IP 500mg',
+            'active_ingredient': 'Metformin Hydrochloride',
+            'test_method': 'HPLC',
+            'label_claim': '500 mg',
+            'protocol_number': 'KPL/AMVN/P/21/045-00',
+            'company_name': 'Kwality Pharmaceutical Ltd.',
+            'company_location': 'Raja ka Bagh, H.P., India',
+            'specification_range': '95.0% to 105.0%',
+            'molecular_weight': '165.62',
+            'molecular_formula': 'C4H11N5·HCl',
+            'smiles': 'CN(C)C(=N)N=C(N)N.Cl',
+            'weight_standard': '50.0',
+            'weight_sample': '250.0',
+            'final_concentration_standard': '0.1',
+            'final_concentration_sample': '0.1',
+            'potency': '99.92',
+            'average_weight': '605.5',
+            'wavelength': '232',
+            'reference_area_standard': '45210',
+            'flow_rate': '1.0',
+            'injection_volume': '20',
+            'prepared_by_name': 'Officer QC',
+            'reviewed_by_name': 'Manager QC',
+            'approved_by_name': 'Sr. Manager QA',
+            'authorized_by_name': 'Head QA'
+        };
+
+        // Fill basic fields
+        for (const [key, value] of Object.entries(data)) {
+            const el = document.querySelector(`input[name="${key}"], select[name="${key}"]`);
+            if (el) {
+                el.value = value;
+                el.style.backgroundColor = '#fffbeb';
+                el.style.transition = 'all 0.3s';
+                if (key === 'test_method') {
+                    el.dispatchEvent(new Event('change'));
+                }
+            }
+        }
+
+        // Check first 2 items in each selection section
+        ['selected_equipment', 'selected_glass_materials', 'selected_reagents'].forEach(name => {
+            const checks = document.querySelectorAll(`input[name="${name}"]`);
+            checks.forEach((c, i) => { if (i < 2) c.checked = true; });
+        });
+
+        // Select first reference standard
+        const refs = document.querySelectorAll('input[name="selected_reference"]');
+        if (refs.length > 0) refs[0].checked = true;
+
+        // Check common validation parameters
+        const val_params = ['system_suitability', 'specificity', 'system_precision', 'method_precision', 'linearity', 'recovery'];
+        val_params.forEach(val => {
+            const el = document.querySelector(`input[name="val_params"][value="${val}"]`);
+            if (el) el.checked = true;
+        });
+
+        if (typeof showNotification === 'function') {
+            showNotification('AMV Protocol demo data filled!', 'success');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Handle instrument type change to show/hide specific parameters
+        const form = document.querySelector('form[action="/amv/generate-verification-protocol"]');
+        const instrumentSelect = document.querySelector('select[name="test_method"]');
+        if (instrumentSelect) {
+            instrumentSelect.addEventListener('change', function () {
+                const selectedType = this.value;
+
+                // Hide all instrument-specific parameter sections
+                document.getElementById('uv-aas-params').classList.add('hidden');
+                document.getElementById('hplc-uplc-gc-params').classList.add('hidden');
+                document.getElementById('titration-params').classList.add('hidden');
+
+                // Show relevant section based on selection
+                if (selectedType === 'UV' || selectedType === 'AAS') {
+                    document.getElementById('uv-aas-params').classList.remove('hidden');
+                } else if (selectedType === 'HPLC' || selectedType === 'UPLC' || selectedType === 'GC') {
+                    document.getElementById('hplc-uplc-gc-params').classList.remove('hidden');
+                } else if (selectedType === 'Titration') {
+                    document.getElementById('titration-params').classList.remove('hidden');
+                }
+
+                // Auto-select validation parameters based on instrument type
+                autoSelectValidationParameters(selectedType);
+            });
+
+            // Trigger change event on page load to show correct parameters
+            instrumentSelect.dispatchEvent(new Event('change'));
+        }
+
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                console.log('=== CONSOLIDATED FORM SUBMISSION HANDLER FIRING ===');
+
+                // 1. Capture Equipment selections
+                const selectedEquipment = Array.from(document.querySelectorAll('input[name="selected_equipment"]:checked')).map(cb => ({
+                    id: cb.value,
+                    name: cb.closest('.flex').querySelector('label').textContent.trim(),
+                    code: cb.dataset.code || '',
+                    brand: cb.dataset.brand || ''
+                }));
+                document.getElementById('selected_equipment_json').value = JSON.stringify(selectedEquipment);
+                console.log('Selected Equipment JSON:', document.getElementById('selected_equipment_json').value);
+
+                // 2. Capture Glass Materials selections
+                const selectedGlass = Array.from(document.querySelectorAll('input[name="selected_glass_materials"]:checked')).map(cb => ({
+                    id: cb.value,
+                    name: cb.closest('.flex').querySelector('label').textContent.trim(),
+                    characteristics: cb.dataset.characteristics || ''
+                }));
+                document.getElementById('selected_glass_materials_json').value = JSON.stringify(selectedGlass);
+                console.log('Selected Glass JSON:', document.getElementById('selected_glass_materials_json').value);
+
+                // 3. Capture Reagents selections
+                const selectedReagents = Array.from(document.querySelectorAll('input[name="selected_reagents"]:checked')).map(cb => ({
+                    id: cb.value,
+                    name: cb.closest('.flex').querySelector('label').textContent.trim(),
+                    batch: cb.dataset.batch || '',
+                    expiry_date: cb.dataset.expiry || ''
+                }));
+                document.getElementById('selected_reagents_json').value = JSON.stringify(selectedReagents);
+                console.log('Selected Reagents JSON:', document.getElementById('selected_reagents_json').value);
+
+                // 4. Capture Reference selection
+                const referenceRadio = document.querySelector('input[name="selected_reference"]:checked');
+                const selectedReference = referenceRadio ? {
+                    id: referenceRadio.value,
+                    standard_name: referenceRadio.dataset.standardName || '',
+                    potency: referenceRadio.dataset.potency || ''
+                } : null;
+                document.getElementById('selected_reference_json').value = selectedReference ? JSON.stringify(selectedReference) : '{}';
+                console.log('Selected Reference JSON:', document.getElementById('selected_reference_json').value);
+
+                // The 'val_params' checkboxes will be sent as a list of values automatically by the browser,
+                // so no special handling is needed here. Your backend will receive them under the 'val_params' key.
+                const valParamCheckboxes = document.querySelectorAll('input[name="val_params"]:checked');
+                const selectedValParams = Array.from(valParamCheckboxes).map(cb => cb.value);
+                console.log('Selected Verification Parameters:', selectedValParams);
+
+                console.log('=== FORM SUBMISSION PROCEEDING ===');
+            });
+        }
+    });
+
+    // Auto-select validation parameters based on instrument type
+    function autoSelectValidationParameters(instrumentType) {
+        // Define validation parameters for each instrument type
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500 text-white' :
+            type === 'error' ? 'bg-red-500 text-white' :
+                'bg-blue-500 text-white'
+            }`;
+        notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mr-2"></i>
+            <span>${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+        document.body.appendChild(notification);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+        const validationParameters = {
+            'UV': [
+                'system_suitability',
+                'specificity',
+                'system_precision',
+                'method_precision',
+                'linearity',
+                'recovery',
+                'robustness'
+            ],
+            'AAS': [
+                'system_suitability',
+                'specificity',
+                'system_precision',
+                'method_precision',
+                'linearity',
+                'recovery',
+                'robustness'
+            ],
+            'HPLC': [
+                'system_suitability',
+                'specificity',
+                'system_precision',
+                'method_precision',
+                'intermediate_precision',
+                'linearity',
+                'recovery',
+                'robustness'
+            ],
+            'UPLC': [
+                'system_suitability',
+                'specificity',
+                'system_precision',
+                'method_precision',
+                'intermediate_precision',
+                'linearity',
+                'recovery',
+                'robustness'
+            ],
+            'GC': [
+                'system_suitability',
+                'specificity',
+                'system_precision',
+                'method_precision',
+                'intermediate_precision',
+                'linearity',
+                'recovery',
+                'robustness'
+            ],
+            'Titration': [
+                'system_precision',
+                'method_precision',
+                'linearity',
+                'recovery'
+            ]
+        };
+
+        const selectedParams = validationParameters[instrumentType] || [];
+
+        document.querySelectorAll('input[name="val_params"]').forEach(checkbox => {
+            checkbox.checked = selectedParams.includes(checkbox.value);
+        });
+
+        if (selectedParams.length > 0) {
+            showNotification(`Auto-selected ${selectedParams.length} validation parameters for ${instrumentType}`, 'success');
+        }
+    }
+</script>
+{% endblock %}
