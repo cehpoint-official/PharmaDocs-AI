@@ -83,6 +83,8 @@
               <p class="text-[10px] font-black text-blue-600 capitalize">{{ user.subscription_plan or 'free' }}</p>
             </div>
             <a href="/user/profile" class="block px-4 py-2 text-[11px] font-bold hover:bg-gray-100">Profile Settings</a>
+            <button onclick="openModal('editProfileModal')"
+              class="w-full text-left block px-4 py-2 text-[11px] font-bold hover:bg-gray-100">Edit Profile</button>
             <hr class="border-gray-100">
             <a href="{{ url_for('auth.logout') }}"
               class="block px-4 py-2 text-[11px] font-bold text-red-600 hover:bg-red-50">Log Out</a>
@@ -96,51 +98,39 @@
   </nav>
   {% endif %}
 
-  <!-- Edit Profile Modal -->
-  <div id="editProfileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
-      <div class="flex justify-between items-center bg-gray-100 border-b px-5 py-3 rounded-t-lg">
-        <h5 class="text-xl font-semibold text-gray-900">Edit Profile</h5>
-        <button type="button"
-          class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center"
-          onclick="closeModal('editProfileModal')">
-          <i class="fas fa-times"></i>
-          <span class="sr-only">Close modal</span>
+  <!-- Global Edit Profile Layer -->
+  <div id="editProfileModal"
+    class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded shadow-2xl w-full max-w-lg border border-gray-200">
+      <div class="flex justify-between items-center px-6 py-4 border-b bg-gray-50/50">
+        <h3 class="text-[10px] font-black text-gray-800 uppercase tracking-widest leading-none">Identity Configuration
+        </h3>
+        <button onclick="closeModal('editProfileModal')" class="text-gray-400 hover:text-red-600 transition-colors">
+          <i class="fas fa-times text-xs"></i>
         </button>
       </div>
-
-      <form id="editProfileForm" class="p-5 space-y-4">
-        <!-- Name -->
-        <div>
-          <label for="profileName" class="block mb-2 text-sm font-medium text-gray-900">Name *</label>
-          <input type="text" id="profileName" name="name" value="{{ user.name if user else '' }}" required
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+      <form id="editProfileForm" class="p-6 space-y-4">
+        <div class="space-y-1">
+          <label class="text-[9px] font-black text-gray-500 uppercase">Full Name</label>
+          <input type="text" name="name" value="{{ user.name if user else '' }}" required
+            class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none">
         </div>
-
-        <!-- Email -->
-        <div>
-          <label for="profileEmail" class="block mb-2 text-sm font-medium text-gray-900">Email *</label>
-          <input type="email" id="profileEmail" name="email" value="{{ user.email if user else '' }}" required
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+        <div class="space-y-1">
+          <label class="text-[9px] font-black text-gray-500 uppercase">Email Address</label>
+          <input type="email" name="email" value="{{ user.email if user else '' }}" required
+            class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none">
         </div>
-
-        <!-- Password -->
-        <div>
-          <label for="profilePassword" class="block mb-2 text-sm font-medium text-gray-900">New Password</label>
-          <input type="password" id="profilePassword" name="password"
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
-            placeholder="Leave blank to keep current password">
+        <div class="space-y-1">
+          <label class="text-[9px] font-black text-gray-500 uppercase">New Protocol Key (Password)</label>
+          <input type="password" name="password" placeholder="LEAVE BLANK FOR NO CHANGE"
+            class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none">
         </div>
-
-        <div class="flex justify-end items-center space-x-2 pt-4 border-t border-gray-200">
+        <div class="pt-4 flex gap-2">
           <button type="button" onclick="closeModal('editProfileModal')"
-            class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10">
-            Cancel
-          </button>
+            class="flex-1 py-2 text-[10px] font-bold uppercase bg-gray-50 text-gray-400 rounded hover:bg-gray-100 transition-all">Discard</button>
           <button type="submit"
-            class="text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:outline-none focus:ring-indigo-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center flex items-center">
-            <i class="fas fa-save mr-2"></i>Save Changes
-          </button>
+            class="flex-[2] py-2 text-[10px] font-bold uppercase bg-[#1e40af] text-white rounded hover:bg-blue-800 shadow-md">Commit
+            Changes</button>
         </div>
       </form>
     </div>

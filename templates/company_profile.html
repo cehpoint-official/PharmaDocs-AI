@@ -2,6 +2,106 @@
 {% block title %}Workspace Management - PharmaDocs AI Platform{% endblock %}
 
 {% block content %}
+<!-- Modals Layer -->
+<div id="addCompanyModal"
+  class="fixed inset-0 z-[100] hidden items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
+  <div class="bg-white rounded shadow-2xl w-full max-w-xl border border-gray-200">
+    <div class="flex justify-between items-center px-6 py-4 border-b bg-gray-50">
+      <h3 class="text-[10px] font-black text-gray-800 uppercase tracking-widest">Register New Entity</h3>
+      <button onclick="closeModal('addCompanyModal')"
+        class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors">
+        <i class="fas fa-times text-xs"></i>
+      </button>
+    </div>
+    <form id="addCompanyForm" class="p-6 space-y-4" enctype="multipart/form-data">
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Primary Company Name</label>
+        <input type="text" name="name" required
+          class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none">
+      </div>
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Registered Address</label>
+        <textarea name="address"
+          class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none min-h-[80px]"></textarea>
+      </div>
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Brand Identity Asset</label>
+        <input type="file" name="logo" accept="image/*"
+          class="w-full text-[10px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+      </div>
+      <div class="pt-4 flex gap-2">
+        <button type="button" onclick="closeModal('addCompanyModal')"
+          class="flex-1 py-2 text-[10px] font-bold uppercase bg-gray-100 text-gray-600 rounded hover:bg-gray-200">Discard</button>
+        <button type="submit"
+          class="flex-[2] py-2 text-[10px] font-bold uppercase bg-[#1e40af] text-white rounded hover:bg-blue-800">Establish
+          Workspace</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="editCompanyModal"
+  class="fixed inset-0 z-[100] hidden items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
+  <div class="bg-white rounded shadow-2xl w-full max-w-xl border border-gray-200">
+    <div class="flex justify-between items-center px-6 py-4 border-b bg-gray-50">
+      <h3 class="text-[10px] font-black text-gray-800 uppercase tracking-widest">Update Identity</h3>
+      <button onclick="closeModal('editCompanyModal')"
+        class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors">
+        <i class="fas fa-times text-xs"></i>
+      </button>
+    </div>
+    <form id="editCompanyForm" class="p-6 space-y-4" enctype="multipart/form-data">
+      <input type="hidden" id="editCompanyId" name="company_id">
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Company Name</label>
+        <input type="text" id="editCompanyName" name="name" required
+          class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none">
+      </div>
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Registered Address</label>
+        <textarea id="editCompanyAddress" name="address"
+          class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none min-h-[80px]"></textarea>
+      </div>
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Brand Asset Update</label>
+        <input type="file" name="logo" accept="image/*"
+          class="w-full text-[10px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+      </div>
+      <div class="pt-4 flex gap-2">
+        <button type="button" onclick="closeModal('editCompanyModal')"
+          class="flex-1 py-2 text-[10px] font-bold uppercase bg-gray-100 text-gray-600 rounded hover:bg-gray-200">Discard</button>
+        <button type="submit"
+          class="flex-[2] py-2 text-[10px] font-bold uppercase bg-[#1e40af] text-white rounded hover:bg-blue-800">Commit
+          Policy</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="addSubBrandModal"
+  class="fixed inset-0 z-[100] hidden items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
+  <div class="bg-white rounded shadow-2xl w-full max-w-sm border border-gray-200">
+    <div class="flex justify-between items-center px-6 py-4 border-b bg-gray-50">
+      <h3 class="text-[10px] font-black text-gray-800 uppercase tracking-widest">Append Sub-brand</h3>
+      <button onclick="closeModal('addSubBrandModal')"
+        class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors">
+        <i class="fas fa-times text-xs"></i>
+      </button>
+    </div>
+    <form id="addSubBrandForm" class="p-6 space-y-4">
+      <input type="hidden" id="subBrandCompanyId" name="company_id">
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Brand Designation</label>
+        <input type="text" name="name" required
+          class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none"
+          placeholder="e.g. Quality Division">
+      </div>
+      <button type="submit"
+        class="w-full py-2 text-[10px] font-bold uppercase bg-[#1e40af] text-white rounded hover:bg-blue-800">Link Brand
+        Hierarchy</button>
+    </form>
+  </div>
+</div>
 <div class="max-w-full mx-auto px-4 py-6">
 
   <!-- Compact Header -->
@@ -98,7 +198,7 @@
       <div class="px-3 py-2 bg-gray-50/50 border-t">
         <div class="flex items-center justify-between mb-2">
           <h5 class="text-[10px] font-black text-gray-500 uppercase">Registered Sub-brands</h5>
-          <button onclick="addBrand('{{ company.id }}')" class="text-[9px] font-bold text-blue-700 hover:underline">+
+          <button onclick="addSubBrand('{{ company.id }}')" class="text-[9px] font-bold text-blue-700 hover:underline">+
             ADD BRAND</button>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -143,121 +243,103 @@
     </button>
   </div>
   {% endif %}
-</div>
 
-<!-- Modals System -->
+</div><!-- End of main container -->
 
-<!-- Register Company Modal -->
-<div id="addCompanyModal" class="modal-backdrop hidden transition-opacity duration-300">
-  <div class="modal-content-saas max-w-xl">
-    <div class="flex justify-between items-center p-8 border-b border-slate-50">
-      <div>
-        <h3 class="text-xl font-display font-black text-slate-900">Register Entity</h3>
-        <p class="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">New Global Company Identity</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <button type="button" onclick="fillCompanyDemo()"
-          class="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center border border-amber-100 hover:bg-amber-100 transition-colors">
-          <i class="fas fa-magic text-sm"></i>
-        </button>
-        <button onclick="closeModal('addCompanyModal')"
-          class="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors">
-          <i class="fas fa-times text-xs"></i>
-        </button>
-      </div>
+<!-- Global Modals Cluster -->
+<div id="addCompanyModal"
+  class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-white rounded shadow-2xl w-full max-w-lg border border-gray-200">
+    <div class="flex justify-between items-center px-6 py-4 border-b bg-gray-50/50">
+      <h3 class="text-[10px] font-black text-gray-800 uppercase tracking-widest leading-none">Initialize New Entity</h3>
+      <button onclick="closeModal('addCompanyModal')" class="text-gray-400 hover:text-red-600 transition-colors">
+        <i class="fas fa-times text-xs"></i>
+      </button>
     </div>
-    <form id="addCompanyForm" class="p-8 space-y-6" enctype="multipart/form-data">
-      <div class="space-y-1.5">
-        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Primary Name <span
-            class="text-red-500">*</span></label>
-        <input type="text" id="companyName" name="name" required class="input-saas py-3 px-4"
-          placeholder="e.g. Acme Pharmaceutical Ltd.">
+    <form id="addCompanyForm" class="p-6 space-y-4" enctype="multipart/form-data">
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Organization Name</label>
+        <input type="text" name="name" required
+          class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none">
       </div>
-      <div class="space-y-1.5">
-        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Headquarters Address</label>
-        <textarea id="companyAddress" name="address" class="input-saas py-3 px-4 min-h-[100px]"
-          placeholder="Full street address, city, and state..."></textarea>
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Operational Headquarters</label>
+        <textarea name="address"
+          class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none min-h-[80px]"></textarea>
       </div>
-      <div class="space-y-1.5">
-        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Visual Identity
-          (Logo)</label>
-        <div
-          class="border-2 border-dashed border-slate-100 rounded-2xl p-6 text-center bg-slate-50/50 hover:bg-indigo-50/30 hover:border-indigo-100 transition-all cursor-pointer relative group">
-          <i
-            class="fas fa-cloud-arrow-up text-slate-300 text-2xl group-hover:text-indigo-400 group-hover:scale-110 transition-all mb-2 block"></i>
-          <p class="text-[10px] font-bold text-slate-500 uppercase">Click to select branding asset</p>
-          <input type="file" id="companyLogo" name="logo" accept="image/*"
-            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-        </div>
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Branding Identity (Logo)</label>
+        <input type="file" name="logo" accept="image/*"
+          class="w-full text-[10px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
       </div>
-      <div class="pt-6 border-t border-slate-50 flex gap-4">
+      <div class="pt-4 flex gap-2">
         <button type="button" onclick="closeModal('addCompanyModal')"
-          class="flex-1 btn-secondary-saas py-3">Cancel</button>
-        <button type="submit" class="flex-[2] btn-primary-saas py-3 flex items-center justify-center gap-3">
-          <i class="fas fa-save"></i> Establish Identity
-        </button>
+          class="flex-1 py-2 text-[10px] font-bold uppercase bg-gray-50 text-gray-400 rounded hover:bg-gray-100 transition-all">Discard</button>
+        <button type="submit"
+          class="flex-[2] py-2 text-[10px] font-bold uppercase bg-[#1e40af] text-white rounded hover:bg-blue-800 shadow-md">Register
+          Entity</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Edit Company Modal -->
-<div id="editCompanyModal" class="modal-backdrop hidden transition-opacity duration-300">
-  <div class="modal-content-saas max-w-xl">
-    <div class="flex justify-between items-center p-8 border-b border-slate-50">
-      <div>
-        <h3 class="text-xl font-display font-black text-slate-900">Manage Identity</h3>
-        <p class="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">Update Global Configuration</p>
-      </div>
-      <button onclick="closeModal('editCompanyModal')"
-        class="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors">
+<div id="editCompanyModal"
+  class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-white rounded shadow-2xl w-full max-w-lg border border-gray-200">
+    <div class="flex justify-between items-center px-6 py-4 border-b bg-gray-50/50">
+      <h3 class="text-[10px] font-black text-gray-800 uppercase tracking-widest leading-none">Policy Configuration</h3>
+      <button onclick="closeModal('editCompanyModal')" class="text-gray-400 hover:text-red-600 transition-colors">
         <i class="fas fa-times text-xs"></i>
       </button>
     </div>
-    <form id="editCompanyForm" class="p-8 space-y-6" enctype="multipart/form-data">
+    <form id="editCompanyForm" class="p-6 space-y-4" enctype="multipart/form-data">
       <input type="hidden" id="editCompanyId" name="company_id">
-      <div class="space-y-1.5">
-        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name <span
-            class="text-red-500">*</span></label>
-        <input type="text" id="editCompanyName" name="name" required class="input-saas py-3 px-4">
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Entity Name</label>
+        <input type="text" id="editCompanyName" name="name" required
+          class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none">
       </div>
-      <div class="space-y-1.5">
-        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Address</label>
-        <textarea id="editCompanyAddress" name="address" class="input-saas py-3 px-4 min-h-[100px]"></textarea>
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Operational Address</label>
+        <textarea id="editCompanyAddress" name="address"
+          class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none min-h-[80px]"></textarea>
       </div>
-      <div class="space-y-1.5">
-        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Glass Materials Definition
-          (JSON Object)</label>
-        <textarea id="editCompanyGlassMaterials" name="glass_materials"
-          class="input-saas py-3 px-4 min-h-[80px] font-mono text-[10px]"
-          placeholder='{ "type": "BoroSilicate", "grade": "USP Type I" }'></textarea>
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Asset Upgrade (Logo)</label>
+        <input type="file" name="logo" accept="image/*"
+          class="w-full text-[10px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
       </div>
-      <div class="pt-6 border-t border-slate-50 flex gap-4">
+      <div class="pt-4 flex gap-2">
         <button type="button" onclick="closeModal('editCompanyModal')"
-          class="flex-1 btn-secondary-saas py-3">Discard</button>
-        <button type="submit" class="flex-[2] btn-primary-saas py-3">Save Workspace Policy</button>
+          class="flex-1 py-2 text-[10px] font-bold uppercase bg-gray-50 text-gray-400 rounded hover:bg-gray-100 transition-all">Discard</button>
+        <button type="submit"
+          class="flex-[2] py-2 text-[10px] font-bold uppercase bg-[#1e40af] text-white rounded hover:bg-blue-800 shadow-md">Commit
+          Protocol</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Sub-brand Appending -->
-<div id="addSubBrandModal" class="modal-backdrop hidden transition-opacity duration-300">
-  <div class="modal-content-saas max-w-md">
-    <div class="flex justify-between items-center p-6 border-b border-slate-50">
-      <h3 class="text-lg font-display font-black text-slate-900">Append Sub-brand</h3>
-      <button onclick="closeModal('addSubBrandModal')" class="text-slate-400 hover:text-slate-600">
+<div id="addSubBrandModal"
+  class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-white rounded shadow-2xl w-full max-w-sm border border-gray-200 overflow-hidden">
+    <div class="flex justify-between items-center px-6 py-4 border-b bg-gray-50/50">
+      <h3 class="text-[10px] font-black text-gray-800 uppercase tracking-widest leading-none">Append Subsidiary</h3>
+      <button onclick="closeModal('addSubBrandModal')" class="text-gray-400 hover:text-red-600 transition-colors">
         <i class="fas fa-times text-xs"></i>
       </button>
     </div>
-    <form id="addSubBrandForm" class="p-6 space-y-6">
+    <form id="addSubBrandForm" class="p-6 space-y-4">
       <input type="hidden" id="subBrandCompanyId" name="company_id">
-      <div class="space-y-1.5">
-        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Brand Designation <span
-            class="text-red-500">*</span></label>
-        <input type="text" name="name" required class="input-saas py-3 px-4" placeholder="e.g. Quality Division">
+      <div class="space-y-1">
+        <label class="text-[9px] font-black text-gray-500 uppercase">Brand Designation</label>
+        <input type="text" name="name" required
+          class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-600 outline-none"
+          placeholder="e.g. Quality Division">
       </div>
-      <button type="submit" class="w-full btn-primary-saas py-3">Link Brand Hierarchy</button>
+      <button type="submit"
+        class="w-full py-2 text-[10px] font-bold uppercase bg-[#1e40af] text-white rounded hover:bg-blue-800 shadow-md">Link
+        Identity</button>
     </form>
   </div>
 </div>
@@ -266,72 +348,49 @@
 
 {% block scripts %}
 <script>
-  // Preservation of existing logic with UI state enhancements
-
   function toggleRelDropdown(btn) {
-    const container = btn.closest('.dropdown-container');
-    const menu = container.querySelector('.custom-dropdown');
-
-    // Close all others
-    document.querySelectorAll('.custom-dropdown').forEach(d => {
-      if (d !== menu) d.classList.add('hidden');
-    });
-
+    const menu = btn.closest('.dropdown-container').querySelector('.custom-dropdown');
+    document.querySelectorAll('.custom-dropdown').forEach(d => { if (d !== menu) d.classList.add('hidden'); });
     menu.classList.toggle('hidden');
   }
 
-  // Close dropdowns on outside click
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.dropdown-container')) {
-      document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.add('hidden'));
-    }
+    if (!e.target.closest('.dropdown-container')) document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.add('hidden'));
   });
 
   async function editCompany(id) {
     try {
       const res = await fetch(`/company/get/${id}`);
-      const result = await res.json();
-      if (!result.success) return alert('Policy Retrieval Failed');
-
-      const c = result.company;
-      document.getElementById('editCompanyId').value = c.id;
-      document.getElementById('editCompanyName').value = c.name;
-      document.getElementById('editCompanyAddress').value = c.address || '';
-      document.getElementById('editCompanyGlassMaterials').value = c.glass_materials ? JSON.stringify(c.glass_materials, null, 2) : '';
+      const r = await res.json();
+      if (!r.success) return alert('Retrieval Fault');
+      document.getElementById('editCompanyId').value = r.company.id;
+      document.getElementById('editCompanyName').value = r.company.name;
+      document.getElementById('editCompanyAddress').value = r.company.address || '';
       openModal('editCompanyModal');
-    } catch (err) { console.error(err); }
+    } catch (err) { alert('System Error'); }
   }
 
   document.getElementById('addCompanyForm').addEventListener('submit', async function (e) {
     e.preventDefault();
     const btn = this.querySelector('button[type="submit"]');
-    const original = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Initializing Workspace...`;
-
     try {
       const res = await fetch('/company/create', { method: 'POST', body: new FormData(this) });
-      const r = await res.json();
-      if (r.success) location.reload();
-      else alert('GXP Restriction: ' + (r.error || 'Identity generation failed'));
-    } catch (err) { alert('System Exception'); }
-    finally { btn.disabled = false; btn.innerHTML = original; }
+      if ((await res.json()).success) location.reload(); else alert('Registration Failed');
+    } catch (err) { alert('Communication Fault'); }
+    finally { btn.disabled = false; }
   });
 
   document.getElementById('editCompanyForm').addEventListener('submit', async function (e) {
     e.preventDefault();
     const btn = this.querySelector('button[type="submit"]');
     btn.disabled = true;
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Committing Policy...`;
-
     try {
       const id = document.getElementById('editCompanyId').value;
-      const res = await fetch(`/company/update/${id}`, { method: 'POST', body: new FormData(this) });
-      const r = await res.json();
-      if (r.success) location.reload();
-      else alert('Error: ' + r.error);
-    } catch (err) { alert('Commit Failed'); }
-    finally { btn.disabled = false; btn.innerHTML = 'Save Workspace Policy'; }
+      const res = await fetch(`/company/edit/${id}`, { method: 'POST', body: new FormData(this) });
+      if ((await res.json()).success) location.reload(); else alert('Commit Failed');
+    } catch (err) { alert('Protocol Exception'); }
+    finally { btn.disabled = false; }
   });
 
   function addSubBrand(id) {
@@ -344,40 +403,16 @@
     e.preventDefault();
     const btn = this.querySelector('button[type="submit"]');
     btn.disabled = true;
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Linking...`;
-
     try {
       const res = await fetch('/subbrand/create', { method: 'POST', body: new FormData(this) });
-      const r = await res.json();
-      if (r.success) location.reload();
-      else alert('Linking Error: ' + r.error);
-    } catch (err) { alert('Network Fault'); }
-    finally { btn.disabled = false; btn.innerHTML = 'Link Brand Hierarchy'; }
+      if ((await res.json()).success) location.reload(); else alert('Linking Fault');
+    } catch (err) { alert('Network Failure'); }
+    finally { btn.disabled = false; }
   });
 
   function fillCompanyDemo() {
-    document.getElementById('companyName').value = 'Ind-Swift Laboratories Ltd.';
-    document.getElementById('companyAddress').value = 'S.C.O. 850, Shivalik Enclave, NAC Manimajra, Chandigarh - 160101';
-    document.getElementById('companyName').classList.add('bg-indigo-50/50');
-    setTimeout(() => document.getElementById('companyName').classList.remove('bg-indigo-50/50'), 1000);
-  }
-
-  // Simplified modal helpers (base.html usually has openModal/closeModal but we ensure compatibility)
-  if (typeof openModal === 'undefined') {
-    window.openModal = id => {
-      const m = document.getElementById(id);
-      m.classList.remove('hidden');
-      m.classList.add('flex');
-      setTimeout(() => m.classList.add('opacity-100'), 10);
-    };
-    window.closeModal = id => {
-      const m = document.getElementById(id);
-      m.classList.remove('opacity-100');
-      setTimeout(() => {
-        m.classList.add('hidden');
-        m.classList.remove('flex');
-      }, 300);
-    };
+    document.querySelector('#addCompanyForm [name="name"]').value = 'Ind-Swift Laboratories Ltd.';
+    document.querySelector('#addCompanyForm [name="address"]').value = 'S.C.O. 850, NAC Manimajra, Chandigarh';
   }
 </script>
 

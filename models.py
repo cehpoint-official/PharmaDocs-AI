@@ -186,7 +186,7 @@ class Equipment(db.Model):
     company_id: Mapped[int] = mapped_column(Integer, ForeignKey('companies.id'), nullable=False)
     company_provided_id: Mapped[str] = mapped_column(String(50), nullable=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    # type: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., HPLC, GC, etc.
+    type: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., HPLC, GC, etc.
     code: Mapped[str] = mapped_column(String(100), nullable=True)
     brand: Mapped[str] = mapped_column(String(100), nullable=True)
     make: Mapped[str] = mapped_column(String(100), nullable=True)

@@ -39,7 +39,7 @@
                         class="inline-flex px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-indigo-100">
                         {{ user.subscription_plan or 'Analyst' }}
                     </span>
-                    <span class="text-xs font-bold text-slate-400">UID: {{ user.id[:8] if user.id else 'PD-001'
+                    <span class="text-xs font-bold text-slate-400">UID: {{ (user.id|string)[:8] if user.id else 'PD-001'
                         }}</span>
                 </div>
             </div>
@@ -47,11 +47,11 @@
 
         <div class="absolute -bottom-6 right-10 flex gap-3">
             <button onclick="openModal('editProfileModal')"
-                class="btn-primary-saas px-6 py-2.5 text-xs shadow-xl shadow-indigo-100 flex items-center gap-2">
+                class="inline-flex items-center gap-2 px-6 py-2.5 bg-[#1e40af] text-white text-xs font-bold uppercase rounded shadow-xl shadow-indigo-100 hover:bg-blue-800 transition-all">
                 <i class="fas fa-edit opacity-50"></i> Update Identity
             </button>
             <a href="#"
-                class="btn-secondary-saas px-6 py-2.5 text-xs border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+                class="inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 text-xs font-bold uppercase rounded hover:bg-slate-50 transition-all">
                 <i class="fas fa-key opacity-50"></i> Credentials
             </a>
         </div>
@@ -61,7 +61,8 @@
 
         <!-- Sidebar: Account Maturity -->
         <div class="space-y-8">
-            <section class="card-premium p-8">
+            <section
+                class="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 transition-all duration-300 p-8">
                 <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-6">Subscription Pulse</h3>
                 {% set plan = (user.subscription_plan or 'free') %}
                 <div class="space-y-6">
@@ -91,14 +92,15 @@
 
                 <div class="mt-8 pt-6 border-t border-slate-50">
                     <a href="/subscription/plans"
-                        class="w-full btn-primary-saas py-3 text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-indigo-100 block text-center">
+                        class="w-full block text-center py-3 bg-[#1e40af] text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded shadow-lg shadow-indigo-100 hover:bg-blue-800 transition-all">
                         Expand Capabilities
                     </a>
                 </div>
             </section>
 
             <!-- Metadata Table -->
-            <section class="card-premium p-8">
+            <section
+                class="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 transition-all duration-300 p-8">
                 <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-6">System Trace</h3>
                 <div class="space-y-4">
                     <div>
@@ -120,7 +122,8 @@
 
             <!-- Usage Metrics -->
             {% if usage_stats %}
-            <section class="card-premium p-10 overflow-hidden relative">
+            <section
+                class="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 transition-all duration-300 p-10 overflow-hidden relative">
                 <div class="absolute top-0 right-0 p-8 opacity-5">
                     <i class="fas fa-chart-pie text-9xl"></i>
                 </div>
@@ -204,7 +207,8 @@
 
             <!-- Transactional Audit -->
             {% if recent_payments %}
-            <section class="card-premium overflow-hidden">
+            <section
+                class="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 transition-all duration-300 overflow-hidden">
                 <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
                     <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">Financial Ledger</h2>
                     <i class="fas fa-receipt text-slate-300 text-xs"></i>
@@ -252,8 +256,9 @@
 </div>
 
 <!-- Edit Identity Modal -->
-<div id="editProfileModal" class="modal-backdrop hidden">
-    <div class="modal-content-saas max-w-lg">
+<div id="editProfileModal"
+    class="bg-slate-900/60 backdrop-blur-sm fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="bg-white rounded-[2.5rem] shadow-2xl w-full mx-4 max-w-lg overflow-hidden transition-all duration-300">
         <div class="flex justify-between items-center p-8 border-b border-slate-50">
             <div>
                 <h3 class="text-xl font-display font-black text-slate-900">Modify Identity</h3>
@@ -270,24 +275,31 @@
             <div class="space-y-1.5">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Legal Designation
                     <span class="text-rose-500">*</span></label>
-                <input type="text" name="name" value="{{ user.name }}" class="input-saas py-3 px-4" required>
+                <input type="text" name="name" value="{{ user.name }}"
+                    class="w-full bg-slate-50 border border-slate-100 rounded-2xl py-3 px-4 text-sm font-bold text-slate-700 placeholder:text-slate-300 focus:bg-white focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 transition-all outline-none"
+                    required>
             </div>
             <div class="space-y-1.5">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Electronic Mail
                     Registry <span class="text-rose-500">*</span></label>
-                <input type="email" name="email" value="{{ user.email }}" class="input-saas py-3 px-4" required>
+                <input type="email" name="email" value="{{ user.email }}"
+                    class="w-full bg-slate-50 border border-slate-100 rounded-2xl py-3 px-4 text-sm font-bold text-slate-700 placeholder:text-slate-300 focus:bg-white focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 transition-all outline-none"
+                    required>
             </div>
             <div class="space-y-1.5">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Authorization
                     Credential</label>
-                <input type="password" name="password" class="input-saas py-3 px-4"
+                <input type="password" name="password"
+                    class="w-full bg-slate-50 border border-slate-100 rounded-2xl py-3 px-4 text-sm font-bold text-slate-700 placeholder:text-slate-300 focus:bg-white focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 transition-all outline-none"
                     placeholder="Leave blank to maintain current credentials">
             </div>
 
             <div class="pt-6 border-t border-slate-50 flex gap-4">
                 <button type="button" onclick="closeModal('editProfileModal')"
-                    class="flex-1 btn-secondary-saas py-3">Discard</button>
-                <button type="submit" class="flex-[2] btn-primary-saas py-3">Sync Global Identity</button>
+                    class="flex-1 py-3 bg-white border border-slate-200 text-slate-600 text-xs font-bold uppercase rounded hover:bg-slate-50 transition-all font-bold uppercase">Discard</button>
+                <button type="submit"
+                    class="flex-[2] py-3 bg-[#1e40af] text-white text-xs font-bold uppercase rounded hover:bg-blue-800 transition-all font-bold uppercase shadow-xl shadow-indigo-100">Sync
+                    Global Identity</button>
             </div>
         </form>
     </div>
@@ -335,21 +347,6 @@
             });
     }
 
-    // Modal handling (ensuring base.html consistency)
-    if (typeof openModal === 'undefined') {
-        window.openModal = id => {
-            const m = document.getElementById(id);
-            m.classList.remove('hidden');
-            m.classList.add('flex');
-            document.body.style.overflow = 'hidden';
-        };
-        window.closeModal = id => {
-            const m = document.getElementById(id);
-            m.classList.add('hidden');
-            m.classList.remove('flex');
-            document.body.style.overflow = 'auto';
-        };
-    }
 </script>
 
 <style>
