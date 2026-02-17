@@ -1,374 +1,326 @@
 {% extends "base.html" %}
-{% block title %}Subscription Plans - PharmaDocs AI (India){% endblock %}
+{% block title %}Regional Protocol - Subscription Plans - PharmaDocs AI{% endblock %}
 
 {% block content %}
-<div class="px-6 py-6 max-w-7xl mx-auto">
-    <!-- Header -->
-    <div class="text-center mb-12">
-        <h1 class="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
-        <p class="text-xl text-gray-600">Select the perfect plan for your pharmaceutical documentation needs</p>
-        <div class="mt-4 inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
-            <i class="fas fa-map-marker-alt mr-2"></i>
-            India - All prices in ₹ (INR)
-        </div>
-    </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
 
-    <!-- Setup Instructions (show if no Razorpay key) -->
-    {% if not razorpay_key_id %}
-    <div class="bg-orange-50 border border-orange-200 rounded-lg p-6 mb-8">
-        <div class="flex items-start">
-            <div class="flex-shrink-0">
-                <i class="fas fa-exclamation-triangle text-orange-400 mt-1"></i>
+    <!-- Localized Header -->
+    <div class="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8">
+        <div class="max-w-2xl">
+            <div class="flex items-center gap-3 mb-4">
+                <span
+                    class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-location-dot"></i> Regional Hub: India
+                </span>
+                <span class="text-xs font-bold text-slate-400">Currency: INR (₹)</span>
             </div>
-            <div class="ml-3">
-                <h3 class="text-lg font-medium text-orange-800">Setup Required</h3>
-                <p class="mt-2 text-sm text-orange-700">
-                    To enable payments, please add your Razorpay credentials to the .env file:
-                </p>
-                <div class="mt-3 bg-orange-100 p-3 rounded text-sm font-mono text-orange-900">
-                    RAZORPAY_KEY_ID=rzp_test_your_key_id_here<br>
-                    RAZORPAY_KEY_SECRET=your_secret_key_here
+            <h1 class="text-4xl font-display font-black text-slate-900 tracking-tight">Analytical Tier Selection</h1>
+            <p class="text-sm font-medium text-slate-500 mt-2 leading-relaxed">
+                Localized subscription frameworks for pharmaceutical compliance. All throughput limits and archival
+                capacities are calibrated for Indian regional laboratories.
+            </p>
+        </div>
+
+        {% if not razorpay_key_id %}
+        <div class="card-premium p-6 border-amber-200 bg-amber-50/20 max-w-sm">
+            <div class="flex gap-4">
+                <i class="fas fa-triangle-exclamation text-amber-500 text-xl shrink-0"></i>
+                <div class="space-y-2">
+                    <p class="text-[10px] font-black text-amber-800 uppercase tracking-widest">Setup Intervention
+                        Required</p>
+                    <p class="text-[11px] font-medium text-amber-700 leading-tight">Razorpay API credentials not
+                        detected in environment manifest.</p>
                 </div>
-                <p class="mt-2 text-sm text-orange-700">
-                    Get your free test credentials from <a href="https://razorpay.com" target="_blank" class="underline font-medium">razorpay.com</a>
-                </p>
             </div>
         </div>
+        {% endif %}
     </div>
-    {% endif %}
 
-    <!-- Current Plan Info -->
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
-        <div class="flex items-center justify-between">
+    <!-- Active Subscription Pulse -->
+    <div
+        class="card-premium p-8 mb-12 flex flex-col md:flex-row items-center justify-between group shadow-indigo-50 hover:border-indigo-100">
+        <div class="flex items-center gap-6">
+            <div
+                class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border border-indigo-100 group-hover:scale-110 transition-transform">
+                <i class="fas fa-fingerprint text-xl"></i>
+            </div>
             <div>
-                <h3 class="text-lg font-semibold text-blue-900">Current Plan: {{ user.subscription_plan.title() }}</h3>
-                <p class="text-blue-700">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                    Authenticated Framework</p>
+                <h3 class="text-xl font-display font-black text-slate-900">{{ user.subscription_plan.title() }} Engine
+                </h3>
+                <p class="text-xs font-bold text-indigo-600/70 mt-1">
                     {% if user.subscription_expiry and user.subscription_expiry > now %}
-                        Expires on {{ user.subscription_expiry.strftime('%B %d, %Y') }}
-                    {% elif user.subscription_plan == 'free' %}
-                        No expiration date
+                    Capability Valid: {{ user.subscription_expiry.strftime('%d %b %Y') }}
                     {% else %}
-                        Subscription expired
+                    Baseline Logic Mode
                     {% endif %}
                 </p>
             </div>
-            <div class="text-right">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
-                    {% if user.subscription_plan == 'premium' %}bg-green-100 text-green-800
-                    {% elif user.subscription_plan == 'basic' %}bg-blue-100 text-blue-800
-                    {% else %}bg-gray-100 text-gray-800{% endif %}">
-                    {% if user.is_subscription_active() %}Active{% else %}Inactive{% endif %}
-                </span>
-            </div>
+        </div>
+        <div class="mt-4 md:mt-0 px-6 py-2 bg-slate-50 border border-slate-100 rounded-2xl">
+            <span
+                class="text-[10px] font-black uppercase tracking-widest {% if user.is_subscription_active() %}text-emerald-600{% else %}text-slate-400{% endif %}">
+                {{ 'Active High' if user.is_subscription_active() else 'Baseline' }}
+            </span>
         </div>
     </div>
 
-    <!-- Subscription Plans -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+    <!-- Matrix Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
         {% for plan in plans %}
-        <div class="bg-white rounded-2xl shadow-lg border-2 
-            {% if plan.popular %}border-blue-500{% else %}border-gray-200{% endif %} p-8 relative">
-            
+        <div
+            class="card-premium p-10 flex flex-col group relative overflow-hidden transition-all duration-500 {{ 'border-indigo-200 ring-4 ring-indigo-50' if plan.popular }}">
+
             {% if plan.popular %}
-            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <span class="bg-blue-500 text-white px-4 py-1 text-sm font-medium rounded-full">Most Popular</span>
-            </div>
+            <div
+                class="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 z-10">
+                Popular Selection</div>
             {% endif %}
-            
-            <div class="text-center">
-                <h3 class="text-2xl font-bold text-gray-900">{{ plan.display_name }}</h3>
-                <div class="mt-4">
-                    <span class="text-4xl font-bold text-gray-900">₹{{ plan.price|int }}</span>
-                    <span class="text-gray-500">/month</span>
+
+            <div class="text-center mb-10">
+                <h3
+                    class="text-lg font-black text-slate-900 uppercase tracking-widest mb-4 group-hover:text-indigo-600">
+                    {{ plan.display_name }}</h3>
+                <div class="flex justify-center items-start">
+                    <span class="text-xl font-bold text-slate-400 mt-2">₹</span>
+                    <span class="text-6xl font-display font-black text-slate-900 tracking-tighter">{{ plan.price|int
+                        }}</span>
+                    <span class="text-sm font-bold text-slate-400 mb-2 self-end">/mo</span>
                 </div>
             </div>
-            
-            <ul class="mt-8 space-y-4">
+
+            <ul class="space-y-4 mb-12 flex-1">
                 {% for feature in plan.features %}
-                <li class="flex items-center">
-                    <i class="fas fa-check text-green-500 mr-3"></i>
-                    <span>{{ feature }}</span>
+                <li class="flex items-start gap-3">
+                    <i
+                        class="fas fa-circle-check text-indigo-400 text-sm mt-0.5 group-hover:text-emerald-500 transition-colors"></i>
+                    <span class="text-sm font-bold text-slate-600 group-hover:text-slate-900 transition-colors">{{
+                        feature }}</span>
                 </li>
                 {% endfor %}
             </ul>
-            
-            <div class="mt-8">
+
+            <div class="pt-6">
                 {% if user.subscription_plan == plan.name %}
-                    <button class="w-full py-3 px-6 
-                        {% if plan.name == 'premium' %}bg-green-400 text-white
-                        {% elif plan.name == 'basic' %}bg-blue-400 text-white
-                        {% else %}bg-gray-400 text-white{% endif %} 
-                        font-medium rounded-lg cursor-not-allowed">
-                        Current Plan
-                    </button>
+                <button
+                    class="w-full bg-slate-100 text-slate-400 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-not-allowed">Active
+                    Hierarchy</button>
                 {% elif plan.name == 'free' %}
-                    <button onclick="downgradePlan('free')" class="w-full py-3 px-6 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition">
-                        Downgrade
-                    </button>
+                <button onclick="downgradePlan('free')" class="w-full btn-secondary-saas py-4 text-[10px]">Transition
+                    Baseline</button>
                 {% else %}
-                    <button onclick="subscribeToPlan('{{ plan.name }}', {{ plan.price|int * 100 }})" 
-                            class="w-full py-3 px-6 
-                            {% if plan.name == 'premium' %}bg-green-600 hover:bg-green-700
-                            {% else %}bg-blue-600 hover:bg-blue-700{% endif %} 
-                            text-white font-medium rounded-lg transition">
-                        Choose {{ plan.display_name }}
-                    </button>
+                <button onclick="subscribeToPlan('{{ plan.name }}', {{ plan.price|int * 100 }})"
+                    class="w-full btn-primary-saas py-4 text-[10px] {{ 'bg-slate-900 hover:bg-black' if plan.name == 'premium' }}">
+                    Select Framework
+                </button>
                 {% endif %}
             </div>
         </div>
         {% endfor %}
     </div>
 
-    <!-- Payment Methods -->
-    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-        <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">Accepted Payment Methods</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 items-center justify-center">
-            <div class="text-center">
-                <i class="fab fa-cc-visa text-4xl text-blue-600 mb-2"></i>
-                <p class="text-sm text-gray-600">Visa</p>
-            </div>
-            <div class="text-center">
-                <i class="fab fa-cc-mastercard text-4xl text-red-600 mb-2"></i>
-                <p class="text-sm text-gray-600">Mastercard</p>
-            </div>
-            <div class="text-center">
-                <i class="fas fa-university text-4xl text-green-600 mb-2"></i>
-                <p class="text-sm text-gray-600">Net Banking</p>
-            </div>
-            <div class="text-center">
-                <i class="fas fa-mobile-alt text-4xl text-purple-600 mb-2"></i>
-                <p class="text-sm text-gray-600">UPI</p>
-            </div>
+    <!-- Verification Trust Hub -->
+    <div class="card-premium p-12 bg-slate-900 text-white relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+            <i class="fas fa-shield-halved text-9xl"></i>
         </div>
-        <div class="mt-4 text-center">
-            <p class="text-sm text-gray-500">Powered by Razorpay - India's leading payment gateway</p>
+        <h3 class="text-xl font-display font-black mb-12 text-center relative">Regional Transactional Security</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-10 relative">
+            {% set methods = [
+            ("Visa", "fab fa-cc-visa", "text-blue-400"),
+            ("Mastercard", "fab fa-cc-mastercard", "text-rose-400"),
+            ("Net Banking", "fas fa-building-columns", "text-emerald-400"),
+            ("UPI Precision", "fas fa-mobile-screen", "text-indigo-400")
+            ] %}
+            {% for name, icon, color in methods %}
+            <div class="text-center group">
+                <div
+                    class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-white/10 transition-colors">
+                    <i class="{{ icon }} text-3xl {{ color }}"></i>
+                </div>
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">{{ name }}</p>
+            </div>
+            {% endfor %}
         </div>
-    </div>
-
-    <!-- FAQ Section -->
-    <div class="bg-white rounded-lg shadow-lg p-8">
-        <h3 class="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h3>
-        
-        <div class="space-y-6">
-            <div class="border-b border-gray-200 pb-4">
-                <h4 class="text-lg font-semibold text-gray-900 mb-2">Can I pay in Indian Rupees?</h4>
-                <p class="text-gray-600">Yes! All our plans are priced in Indian Rupees (₹) and we accept all Indian payment methods including UPI, Net Banking, Cards, and Wallets.</p>
-            </div>
-            
-            <div class="border-b border-gray-200 pb-4">
-                <h4 class="text-lg font-semibold text-gray-900 mb-2">Is there a free trial?</h4>
-                <p class="text-gray-600">New users get a 7-day free trial on Basic and Premium plans. You can cancel anytime during the trial period.</p>
-            </div>
-            
-            <div class="border-b border-gray-200 pb-4">
-                <h4 class="text-lg font-semibold text-gray-900 mb-2">Which payment methods are supported?</h4>
-                <p class="text-gray-600">We support UPI, Net Banking, Credit/Debit Cards, and popular wallets like Paytm, PhonePe through Razorpay's secure platform.</p>
-            </div>
-            
-            <div>
-                <h4 class="text-lg font-semibold text-gray-900 mb-2">Can I get a tax invoice?</h4>
-                <p class="text-gray-600">Yes, we provide GST-compliant invoices for all payments. You can download them from your billing history.</p>
-            </div>
-        </div>
+        <p class="text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-12">Authorized Payment
+            Pipeline provided by Razorpay - India</p>
     </div>
 </div>
 
-<!-- Payment Processing Modal -->
-<div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold text-gray-900">Complete Payment</h3>
-            <button onclick="closePaymentModal()" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times"></i>
+<!-- Transactional Synthesis Modal -->
+<div id="paymentModal" class="modal-backdrop hidden">
+    <div class="modal-content-saas max-w-lg">
+        <div class="flex justify-between items-center p-8 border-b border-slate-50">
+            <div>
+                <h3 class="text-xl font-display font-black text-slate-900">Execute Transaction</h3>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Tier: <span
+                        id="selectedPlanName" class="text-indigo-600"></span></p>
+            </div>
+            <button onclick="closeModal('paymentModal')"
+                class="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl hover:bg-rose-50 hover:text-red-500 flex items-center justify-center transition-colors">
+                <i class="fas fa-times text-xs"></i>
             </button>
         </div>
-        
-        <div id="paymentDetails" class="mb-4">
-            <p class="text-gray-600">Plan: <span id="selectedPlanName" class="font-semibold"></span></p>
-            <p class="text-gray-600">Amount: ₹<span id="selectedAmount" class="font-semibold"></span></p>
-        </div>
-        
-        <div class="space-y-3">
-            <button id="razorpayButton" class="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition">
-                <i class="fas fa-credit-card mr-2"></i>Pay with Razorpay
-            </button>
-            
-            <button id="paymentLinkButton" class="w-full py-3 px-6 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition">
-                <i class="fas fa-link mr-2"></i>Get Payment Link
-            </button>
-            
-            <p class="text-sm text-gray-500 mt-4">
-                <strong>Note:</strong> To test payments, you need to add Razorpay credentials to your .env file first.
+
+        <div class="p-8 space-y-6">
+            <div class="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Synthesis Amount</span>
+                    <span class="text-2xl font-display font-black text-slate-900">₹<span
+                            id="selectedAmount"></span></span>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <button id="razorpayButton" class="w-full btn-primary-saas py-4 text-xs shadow-xl shadow-indigo-100">
+                    <i class="fas fa-bolt-lightning mr-2"></i> Launch Razorpay Gateway
+                </button>
+                <button id="paymentLinkButton"
+                    class="w-full btn-secondary-saas py-4 text-xs border-indigo-100 text-indigo-600 hover:bg-indigo-50">
+                    <i class="fas fa-link mr-2 text-[10px]"></i> Secondary Payment Link
+                </button>
+            </div>
+
+            <p class="text-[10px] font-bold text-slate-400 text-center uppercase tracking-tighter leading-relaxed">
+                System Directive: Credentials must be verified through environment variables prior to launch.
             </p>
         </div>
-        
-        <div id="payment-result" class="hidden mt-4"></div>
     </div>
 </div>
 
-<!-- Payment Success Modal -->
-<div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 text-center">
-        <div class="mb-4">
-            <i class="fas fa-check-circle text-green-500 text-5xl mb-4"></i>
-            <h3 class="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h3>
-            <p class="text-gray-600">Your subscription has been activated successfully.</p>
+<!-- Synthesis Success Celebration -->
+<div id="successModal" class="modal-backdrop hidden">
+    <div class="modal-content-saas max-w-md p-10 text-center">
+        <div
+            class="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-[2rem] flex items-center justify-center text-3xl mx-auto mb-6 border border-emerald-100 shadow-xl shadow-emerald-50">
+            <i class="fas fa-circle-check"></i>
         </div>
-        
-        <button onclick="closeSuccessModal()" class="w-full py-3 px-6 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition">
-            Continue to Dashboard
+        <h3 class="text-2xl font-display font-black text-slate-900 mb-2">Protocol Verified!</h3>
+        <p class="text-sm font-medium text-slate-500 mb-8">Higher-order analytical frameworks have been successfully
+            initialized on your account.</p>
+
+        <button onclick="closeSuccessModal()"
+            class="w-full btn-primary-saas py-4 shadow-xl shadow-emerald-100 bg-emerald-600 hover:bg-emerald-700">
+            Access Command Center
         </button>
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
-let selectedPlanName = '';
-let selectedAmount = 0;
-let currentOrderId = '';
+    let selectedPlanName = '';
+    let selectedAmount = 0;
+    let currentOrderId = '';
 
-function subscribeToPlan(plan, amount) {
-    selectedPlanName = plan;
-    selectedAmount = amount / 100; // Convert paise to rupees for display
-    
-    document.getElementById('selectedPlanName').textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
-    document.getElementById('selectedAmount').textContent = selectedAmount;
-    document.getElementById('paymentModal').style.display = 'flex';
-    
-    // Note: Payment is handled by Razorpay buttons in the modal
-}
-
-function downgradePlan(plan) {
-    if (confirm('Are you sure you want to downgrade to the free plan? You will lose access to premium features.')) {
-        fetch('/user/subscribe', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({plan: plan})
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            } else {
-                alert('Error: ' + data.error);
-            }
-        });
+    function subscribeToPlan(plan, amount) {
+        selectedPlanName = plan;
+        selectedAmount = amount / 100;
+        document.getElementById('selectedPlanName').textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+        document.getElementById('selectedAmount').textContent = selectedAmount;
+        openModal('paymentModal');
     }
-}
 
-function closePaymentModal() {
-    document.getElementById('paymentModal').style.display = 'none';
-}
+    function downgradePlan(plan) {
+        if (confirm('Verify Transformation: Returning to baseline framework will restrict throughput limits.')) {
+            fetch('/user/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: plan })
+            })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) location.reload();
+                    else alert('Protocol Error: ' + d.error);
+                });
+        }
+    }
 
-function closeSuccessModal() {
-    document.getElementById('successModal').style.display = 'none';
-    window.location.href = '/dashboard';
-}
-
-// Razorpay payment handler
-document.getElementById('razorpayButton').addEventListener('click', function() {
-    // Create order first
-    fetch('/razorpay/create-order', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({plan: selectedPlanName})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            currentOrderId = data.order_id;
-            
-            const options = {
-                "key": data.key,
-                "amount": data.amount,
-                "currency": data.currency,
-                "name": "PharmaDocs AI",
-                "description": `${selectedPlanName.charAt(0).toUpperCase() + selectedPlanName.slice(1)} Plan Subscription`,
-                "order_id": data.order_id,
-                "handler": function (response) {
-                    // Verify payment
-                    verifyPayment(response);
-                },
-                "prefill": {
-                    "name": "{{ user.name }}",
-                    "email": "{{ user.email }}"
-                },
-                "theme": {
-                    "color": "#3B82F6"
-                },
-                "modal": {
-                    "ondismiss": function() {
-                        console.log('Payment modal closed');
-                    }
+    // Razorpay Logic Integration
+    document.getElementById('razorpayButton').addEventListener('click', function () {
+        fetch('/razorpay/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan: selectedPlanName })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const options = {
+                        "key": data.key,
+                        "amount": data.amount,
+                        "currency": data.currency,
+                        "name": "PharmaDocs AI",
+                        "description": `${selectedPlanName.toUpperCase()} Protocol Tier`,
+                        "order_id": data.order_id,
+                        "handler": function (response) { verifyPayment(response); },
+                        "prefill": { "name": "{{ user.name }}", "email": "{{ user.email }}" },
+                        "theme": { "color": "#4F46E5" }
+                    };
+                    new Razorpay(options).open();
+                } else {
+                    alert('Initialization Error: ' + (data.message || data.error));
                 }
-            };
-            
-            const rzp = new Razorpay(options);
-            rzp.open();
-        } else {
-            if (data.setup_required) {
-                alert('Setup Required: ' + data.message);
-                document.getElementById('payment-result').innerHTML = 
-                    '<div class="bg-yellow-50 border border-yellow-200 rounded p-3 mt-2">' +
-                    '<p class="text-yellow-800 text-sm"><strong>Setup Required:</strong> ' + data.message + '</p>' +
-                    '</div>';
-                document.getElementById('payment-result').classList.remove('hidden');
-            } else {
-                alert('Error creating order: ' + data.error);
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error creating order');
+            });
     });
-});
 
-// Payment link handler
-document.getElementById('paymentLinkButton').addEventListener('click', function() {
-    fetch('/razorpay/payment-link', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({plan: selectedPlanName})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            window.open(data.payment_link, '_blank');
-            document.getElementById('payment-result').innerHTML = 
-                '<p class="text-green-600">Payment link opened in new tab. Complete payment there.</p>';
-            document.getElementById('payment-result').classList.remove('hidden');
-        } else {
-            alert('Error creating payment link: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error creating payment link');
+    document.getElementById('paymentLinkButton').addEventListener('click', function () {
+        fetch('/razorpay/payment-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan: selectedPlanName })
+        })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) window.open(d.payment_link, '_blank');
+                else alert('Link Generation Failed');
+            });
     });
-});
 
-function verifyPayment(response) {
-    fetch('/razorpay/verify-payment', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(response)
-    })
-    .then(response => response.json())
-    .then(data => {
-        closePaymentModal();
-        
-        if (data.success) {
-            document.getElementById('successModal').style.display = 'flex';
-        } else {
-            alert('Payment verification failed: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Payment verification failed');
-    });
-}
+    function verifyPayment(response) {
+        fetch('/razorpay/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(response)
+        })
+            .then(r => r.json())
+            .then(d => {
+                closeModal('paymentModal');
+                if (d.success) openModal('successModal');
+                else alert('GXP Verification Failed');
+            });
+    }
+
+    function closeSuccessModal() { window.location.href = '/dashboard'; }
+
+    if (typeof openModal === 'undefined') {
+        window.openModal = id => {
+            const m = document.getElementById(id);
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+        };
+        window.closeModal = id => {
+            const m = document.getElementById(id);
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        };
+    }
 </script>
+
+<style>
+    .card-premium {
+        @apply bg-white rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-indigo-100/40 transition-all duration-300;
+    }
+
+    .modal-backdrop {
+        @apply bg-slate-900/60 backdrop-blur-sm fixed inset-0 z-50 items-center justify-center;
+    }
+
+    .modal-content-saas {
+        @apply bg-white rounded-[3rem] shadow-2xl w-full mx-4 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-300;
+    }
+</style>
 {% endblock %}

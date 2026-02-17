@@ -1,370 +1,370 @@
 {% extends "base.html" %}
-
-{% block title %}Generate PVR Report{% endblock %}
+{% block title %}Generate PVR Report - PharmaDocs AI Platform{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8 max-w-6xl">
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex justify-between items-center mb-2">
-            <h2 class="text-2xl font-bold text-gray-800">
-                <i class="fas fa-file-medical text-green-600 mr-2"></i>
-                Generate Process Validation Report (PVR)
-            </h2>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <!-- Header Section -->
+    <div class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+                <a href="{{ url_for('pv.view_pvp_template', template_id=template.id) }}"
+                    class="hover:text-indigo-600 transition-colors">Protocol: {{ template.template_name }}</a>
+                <i class="fas fa-chevron-right text-[8px]"></i>
+                <span class="text-indigo-600">Report Ingestion</span>
+            </div>
+            <h1 class="text-3xl font-display font-black text-slate-900 tracking-tight">Generate PVR</h1>
+            <p class="text-sm font-medium text-slate-500 mt-2 max-w-2xl leading-relaxed">
+                Execute validation data entry for {{ template.template_name }}. Input batch characteristics and test
+                results to generate the final Process Validation Report.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-3">
             <button type="button" onclick="fillPVRDemo()"
-                class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 focus:ring-2 focus:ring-amber-400 font-semibold shadow-sm transition-all transform hover:scale-105 text-sm uppercase">
-                <i class="fas fa-flask mr-2"></i>Fill Demo Data
+                class="btn-secondary-saas px-6 py-2.5 shadow-soft flex items-center gap-2 border-amber-200 text-amber-700 hover:bg-amber-50">
+                <i class="fas fa-flask text-xs"></i>
+                Fill Demo Sequence
             </button>
         </div>
-        <p class="text-gray-600 mb-6">Template: <strong>{{ template.template_name }}</strong></p>
+    </div>
 
-        <form method="POST" class="space-y-8">
-            <!-- Company information -->
-            <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded mb-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                    <i class="fas fa-building text-indigo-600 mr-2"></i>
-                    Company Information
-                </h3>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Company Name <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="company_name" required value="{{ template.company_name or ' ' }}"
-                            placeholder="e.g., ABC Pharmaceuticals Limited"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+    <form method="POST" class="space-y-12">
+
+        <!-- Phase 1: Organizational Context -->
+        <section class="card-premium overflow-hidden">
+            <div class="px-8 py-5 border-b border-slate-100 bg-indigo-50/30 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-xs shadow-soft border border-indigo-200">
+                        <i class="fas fa-building"></i>
                     </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Company Address <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="company_address" required value="{{ template.company_address or '' }}"
-                            placeholder="e.g., 123 Pharma St, Industrial Area, City, Country"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            city <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="company_city" required value="{{ template.company_city or '' }}"
-                            placeholder="e.g., Nurpur"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            state <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="company_state" required value="{{ template.company_state or '' }}"
-                            placeholder="e.g., Himachal Pradesh"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Country <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="company_country" required
-                            value="{{ template.company_country or 'India' }}" placeholder="e.g., India"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            pincode <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="company_pincode" required value="{{ template.company_pincode or '' }}"
-                            placeholder="e.g., 174303"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                    </div>
+                    <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">Organizational Context</h2>
                 </div>
+                <span
+                    class="text-[9px] font-black text-indigo-600 uppercase bg-white px-2 py-1 rounded-full border border-indigo-100">Step
+                    01</span>
             </div>
 
-            <!-- Product Information -->
-            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                    <i class="fas fa-info-circle text-blue-600 mr-2"></i>
-                    Product Information
-                </h3>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Product Name <span class="text-red-500">*</span>
-                        </label>
+            <div class="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 space-y-2">
+                    <label class="label-saas">Full Legal Entity Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="company_name" required value="{{ template.company_name or '' }}"
+                        class="input-saas" placeholder="e.g. Kwality Pharmaceuticals Limited">
+                </div>
+                <div class="space-y-2">
+                    <label class="label-saas">Registered Office Address <span class="text-red-500">*</span></label>
+                    <input type="text" name="company_address" required value="{{ template.company_address or '' }}"
+                        class="input-saas" placeholder="Detailed facility address">
+                </div>
+                <div class="space-y-2">
+                    <label class="label-saas">City / Location <span class="text-red-500">*</span></label>
+                    <input type="text" name="company_city" required value="{{ template.company_city or '' }}"
+                        class="input-saas" placeholder="e.g. Amritsar">
+                </div>
+                <div class="space-y-2">
+                    <label class="label-saas">State / Province <span class="text-red-500">*</span></label>
+                    <input type="text" name="company_state" required value="{{ template.company_state or '' }}"
+                        class="input-saas" placeholder="e.g. Punjab">
+                </div>
+                <div class="space-y-2">
+                    <label class="label-saas">Country <span class="text-red-500">*</span></label>
+                    <input type="text" name="company_country" required value="{{ template.company_country or 'India' }}"
+                        class="input-saas" placeholder="e.g. India">
+                </div>
+                <div class="space-y-2">
+                    <label class="label-saas">Postal Code <span class="text-red-500">*</span></label>
+                    <input type="text" name="company_pincode" required value="{{ template.company_pincode or '' }}"
+                        class="input-saas" placeholder="e.g. 143001">
+                </div>
+            </div>
+        </section>
+
+        <!-- Phase 2: Product & Batch Matrix -->
+        <section class="card-premium overflow-hidden">
+            <div class="px-8 py-5 border-b border-slate-100 bg-blue-50/30 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xs shadow-soft border border-blue-200">
+                        <i class="fas fa-vial"></i>
+                    </div>
+                    <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">Product & Validation Matrix
+                    </h2>
+                </div>
+                <span
+                    class="text-[9px] font-black text-blue-600 uppercase bg-white px-2 py-1 rounded-full border border-blue-100">Step
+                    02</span>
+            </div>
+
+            <div class="p-8 space-y-10">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div class="lg:col-span-2 space-y-2">
+                        <label class="label-saas">Product Commercial Name <span class="text-red-500">*</span></label>
                         <input type="text" name="product_name" required value="{{ template.product_name or '' }}"
-                            placeholder="e.g., Fluorouracil Injection BP 50mg/ml"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            class="input-saas font-black" placeholder="e.g. Metformin Hydrochloride 500mg">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Protocol Number <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="protocol_number" required placeholder="e.g., PVP/001/2024"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <div class="space-y-2">
+                        <label class="label-saas">Protocol System Number <span class="text-red-500">*</span></label>
+                        <input type="text" name="protocol_number" required class="input-saas"
+                            placeholder="PVP/XXX/2024">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Batch Size <span class="text-red-500">*</span>
-                        </label>
+                    <div class="space-y-2">
+                        <label class="label-saas">Theoretical Batch Size <span class="text-red-500">*</span></label>
                         <input type="text" name="batch_size" required value="{{ template.batch_size or '' }}"
-                            placeholder="e.g., 50.0 Liters / 2500 units"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            class="input-saas" placeholder="e.g. 100,000 units">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Manufacturing Site <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="manufacturing_site" required placeholder="e.g., Plant 1, Block A"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <div class="space-y-2">
+                        <label class="label-saas">Manufacturing Site / Unit <span class="text-red-500">*</span></label>
+                        <input type="text" name="manufacturing_site" required class="input-saas"
+                            placeholder="Detailed unit location">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Validation Type <span class="text-red-500">*</span>
-                        </label>
-                        <select name="validation_type" required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="Prospective">Prospective</option>
-                            <option value="Concurrent">Concurrent</option>
-                            <option value="Retrospective">Retrospective</option>
-                        </select>
+                    <div class="space-y-2">
+                        <label class="label-saas">Validation Strategy <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <select name="validation_type" required class="input-saas appearance-none">
+                                <option value="Prospective">Prospective</option>
+                                <option value="Concurrent">Concurrent</option>
+                                <option value="Retrospective">Retrospective</option>
+                            </select>
+                            <div
+                                class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                                <i class="fas fa-chevron-down text-[10px]"></i>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Number of Batches <span class="text-red-500">*</span>
-                        </label>
-                        <select id="batch-count"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="3" selected>3 Batches (Recommended)</option>
-                            <option value="2">2 Batches</option>
-                            <option value="1">1 Batch</option>
-                            <option value="4">4 Batches</option>
-                            <option value="5">5 Batches</option>
-                        </select>
+                    <div class="space-y-2">
+                        <label class="label-saas">Execution Batch Count <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <select id="batch-count" class="input-saas appearance-none">
+                                <option value="1">1 Batch Trial</option>
+                                <option value="2">2 Batches Pilot</option>
+                                <option value="3" selected>3 Batches (Gold Standard)</option>
+                                <option value="4">4 Batches Extended</option>
+                                <option value="5">5 Batches Scale-up</option>
+                            </select>
+                            <div
+                                class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                                <i class="fas fa-chevron-down text-[10px]"></i>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Approval Personnel -->
-            <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                    <i class="fas fa-user-check text-green-600 mr-2"></i>
-                    Approval Personnel
-                </h3>
-                <div class="grid md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Prepared By <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="prepared_by" required placeholder="Name & Designation"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Checked By <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="checked_by" required placeholder="Name & Designation"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Approved By <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="approved_by" required placeholder="Name & Designation"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <div class="lg:col-span-4 bg-slate-50 border border-slate-100 rounded-2xl p-6">
+                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Batch Identity
+                            Tracking</h4>
+                        <div id="batch-numbers-container" class="space-y-4">
+                            <!-- Dynamic Batch Inputs -->
+                        </div>
                     </div>
                 </div>
             </div>
+        </section>
 
-            <!-- Batch Numbers -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                    <i class="fas fa-vials text-purple-600 mr-2"></i>
-                    Batch Details
-                </h3>
-                <div id="batch-numbers-container" class="space-y-4">
-                    <!-- Batch inputs will be generated here -->
+        <!-- Phase 3: Analytical Execution -->
+        <section class="card-premium overflow-hidden">
+            <div class="px-8 py-5 border-b border-slate-100 bg-emerald-50/30 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-xs shadow-soft border border-emerald-200">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">Analytical Test Execution
+                    </h2>
                 </div>
+                <span
+                    class="text-[9px] font-black text-emerald-600 uppercase bg-white px-2 py-1 rounded-full border border-emerald-100">Step
+                    03</span>
             </div>
 
-            <!-- Test Results Table -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                    <i class="fas fa-flask text-orange-600 mr-2"></i>
-                    Test Results
-                </h3>
+            <div class="p-0">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white border border-gray-300 rounded-lg" id="results-table">
+                    <table class="w-full text-left border-collapse" id="results-table">
                         <thead>
-                            <tr class="bg-gray-800 text-white">
-                                <th class="px-4 py-3 text-left">Test Parameter</th>
-                                <th class="px-4 py-3 text-left">Acceptance Criteria</th>
-                                <th class="px-4 py-3 text-center batch-header" colspan="3">Batch Results</th>
+                            <tr class="bg-white border-b border-slate-100">
+                                <th
+                                    class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-1/4">
+                                    Specification Parameter</th>
+                                <th
+                                    class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-1/4">
+                                    Acceptance Limit</th>
+                                <th id="batch-header-container"
+                                    class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center"
+                                    colspan="3">Execution Results (By Batch)</th>
                             </tr>
-                            <tr class="bg-gray-700 text-white" id="batch-header-row">
+                            <tr class="bg-slate-50/50 border-b border-slate-50" id="batch-header-row">
                                 <th colspan="2"></th>
-                                <!-- Batch column headers will be generated here -->
+                                <!-- Dynamic Header Columns -->
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="divide-y divide-slate-50">
                             {% for criterion in criteria %}
-                            <tr class="border-t hover:bg-gray-50">
-                                <td class="px-4 py-3 font-medium text-gray-800">
-                                    {{ criterion.test_name }}
+                            <tr class="hover:bg-slate-50/30 transition-colors">
+                                <td class="px-8 py-6">
+                                    <p class="text-sm font-black text-slate-900 leading-tight">{{ criterion.test_name }}
+                                    </p>
                                 </td>
-                                <td class="px-4 py-3 text-gray-600 text-sm">
-                                    {{ criterion.acceptance_criteria }}
+                                <td class="px-8 py-6">
+                                    <span
+                                        class="inline-flex px-2 py-1 bg-white border border-slate-100 text-[10px] font-bold text-slate-500 rounded">
+                                        {{ criterion.acceptance_criteria }}
+                                    </span>
                                 </td>
-                                <!-- Batch result inputs will be generated here -->
-                                <td class="batch-input-cell" data-test-id="{{ criterion.test_id }}"></td>
+                                <td class="batch-input-cell hidden" data-test-id="{{ criterion.test_id }}"></td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
+        </section>
 
-            <!-- Info Box -->
-            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+        <!-- Phase 4: Authorized Signatories -->
+        <section class="card-premium overflow-hidden">
+            <div class="px-8 py-5 border-b border-slate-100 bg-orange-50/30 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center text-xs shadow-soft border border-orange-200">
+                        <i class="fas fa-signature"></i>
                     </div>
-                    <div class="ml-3">
-                        <p class="text-sm text-yellow-700">
-                            <strong>Important:</strong> Enter actual test results for each batch.
-                            All fields must be filled before generating the report.
-                        </p>
-                    </div>
+                    <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">Authorized Signatories</h2>
+                </div>
+                <span
+                    class="text-[9px] font-black text-orange-600 uppercase bg-white px-2 py-1 rounded-full border border-orange-100">Step
+                    04</span>
+            </div>
+
+            <div class="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="space-y-2">
+                    <label class="label-saas">Prepared By <span class="text-red-500">*</span></label>
+                    <input type="text" name="prepared_by" required class="input-saas"
+                        placeholder="Name & Qualification">
+                </div>
+                <div class="space-y-2">
+                    <label class="label-saas">Technical Reviewer <span class="text-red-500">*</span></label>
+                    <input type="text" name="checked_by" required class="input-saas" placeholder="Name & Qualification">
+                </div>
+                <div class="space-y-2">
+                    <label class="label-saas">QA / Head Authorization <span class="text-red-500">*</span></label>
+                    <input type="text" name="approved_by" required class="input-saas"
+                        placeholder="Name & Qualification">
                 </div>
             </div>
+        </section>
 
-            <!-- Submit Buttons -->
-            <div class="flex gap-4">
-                <button type="submit"
-                    class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center">
-                    <i class="fas fa-file-pdf mr-2"></i>
-                    Generate PVR Report
-                </button>
-                <a href="{{ url_for('pv.view_pvp_template', template_id=template.id) }}"
-                    class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition duration-200">
-                    Cancel
-                </a>
+        <!-- Critical Notice -->
+        <div class="flex items-center gap-4 p-6 bg-amber-50 border border-amber-100 rounded-[2rem] text-amber-800">
+            <div
+                class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-amber-600 shadow-soft flex-shrink-0">
+                <i class="fas fa-triangle-exclamation"></i>
             </div>
-        </form>
-    </div>
-</div>
+            <div class="text-xs font-medium leading-relaxed">
+                <p class="font-black uppercase tracking-widest mb-1">Compliance Confirmation</p>
+                By generating this report, you confirm that all entered data reflects actual analytical observations.
+                The integrity of this record is governed by GxP standards.
+            </div>
+        </div>
 
+        <!-- Actions -->
+        <div class="flex flex-col sm:flex-row gap-4 pt-6">
+            <button type="submit" class="flex-1 btn-primary-saas py-5 text-xs shadow-2xl shadow-indigo-100">
+                <i class="fas fa-file-pdf mr-2"></i>
+                Commit Data & Generate Validation Report
+            </button>
+            <a href="{{ url_for('pv.view_pvp_template', template_id=template.id) }}"
+                class="sm:w-32 flex items-center justify-center text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-red-500 transition-colors">
+                Abort
+            </a>
+        </div>
+
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
-    // Dynamic batch management
+    // Pure logic preserved, UI modernized via Class injection
     const batchCountSelect = document.getElementById('batch-count');
     const batchNumbersContainer = document.getElementById('batch-numbers-container');
     const batchHeaderRow = document.getElementById('batch-header-row');
-    const batchInputCells = document.querySelectorAll('.batch-input-cell');
+    const batchHeaderContainer = document.getElementById('batch-header-container');
 
     function updateBatches() {
         const count = parseInt(batchCountSelect.value);
+        batchHeaderContainer.colSpan = count;
 
-        // Update batch number inputs with detailed fields
+        // Update Batch Identity Tracking Inputs
         batchNumbersContainer.innerHTML = '';
         for (let i = 1; i <= count; i++) {
             const div = document.createElement('div');
-            div.className = 'bg-purple-50 border border-purple-200 rounded-lg p-4';
+            div.className = 'grid grid-cols-1 md:grid-cols-3 gap-4 items-end bg-white p-6 rounded-2xl shadow-soft border border-slate-50 animate-in fade-in slide-in-from-left-2 duration-300';
             div.innerHTML = `
-            <h4 class="font-semibold text-gray-800 mb-3 text-lg">Batch ${i}</h4>
-            <div class="grid md:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Batch Number <span class="text-red-500">*</span>
-                    </label>
-                    <input 
-                        type="text" 
-                        name="batch_${i}_number" 
-                        required
-                        placeholder="e.g., FLU-001-2024"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    >
+                <div class="space-y-1.5">
+                   <p class="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Entity Unit ${i}</p>
+                   <label class="label-saas">Batch Number <span class="text-red-500">*</span></label>
+                   <input type="text" name="batch_${i}_number" required class="input-saas py-2.5 text-xs" placeholder="e.g. BTH-${i}-2024">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Manufacturing Date <span class="text-red-500">*</span>
-                    </label>
-                    <input 
-                        type="date" 
-                        name="batch_${i}_date" 
-                        required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    >
+                <div class="space-y-1.5">
+                   <label class="label-saas">Manufacturing Date <span class="text-red-500">*</span></label>
+                   <input type="date" name="batch_${i}_date" required class="input-saas py-2.5 text-xs">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Batch Size
-                    </label>
-                    <input 
-                        type="text" 
-                        name="batch_${i}_size" 
-                        placeholder="e.g., 50.0 L"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    >
+                <div class="space-y-1.5">
+                   <label class="label-saas">Actual Yield / Size</label>
+                   <input type="text" name="batch_${i}_size" class="input-saas py-2.5 text-xs" placeholder="In units/Liters">
                 </div>
-            </div>
-        `;
+            `;
             batchNumbersContainer.appendChild(div);
         }
 
-        // Update table headers
+        // Update Table Headers
         batchHeaderRow.innerHTML = '<th colspan="2"></th>';
         for (let i = 1; i <= count; i++) {
             const th = document.createElement('th');
-            th.className = 'px-4 py-2 text-center text-white';
-            th.textContent = `Batch ${i}`;
+            th.className = 'px-8 py-3 text-center text-[9px] font-black text-slate-500 uppercase tracking-widest border-l border-slate-100';
+            th.textContent = `Batch 0${i}`;
             batchHeaderRow.appendChild(th);
         }
 
-        // Update result input cells
-        batchInputCells.forEach(cell => {
-            const testId = cell.dataset.testId;
-            const tr = cell.parentElement;
+        // Update Body Results Inputs
+        const rows = document.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const testId = row.querySelector('.batch-input-cell').dataset.testId;
+            // Remove old dynamic columns
+            const oldDyn = row.querySelectorAll('.dynamic-batch-cell');
+            oldDyn.forEach(c => c.remove());
 
-            // Remove existing batch cells
-            const existingCells = tr.querySelectorAll('.batch-input-cell');
-            existingCells.forEach(c => c.remove());
-
-            // Add new batch input cells
+            // Add new dynamic columns
             for (let i = 1; i <= count; i++) {
                 const td = document.createElement('td');
-                td.className = 'px-4 py-3 batch-input-cell';
+                td.className = 'px-4 py-4 dynamic-batch-cell border-l border-slate-50';
                 td.innerHTML = `
-                <input 
-                    type="text" 
-                    name="result_${testId}_BATCH${i}" 
-                    required
-                    placeholder="Result ${i}"
-                    class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-transparent text-center"
-                    data-batch-index="${i}"
-                >
-            `;
-                tr.appendChild(td);
+                   <input type="text" name="result_${testId}_BATCH${i}" required 
+                      class="w-full text-center py-2 px-3 border border-slate-100 rounded-lg text-xs font-black text-slate-900 bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 placeholder-slate-200 transition-all" 
+                      placeholder="Obs." data-batch-index="${i}">
+                `;
+                row.appendChild(td);
             }
         });
     }
 
-    // Update batch numbers based on form submission
-    document.querySelector('form').addEventListener('submit', function (e) {
-        const batchInputs = document.querySelectorAll('input[name="batch_number[]"]');
-        const batchNumbers = Array.from(batchInputs).map(input => input.value);
+    // Initialize
+    batchCountSelect.addEventListener('change', updateBatches);
+    updateBatches();
 
-        // Update all result input names with actual batch numbers
+    // Data Binding for Final Submission
+    document.querySelector('form').addEventListener('submit', function (e) {
+        const batchInputs = [];
+        for (let i = 1; i <= batchCountSelect.value; i++) {
+            batchInputs.push(document.querySelector(`input[name="batch_${i}_number"]`));
+        }
+
         batchInputs.forEach((input, index) => {
             const batchNo = input.value;
             const allResultInputs = document.querySelectorAll(`input[data-batch-index="${index + 1}"]`);
-
-            allResultInputs.forEach(resultInput => {
-                const currentName = resultInput.name;
-                const testId = currentName.split('_')[1];
-                resultInput.name = `result_${testId}_${batchNo}`;
+            allResultInputs.forEach(resInp => {
+                const testId = resInp.name.split('_')[1];
+                resInp.name = `result_${testId}_${batchNo}`;
             });
         });
     });
-
-    // Initialize with default batch count
-    batchCountSelect.addEventListener('change', updateBatches);
-    updateBatches();
 
     function fillPVRDemo() {
         const data = {
@@ -384,41 +384,32 @@
             'approved_by': 'Robert Brown - Head QA'
         };
 
-        // Fill basic fields
         for (const [key, value] of Object.entries(data)) {
             const el = document.querySelector(`input[name="${key}"], select[name="${key}"]`);
             if (el) {
                 el.value = value;
-                el.style.backgroundColor = '#fffbeb';
+                el.classList.add('bg-amber-50');
             }
         }
 
-        // Set batch count to 3
         batchCountSelect.value = "3";
         updateBatches();
 
-        // Fill batch info
-        for (let i = 1; i <= 3; i++) {
-            const num = document.querySelector(`input[name="batch_${i}_number"]`);
-            const date = document.querySelector(`input[name="batch_${i}_date"]`);
-            const bsize = document.querySelector(`input[name="batch_${i}_size"]`);
-            if (num) num.value = `MET-B${i}-24`;
-            if (date) date.value = new Date().toISOString().split('T')[0];
-            if (bsize) bsize.value = '2,50,000 units';
-        }
+        setTimeout(() => {
+            for (let i = 1; i <= 3; i++) {
+                const num = document.querySelector(`input[name="batch_${i}_number"]`);
+                const date = document.querySelector(`input[name="batch_${i}_date"]`);
+                const bsize = document.querySelector(`input[name="batch_${i}_size"]`);
+                if (num) { num.value = `MET-B${i}-24`; num.classList.add('bg-amber-50'); }
+                if (date) { date.value = new Date().toISOString().split('T')[0]; date.classList.add('bg-amber-50'); }
+                if (bsize) { bsize.value = '2,50,000 units'; bsize.classList.add('bg-amber-50'); }
+            }
 
-        // Fill table results
-        const resultInputs = document.querySelectorAll('input[name^="result_"]');
-        resultInputs.forEach(input => {
-            input.value = "Complies";
-            input.style.backgroundColor = '#fffbeb';
-        });
-
-        if (window.showNotification) {
-            showNotification('PVR demo data filled!', 'success');
-        } else {
-            alert('PVR demo data filled!');
-        }
+            document.querySelectorAll('input[name^="result_"]').forEach(input => {
+                input.value = "Complies";
+                input.classList.add('bg-amber-50');
+            });
+        }, 100);
     }
 </script>
 {% endblock %}

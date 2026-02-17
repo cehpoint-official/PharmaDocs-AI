@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
+
 <body class="bg-light">
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
@@ -92,7 +94,7 @@
                                 <td><strong>Parameters to Validate:</strong></td>
                                 <td>
                                     {% for param in metadata.get('parameters_to_validate', []) %}
-                                        <span class="badge bg-info me-1">{{ param.replace('_', ' ').title() }}</span>
+                                    <span class="badge bg-info me-1">{{ param.replace('_', ' ').title() }}</span>
                                     {% endfor %}
                                 </td>
                             </tr>
@@ -100,7 +102,7 @@
                                 <td><strong>Validation Parameters:</strong></td>
                                 <td>
                                     {% for param in metadata.get('validation_params', []) %}
-                                        <span class="badge bg-success me-1">{{ param.replace('_', ' ').title() }}</span>
+                                    <span class="badge bg-success me-1">{{ param.replace('_', ' ').title() }}</span>
                                     {% endfor %}
                                 </td>
                             </tr>
@@ -144,8 +146,8 @@
                                     <i class="fas fa-file-word text-primary fa-2x mb-2"></i>
                                     <h6 class="card-title">STP File</h6>
                                     <p class="card-text text-muted small">Word Document</p>
-                                    <a href="{{ document.stp_file_url }}" 
-                                       class="btn btn-outline-primary btn-sm" target="_blank">
+                                    <a href="{{ document.stp_file_url }}" class="btn btn-outline-primary btn-sm"
+                                        target="_blank">
                                         <i class="fas fa-download me-1"></i>Download
                                     </a>
                                 </div>
@@ -160,8 +162,8 @@
                                     <i class="fas fa-file-pdf text-danger fa-2x mb-2"></i>
                                     <h6 class="card-title">Method Analysis</h6>
                                     <p class="card-text text-muted small">PDF Document</p>
-                                    <a href="{{ document.method_analysis_file_url }}" 
-                                       class="btn btn-outline-primary btn-sm" target="_blank">
+                                    <a href="{{ document.method_analysis_file_url }}"
+                                        class="btn btn-outline-primary btn-sm" target="_blank">
                                         <i class="fas fa-download me-1"></i>Download
                                     </a>
                                 </div>
@@ -176,8 +178,8 @@
                                     <i class="fas fa-file-excel text-success fa-2x mb-2"></i>
                                     <h6 class="card-title">Raw Data</h6>
                                     <p class="card-text text-muted small">Excel/CSV File</p>
-                                    <a href="{{ document.raw_data_url }}" 
-                                       class="btn btn-outline-primary btn-sm" target="_blank">
+                                    <a href="{{ document.raw_data_url }}" class="btn btn-outline-primary btn-sm"
+                                        target="_blank">
                                         <i class="fas fa-download me-1"></i>Download
                                     </a>
                                 </div>
@@ -201,8 +203,8 @@
                         </div>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="{{ url_for('amv_bp.download_amv_report', document_id=document.id) }}" 
-                           class="btn btn-success">
+                        <a href="{{ url_for('amv_bp.download_amv_report', document_id=document.id) }}"
+                            class="btn btn-success">
                             <i class="fas fa-download me-2"></i>Download Report
                         </a>
                         <button class="btn btn-outline-primary" onclick="regenerateReport()">
@@ -224,9 +226,11 @@
                     </div>
                     <div class="d-flex gap-2">
                         {% if not document.generated_doc_url %}
-                        <form method="POST" action="{{ url_for('amv_bp.generate_amv_report', document_id=document.id) }}" 
-                              style="display: inline;">
-                            <button type="submit" class="btn btn-success" onclick="return confirm('Generate AMV Report? This will create a comprehensive validation report.')">
+                        <form method="POST"
+                            action="{{ url_for('amv_bp.generate_amv_report', document_id=document.id) }}"
+                            style="display: inline;">
+                            <button type="submit" class="btn btn-success"
+                                onclick="return confirm('Generate AMV Report? This will create a comprehensive validation report.')">
                                 <i class="fas fa-chart-line me-2"></i>Generate Report
                             </button>
                         </form>
@@ -246,16 +250,17 @@
 
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="position-fixed top-0 end-0 p-3" style="z-index: 1050;">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
+    {% if messages %}
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1050;">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
+            role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
     {% endwith %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -267,7 +272,7 @@
                 const originalText = btn.innerHTML;
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Regenerating...';
-                
+
                 // Submit form
                 const form = document.createElement('form');
                 form.method = 'POST';
@@ -305,4 +310,5 @@
     </script>
 
 </body>
+
 </html>

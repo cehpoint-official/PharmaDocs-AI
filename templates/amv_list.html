@@ -1,371 +1,191 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMV Documents - PharmaDocs AI</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        .card-hover:hover {
-            transform: translateY(-2px);
-            transition: transform 0.2s ease-in-out;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-        }
-        .status-badge {
-            font-size: 0.7rem;
-        }
-        .document-card {
-            border-left: 4px solid #0d6efd;
-        }
-        .truncate-2-lines {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-    </style>
-</head>
-<body class="bg-light">
+{% extends "base.html" %}
+{% block title %}AMV Documents - PharmaDocs AI Platform{% endblock %}
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('dashboard.user_dashboard') }}">
-                <i class="fas fa-microscope me-2"></i>PharmaDocs AI
+{% block content %}
+<div class="max-w-full mx-auto px-4 py-6">
+
+    <!-- Header Section -->
+    <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
+        <div>
+            <div class="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase mb-1">
+                <a href="{{ url_for('dashboard.user_dashboard') }}" class="hover:text-blue-700">APP</a>
+                <i class="fas fa-chevron-right text-[7px]"></i>
+                <span class="text-blue-700">Analytical Method Validation</span>
+            </div>
+            <h1 class="text-xl font-bold text-gray-900 leading-none">AMV Document Registry</h1>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('amv_bp.list_amv_verification_documents') }}"
+                class="px-3 py-1.5 bg-gray-50 text-gray-600 border border-gray-200 rounded text-[10px] font-bold uppercase transition-all">
+                <i class="fas fa-file-contract mr-1"></i> VERIFICATION PROTOCOLS
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <div class="navbar-nav ms-auto">
-                    <a class="nav-link" href="{{ url_for('dashboard.user_dashboard') }}">
-                        <i class="fas fa-home me-1"></i>Dashboard
-                    </a>
-                    <a class="nav-link" href="{{ url_for('amv_bp.create_amv_form') }}">
-                        <i class="fas fa-plus me-1"></i>Create AMV
-                    </a>
-                    <a class="nav-link" href="{{ url_for('amv_bp.list_amv_verification_documents') }}">
-                        <i class="fas fa-file-contract me-1"></i>Verification Protocols
-                    </a>
-                </div>
-            </div>
+            <a href="{{ url_for('amv_bp.create_amv_form') }}"
+                class="px-3 py-1.5 bg-blue-700 text-white rounded text-[10px] font-bold uppercase hover:bg-blue-800 transition-all">
+                <i class="fas fa-plus mr-1"></i> NEW AMV DOCUMENT
+            </a>
         </div>
-    </nav>
-
-    <div class="container mt-4 mb-5">
-        <!-- Header Section -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="text-primary mb-1">
-                    <i class="fas fa-microscope me-2"></i>AMV Documents
-                </h2>
-                <p class="text-muted mb-0">Manage your Analytical Method Validation documents and reports</p>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{{ url_for('amv_bp.list_amv_verification_documents') }}" class="btn btn-outline-primary">
-                    <i class="fas fa-file-contract me-2"></i>Verification Protocols
-                </a>
-                <a href="{{ url_for('amv_bp.create_amv_form') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>Create New AMV
-                </a>
-            </div>
-        </div>
-
-        <!-- Statistics Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card bg-primary text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h4 class="mb-0">{{ documents|length }}</h4>
-                                <small>Total Documents</small>
-                            </div>
-                            <div class="align-self-center">
-                                <i class="fas fa-file-alt fa-2x opacity-50"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-success text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h4 class="mb-0">{{ documents|selectattr('status', 'equalto', 'generated')|list|length }}</h4>
-                                <small>Generated Reports</small>
-                            </div>
-                            <div class="align-self-center">
-                                <i class="fas fa-check-circle fa-2x opacity-50"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-warning text-dark">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h4 class="mb-0">{{ documents|selectattr('status', 'equalto', 'draft')|list|length }}</h4>
-                                <small>Draft Documents</small>
-                            </div>
-                            <div class="align-self-center">
-                                <i class="fas fa-edit fa-2x opacity-50"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-info text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h4 class="mb-0">{{ documents|selectattr('status', 'equalto', 'completed')|list|length }}</h4>
-                                <small>Completed</small>
-                            </div>
-                            <div class="align-self-center">
-                                <i class="fas fa-chart-line fa-2x opacity-50"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Documents Grid -->
-        {% if documents %}
-        <div class="row">
-            {% for document in documents %}
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card h-100 shadow-sm border-0 document-card card-hover">
-                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0 text-truncate" title="{{ document.title }}">
-                            {{ document.title }}
-                        </h6>
-                        <span class="badge status-badge bg-{% if document.status == 'generated' %}success{% elif document.status == 'completed' %}info{% elif document.status == 'draft' %}warning{% else %}secondary{% endif %}">
-                            {{ document.status.title() }}
-                        </span>
-                    </div>
-                    
-                    <div class="card-body">
-                        <!-- Document Number -->
-                        <div class="mb-3">
-                            <small class="text-muted d-block">Document Number:</small>
-                            <strong class="text-primary">{{ document.document_number or 'Not assigned' }}</strong>
-                        </div>
-                        
-                        <!-- Product Information -->
-                        {% if document.document_metadata %}
-                        {% set metadata = document.document_metadata %}
-                        {% if metadata is string %}
-                            {% set metadata = metadata | from_json %}
-                        {% endif %}
-                    {% else %}
-                        {% set metadata = {} %}
-                    {% endif %}
-                    
-                    {% if metadata.product_name %}
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Product:</small>
-                        <div class="fw-bold truncate-2-lines" title="{{ metadata.product_name }}">
-                            {{ metadata.product_name }}
-                        </div>
-                    </div>
-                    {% endif %}
-                        
-                        <!-- Active Ingredient -->
-                        {% if metadata.get('active_ingredient') %}
-                        <div class="mb-3">
-                            <small class="text-muted d-block">Active Ingredient:</small>
-                            <div class="fw-bold truncate-2-lines" title="{{ metadata.active_ingredient }}">
-                                {{ metadata.active_ingredient }}
-                            </div>
-                        </div>
-                        {% endif %}
-                        
-                        <!-- Instrument Type -->
-                        {% if metadata.get('instrument_type') %}
-                        <div class="mb-3">
-                            <small class="text-muted d-block">Instrument:</small>
-                            <div>
-                                <span class="badge bg-secondary">{{ metadata.instrument_type.upper() }}</span>
-                            </div>
-                        </div>
-                        {% endif %}
-                        
-                        <!-- Creation Date -->
-                        <div class="mb-3">
-                            <small class="text-muted d-block">Created:</small>
-                            <div>
-                                <i class="far fa-calendar me-1 text-muted"></i>
-                                {{ document.created_at.strftime('%d/%m/%Y %H:%M') }}
-                            </div>
-                        </div>
-                        
-                        <!-- Generated Status -->
-                        {% if document.generated_doc_url %}
-                        <div class="alert alert-success py-2 mb-0">
-                            <i class="fas fa-check-circle me-1"></i>
-                            <small>Report Generated and Ready</small>
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Card Footer with Actions -->
-                    <div class="card-footer bg-transparent border-top-0 pt-0">
-                        <div class="d-flex justify-content-between align-items-center gap-2">
-                            <!-- View Button -->
-                            <a href="{{ url_for('amv_bp.view_amv', document_id=document.id) }}" 
-                               class="btn btn-outline-primary btn-sm flex-fill">
-                                <i class="fas fa-eye me-1"></i>View
-                            </a>
-                            
-                            <!-- Generate/Download Button -->
-                            {% if document.generated_doc_url %}
-                            <a href="{{ url_for('amv_bp.download_amv_report', document_id=document.id) }}" 
-                               class="btn btn-success btn-sm flex-fill">
-                                <i class="fas fa-download me-1"></i>Download
-                            </a>
-                            {% else %}
-                            <form method="POST" action="{{ url_for('amv_bp.generate_amv_report', document_id=document.id) }}" 
-                                  class="flex-fill" style="min-width: 0;">
-                                <button type="submit" class="btn btn-warning btn-sm w-100" 
-                                        onclick="return confirm('Generate AMV Report for {{ document.title }}?')">
-                                    <i class="fas fa-chart-line me-1"></i>Generate
-                                </button>
-                            </form>
-                            {% endif %}
-                            
-                            <!-- Dropdown Menu -->
-                            <div class="dropdown">
-                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
-                                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li>
-                                        <a class="dropdown-item" href="{{ url_for('amv_bp.view_amv', document_id=document.id) }}">
-                                            <i class="fas fa-eye me-2"></i>View Details
-                                        </a>
-                                    </li>
-                                    {% if document.generated_doc_url %}
-                                    <li>
-                                        <a class="dropdown-item" href="{{ url_for('amv_bp.download_amv_report', document_id=document.id) }}">
-                                            <i class="fas fa-download me-2"></i>Download Report
-                                        </a>
-                                    </li>
-                                    {% else %}
-                                    <li>
-                                        <form method="POST" action="{{ url_for('amv_bp.generate_amv_report', document_id=document.id) }}">
-                                            <button type="submit" class="dropdown-item" 
-                                                    onclick="return confirm('Generate AMV Report?')">
-                                                <i class="fas fa-chart-line me-2"></i>Generate Report
-                                            </button>
-                                        </form>
-                                    </li>
-                                    {% endif %}
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li>
-                                        <a class="dropdown-item text-danger" href="#" 
-                                           onclick="deleteDocument({{ document.id }}, '{{ document.title }}')">
-                                            <i class="fas fa-trash me-2"></i>Delete Document
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <!-- Empty State -->
-        <div class="text-center py-5">
-            <div class="py-5">
-                <i class="fas fa-microscope fa-4x text-muted mb-4 opacity-50"></i>
-                <h4 class="text-muted mb-3">No AMV Documents Found</h4>
-                <p class="text-muted mb-4">Create your first Analytical Method Validation document to get started with method verification and reporting.</p>
-                <div class="d-flex justify-content-center gap-3">
-                    <a href="{{ url_for('amv_bp.create_amv_form') }}" class="btn btn-primary btn-lg">
-                        <i class="fas fa-plus me-2"></i>Create AMV Document
-                    </a>
-                    <a href="{{ url_for('amv_bp.amv_verification_protocol_page') }}" class="btn btn-outline-primary btn-lg">
-                        <i class="fas fa-file-contract me-2"></i>Create Protocol
-                    </a>
-                </div>
-            </div>
-        </div>
-        {% endif %}
     </div>
 
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="position-fixed top-0 end-0 p-3" style="z-index: 1050;">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show" role="alert">
-                        <div class="d-flex align-items-center">
-                            <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} me-2"></i>
-                            <div>{{ message }}</div>
-                        </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
+    <!-- Statistics Overview (Mirror Dashboard) -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
+        <div class="bg-white p-2.5 rounded border">
+            <p class="text-[9px] font-black text-gray-400 uppercase mb-1">Total Vault</p>
+            <div class="flex items-baseline gap-1">
+                <span class="text-lg font-bold text-gray-900">{{ documents|length }}</span>
+                <span class="text-[10px] text-gray-400 font-bold uppercase">Files</span>
             </div>
-        {% endif %}
-    {% endwith %}
+        </div>
+        <div class="bg-white p-2.5 rounded border border-l-4 border-l-emerald-500">
+            <p class="text-[9px] font-black text-gray-400 uppercase mb-1">Generated</p>
+            <div class="flex items-baseline gap-1">
+                <span class="text-lg font-bold text-emerald-600">{{ documents|selectattr('status', 'equalto',
+                    'generated')|list|length }}</span>
+                <span class="text-[10px] text-gray-400 font-bold uppercase">Reports</span>
+            </div>
+        </div>
+        <div class="bg-white p-2.5 rounded border border-l-4 border-l-amber-500">
+            <p class="text-[9px] font-black text-gray-400 uppercase mb-1">In Draft</p>
+            <div class="flex items-baseline gap-1">
+                <span class="text-lg font-bold text-amber-500">{{ documents|selectattr('status', 'equalto',
+                    'draft')|list|length }}</span>
+                <span class="text-[10px] text-gray-400 font-bold uppercase">Drafts</span>
+            </div>
+        </div>
+        <div class="bg-white p-2.5 rounded border border-l-4 border-l-blue-500">
+            <p class="text-[9px] font-black text-gray-400 uppercase mb-1">Finalized</p>
+            <div class="flex items-baseline gap-1">
+                <span class="text-lg font-bold text-blue-600">{{ documents|selectattr('status', 'equalto',
+                    'completed')|list|length }}</span>
+                <span class="text-[10px] text-gray-400 font-bold uppercase">Ready</span>
+            </div>
+        </div>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function deleteDocument(documentId, documentTitle) {
-            if (confirm(`Are you sure you want to delete "${documentTitle}"?\n\nThis action cannot be undone and all associated data will be permanently lost.`)) {
-                // Create a form and submit it for deletion
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = `/amv/${documentId}/delete`;
-                
-                // Add CSRF token if available
-                const csrfToken = document.querySelector('meta[name="csrf-token"]');
-                if (csrfToken) {
-                    const csrfInput = document.createElement('input');
-                    csrfInput.type = 'hidden';
-                    csrfInput.name = 'csrf_token';
-                    csrfInput.value = csrfToken.getAttribute('content');
-                    form.appendChild(csrfInput);
-                }
-                
-                document.body.appendChild(form);
-                form.submit();
+    <!-- Documents Grid -->
+    {% if documents %}
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {% for document in documents %}
+        <div
+            class="bg-white rounded border shadow-sm overflow-hidden hover:border-blue-300 transition-all group flex flex-col">
+            <div class="px-3 py-1.5 border-b bg-gray-50 flex items-center justify-between">
+                <span class="text-[9px] font-bold uppercase
+            {% if document.status == 'generated' %}text-emerald-700
+            {% elif document.status == 'completed' %}text-blue-700
+            {% elif document.status == 'draft' %}text-amber-700
+            {% else %}text-gray-600{% endif %}">
+                    ● {{ document.status }}
+                </span>
+                <div class="text-[9px] font-bold text-gray-400">REF: {{ document.document_number or 'GRP-T-000' }}</div>
+            </div>
+
+            <div class="p-3 flex-grow">
+                <h4 class="text-xs font-bold text-gray-900 leading-tight mb-3 line-clamp-2 min-h-[2rem]"
+                    title="{{ document.title }}">
+                    {{ document.title }}
+                </h4>
+
+                <div class="space-y-1 mb-3">
+                    {% if document.document_metadata %}
+                    {% set metadata = document.document_metadata %}
+                    {% if metadata is string %}{% set metadata = metadata | from_json %}{% endif %}
+
+                    {% if metadata.product_name %}
+                    <div class="flex items-center gap-1 text-[10px]">
+                        <i class="fas fa-pills text-gray-300 w-3"></i>
+                        <p class="font-bold text-gray-500 truncate">{{ metadata.product_name }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if metadata.instrument_type %}
+                    <div class="flex items-center gap-1 text-[10px]">
+                        <i class="fas fa-microscope text-gray-300 w-3"></i>
+                        <p class="font-bold text-gray-400 uppercase">{{ metadata.instrument_type }}</p>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
+                    <div class="flex items-center gap-1 text-[9px] text-gray-400">
+                        <i class="far fa-calendar w-3"></i>
+                        <span>MOD: {{ document.updated_at.strftime('%d/%m/%y') }}</span>
+                    </div>
+                </div>
+
+                {% if document.generated_doc_url %}
+                <div
+                    class="px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100/50 rounded flex items-center gap-1">
+                    <i class="fas fa-check-circle text-[8px]"></i>
+                    <span class="text-[9px] font-black uppercase">VAULT READY</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="px-3 py-2 bg-gray-50 border-t flex items-center gap-1">
+                <a href="{{ url_for('amv_bp.view_amv', document_id=document.id) }}"
+                    class="flex-1 py-1.5 bg-white border text-gray-600 rounded text-[9px] font-bold uppercase text-center hover:bg-gray-100 transition-all">
+                    VIEW
+                </a>
+
+                {% if document.generated_doc_url %}
+                <a href="{{ url_for('amv_bp.download_amv_report', document_id=document.id) }}"
+                    class="flex-1 py-1.5 bg-emerald-600 text-white rounded text-[9px] font-bold uppercase text-center hover:bg-emerald-700 transition-all">
+                    DL
+                </a>
+                {% else %}
+                <form method="POST" action="{{ url_for('amv_bp.generate_amv_report', document_id=document.id) }}"
+                    class="flex-1">
+                    <button type="submit"
+                        class="w-full py-1.5 bg-amber-500 text-white rounded text-[9px] font-bold uppercase text-center hover:bg-amber-600 transition-all"
+                        onclick="return confirm('Initiate AI report generation for {{ document.title }}?')">
+                        GEN
+                    </button>
+                </form>
+                {% endif %}
+
+                <button onclick="deleteDocument({{ document.id }}, '{{ document.title }}')"
+                    class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all">
+                    <i class="fas fa-trash-alt text-[10px]"></i>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="py-16 text-center bg-white rounded border border-dashed border-gray-300">
+        <div
+            class="w-12 h-12 bg-gray-50 text-gray-200 rounded-full flex items-center justify-center mx-auto mb-4 border">
+            <i class="fas fa-folder-open text-xl"></i>
+        </div>
+        <h3 class="text-sm font-bold text-gray-900">No AMV Protocols Recorded</h3>
+        <p class="text-gray-500 text-xs mt-1 mb-8">Begin document intake to initialize verification tracking.</p>
+        <a href="{{ url_for('amv_bp.create_amv_form') }}"
+            class="px-6 py-2 bg-blue-700 text-white rounded text-[10px] font-bold uppercase hover:bg-blue-800 transition-all">
+            NEW DOCUMENT
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function deleteDocument(documentId, documentTitle) {
+        if (confirm(`PERMANENT DELETION WARNING\n\nAre you sure you want to delete "${documentTitle}"?\nThis action is irreversible in the GxP vault.`)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/amv/${documentId}/delete`;
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = csrfToken.getAttribute('content');
+                form.appendChild(csrfInput);
             }
+
+            document.body.appendChild(form);
+            form.submit();
         }
-
-        // Auto-hide flash messages after 5 seconds
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(() => {
-                const alerts = document.querySelectorAll('.alert');
-                alerts.forEach(alert => {
-                    const bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                });
-            }, 5000);
-        });
-
-        // Add loading state for buttons
-        document.addEventListener('submit', function(e) {
-            if (e.target.matches('form')) {
-                const submitBtn = e.target.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
-                    submitBtn.disabled = true;
-                }
-            }
-        });
-    </script>
-
-</body>
-</html>
+    }
+</script>
+{% endblock %}

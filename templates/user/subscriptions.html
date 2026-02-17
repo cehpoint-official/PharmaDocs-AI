@@ -1,272 +1,257 @@
 {% extends "base.html" %}
-{% block title %}Subscription History - PharmaDocs AI{% endblock %}
+{% block title %}Audit Trail - Subscription History - PharmaDocs AI{% endblock %}
 
 {% block content %}
-<div class="px-6 py-6 max-w-6xl mx-auto">
-    <!-- Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Subscription & Payment History</h1>
-        <p class="text-gray-600">View your subscription details and payment history</p>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <!-- Header Section -->
+    <div class="mb-12">
+        <div class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+            <a href="{{ url_for('main.profile') }}" class="hover:text-indigo-600 transition-colors">User Identity</a>
+            <i class="fas fa-chevron-right text-[8px]"></i>
+            <span class="text-indigo-600 text-[10px]">Financial Audit Trail</span>
+        </div>
+        <h1 class="text-4xl font-display font-black text-slate-900 tracking-tight">Billing & Entitlements</h1>
+        <p class="text-sm font-medium text-slate-500 mt-2 max-w-2xl leading-relaxed">
+            A permanent record of your pharmaceutical platform access tiers, transactional history, and resource
+            utilization policies.
+        </p>
     </div>
 
-    <!-- Current Subscription Status -->
-    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">Current Subscription</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="flex items-center">
-                <div class="p-3 bg-blue-100 rounded-lg mr-4">
-                    <i class="fas fa-crown text-blue-600 text-xl"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500">Plan</p>
-                    <p class="text-lg font-semibold text-gray-900 capitalize">{{ user.subscription_plan }}</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center">
-                <div class="p-3 bg-green-100 rounded-lg mr-4">
-                    <i class="fas fa-calendar text-green-600 text-xl"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500">Status</p>
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                        {% if user.is_subscription_active() %}bg-green-100 text-green-800
-                        {% else %}bg-red-100 text-red-800{% endif %}">
-                        {% if user.is_subscription_active() %}Active{% else %}Inactive{% endif %}
-                    </span>
-                </div>
-            </div>
-            
-            <div class="flex items-center">
-                <div class="p-3 bg-purple-100 rounded-lg mr-4">
-                    <i class="fas fa-clock text-purple-600 text-xl"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500">
-                        {% if user.subscription_plan == 'free' %}Next Billing{% else %}Expires{% endif %}
-                    </p>
-                    <p class="text-lg font-semibold text-gray-900">
-                        {% if user.subscription_expiry %}
-                            {{ user.subscription_expiry.strftime('%b %d, %Y') }}
-                        {% else %}
-                            Never
-                        {% endif %}
-                    </p>
-                </div>
+    <!-- Active Subscription Intelligence Card -->
+    <div
+        class="card-premium p-10 mb-12 flex flex-col lg:flex-row gap-10 items-center bg-white shadow-2xl shadow-indigo-100 relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
+            <i class="fas fa-shield-halved text-9xl"></i>
+        </div>
+
+        <div class="flex-shrink-0">
+            <div
+                class="w-24 h-24 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center text-white shadow-2xl shadow-indigo-200">
+                <i class="fas fa-crown text-3xl"></i>
             </div>
         </div>
 
-        <!-- Usage Statistics -->
-        <div class="mt-8 pt-6 border-t border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Usage This Month</h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm font-medium text-gray-700">Documents</span>
-                        <span class="text-sm text-gray-500">
-                            {{ usage_stats.documents.used }}{% if usage_stats.documents.limit > 0 %}/{{ usage_stats.documents.limit }}{% endif %}
-                        </span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                             style="width: {{ [usage_stats.documents.percentage, 100]|min }}%"></div>
-                    </div>
-                </div>
-                
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm font-medium text-gray-700">Storage</span>
-                        <span class="text-sm text-gray-500">{{ usage_stats.storage.used_mb }}/{{ usage_stats.storage.limit_mb }} MB</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-green-600 h-2 rounded-full transition-all duration-300" 
-                             style="width: {{ [usage_stats.storage.percentage, 100]|min }}%"></div>
-                    </div>
-                </div>
-                
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm font-medium text-gray-700">API Requests</span>
-                        <span class="text-sm text-gray-500">{{ usage_stats.api_requests.used_today }}/{{ usage_stats.api_requests.limit_daily }}</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
-                             style="width: {{ [usage_stats.api_requests.percentage, 100]|min }}%"></div>
-                    </div>
-                </div>
+        <div class="flex-1 text-center lg:text-left">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Active Protocol Engine</p>
+            <h2 class="text-3xl font-display font-black text-slate-900 capitalize">{{ user.subscription_plan }} Logic
+                Framework</h2>
+            <div class="flex flex-wrap justify-center lg:justify-start items-center gap-4 mt-4">
+                <span
+                    class="inline-flex items-center px-4 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    Status: {{ 'Operational' if user.is_subscription_active() else 'Baseline' }}
+                </span>
+                <span class="text-xs font-bold text-slate-400">|</span>
+                <span class="text-xs font-bold text-slate-500">Next Reconciliation: {{
+                    user.subscription_expiry.strftime('%B %d, %Y') if user.subscription_expiry else 'Cyclic' }}</span>
             </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="mt-6 flex space-x-4">
-            <a href="/subscription/plans" 
-               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition">
-                <i class="fas fa-arrow-up mr-2"></i>Upgrade Plan
+        <div class="flex flex-col sm:flex-row gap-4 relative z-10 w-full lg:w-auto">
+            <a href="/subscription/plans"
+                class="flex-1 btn-primary-saas px-8 py-3 text-[10px] shadow-xl shadow-indigo-100 transition-transform active:scale-95 text-center">
+                <i class="fas fa-rocket mr-2"></i> Scale Tier
             </a>
             {% if user.subscription_plan != 'free' %}
-            <button onclick="cancelSubscription()" 
-                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition">
-                <i class="fas fa-times mr-2"></i>Cancel Subscription
+            <button onclick="cancelSubscription()"
+                class="flex-1 btn-secondary-saas px-8 py-3 text-[10px] border-rose-100 text-rose-500 hover:bg-rose-50 text-center">
+                <i class="fas fa-power-off mr-2"></i> Stop Logic
             </button>
             {% endif %}
         </div>
     </div>
 
-    <!-- Subscription History -->
-    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">Subscription History</h2>
-        
-        {% if subscriptions %}
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for subscription in subscriptions %}
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize
-                                {% if subscription.plan_name == 'premium' %}bg-purple-100 text-purple-800
-                                {% elif subscription.plan_name == 'basic' %}bg-blue-100 text-blue-800
-                                {% else %}bg-gray-100 text-gray-800{% endif %}">
-                                {{ subscription.plan_name }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize
-                                {% if subscription.status == 'active' %}bg-green-100 text-green-800
-                                {% elif subscription.status == 'canceled' %}bg-red-100 text-red-800
-                                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
-                                {{ subscription.status }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {% if subscription.current_period_start and subscription.current_period_end %}
-                                {{ subscription.current_period_start.strftime('%b %d') }} - 
-                                {{ subscription.current_period_end.strftime('%b %d, %Y') }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ subscription.created_at.strftime('%b %d, %Y') }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <!-- Utilization Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {% set metrics = [
+        ("Document Registry", usage_stats.documents.used, usage_stats.documents.limit, usage_stats.documents.percentage,
+        "indigo", "fa-file-dna"),
+        ("Data Repository", usage_stats.storage.used_mb, usage_stats.storage.limit_mb, usage_stats.storage.percentage,
+        "blue", "fa-warehouse"),
+        ("AI Protocol Cycles", usage_stats.api_requests.used_today, usage_stats.api_requests.limit_daily,
+        usage_stats.api_requests.percentage, "purple", "fa-microchip")
+        ] %}
+        {% for label, used, limit, percentage, color, icon in metrics %}
+        <div class="card-premium p-8 group">
+            <div class="flex items-start justify-between mb-6">
+                <div
+                    class="w-10 h-10 bg-{{ color }}-50 text-{{ color }}-600 rounded-xl flex items-center justify-center border border-{{ color }}-100 group-hover:scale-110 transition-transform shadow-soft">
+                    <i class="fas {{ icon }} text-xs"></i>
+                </div>
+                <div class="text-right">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{{ label
+                        }}</p>
+                    <p class="text-lg font-display font-black text-slate-900">{{ used }} <span
+                            class="text-[10px] text-slate-300 uppercase">/ {{ limit if limit > 0 else '∞' }}</span></p>
+                </div>
+            </div>
+            <div class="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
+                <div class="h-full bg-{{ color }}-500 rounded-full shadow-[0_0_8px_rgba(var(--tw-color-{{ color }}-500),0.3)] transition-all duration-1000"
+                    style="width: {{ [percentage, 100]|min }}%"></div>
+            </div>
         </div>
-        {% else %}
-        <div class="text-center py-8">
-            <i class="fas fa-history text-gray-400 text-4xl mb-4"></i>
-            <p class="text-gray-500">No subscription history available</p>
-        </div>
-        {% endif %}
+        {% endfor %}
     </div>
 
-    <!-- Payment History -->
-    <div class="bg-white rounded-lg shadow-lg p-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">Payment History</h2>
-        
-        {% if payments %}
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for payment in payments %}
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            ${{ payment.get_amount_dollars() }}
-                            <span class="text-xs text-gray-500 uppercase">{{ payment.currency }}</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                {% if payment.status == 'succeeded' %}bg-green-100 text-green-800
-                                {% elif payment.status == 'failed' %}bg-red-100 text-red-800
-                                {% elif payment.status == 'refunded' %}bg-yellow-100 text-yellow-800
-                                {% else %}bg-gray-100 text-gray-800{% endif %}">
-                                {{ payment.status }}
-                            </span>
-                            {% if payment.is_refunded() %}
-                            <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
-                                Refunded: ${{ payment.get_refunded_dollars() }}
-                            </span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {{ payment.description or 'Payment' }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ payment.created_at.strftime('%b %d, %Y %I:%M %p') }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {% if payment.receipt_url %}
-                            <a href="{{ payment.receipt_url }}" target="_blank" 
-                               class="text-blue-600 hover:text-blue-900">
-                                <i class="fas fa-external-link-alt mr-1"></i>View
-                            </a>
-                            {% else %}
-                            <span class="text-gray-400">N/A</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="text-center py-8">
-            <i class="fas fa-credit-card text-gray-400 text-4xl mb-4"></i>
-            <p class="text-gray-500">No payment history available</p>
-        </div>
-        {% endif %}
+    <!-- Dual History Matrices -->
+    <div class="space-y-12">
+
+        <!-- Subscription History -->
+        <section class="card-premium overflow-hidden">
+            <div class="px-8 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <h2 class="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Protocol Evolution Record
+                </h2>
+                <i class="fas fa-clock-rotate-left text-slate-300 text-xs"></i>
+            </div>
+            <div class="p-0">
+                {% if subscriptions %}
+                <table class="w-full text-left">
+                    <thead>
+                        <tr
+                            class="bg-white border-b border-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                            <th class="px-8 py-4">Capability Plan</th>
+                            <th class="px-8 py-4">Execution Status</th>
+                            <th class="px-8 py-4">Validity Horizon</th>
+                            <th class="px-8 py-4">Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50 text-[11px] font-bold text-slate-600">
+                        {% for sub in subscriptions %}
+                        <tr class="hover:bg-slate-50/30 transition-colors">
+                            <td class="px-8 py-5">
+                                <span
+                                    class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 uppercase tracking-widest text-[9px]">
+                                    {{ sub.plan_name }}
+                                </span>
+                            </td>
+                            <td class="px-8 py-5">
+                                <span class="inline-flex px-3 py-1 rounded-full uppercase tracking-tighter text-[9px] font-black
+                                    {% if sub.status == 'active' %}bg-emerald-50 text-emerald-600 border border-emerald-100
+                                    {% elif sub.status == 'canceled' %}bg-rose-50 text-rose-600 border border-rose-100
+                                    {% else %}bg-amber-50 text-amber-600 border border-amber-100{% endif %}">
+                                    {{ sub.status }}
+                                </span>
+                            </td>
+                            <td class="px-8 py-5 text-slate-500">
+                                {% if sub.current_period_start and sub.current_period_end %}
+                                {{ sub.current_period_start.strftime('%d %b') }} - {{
+                                sub.current_period_end.strftime('%d %b, %Y') }}
+                                {% else %}
+                                <span class="text-slate-300 font-medium">Static Policy</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-8 py-5 text-slate-400">{{ sub.created_at.strftime('%d %b %Y') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="p-20 text-center opacity-40">
+                    <i class="fas fa-ghost text-4xl mb-4 text-slate-300"></i>
+                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">No protocol history
+                        detected</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Payment History Ledger -->
+        <section class="card-premium overflow-hidden">
+            <div class="px-8 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <h2 class="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Financial Transaction
+                    Ledger</h2>
+                <i class="fas fa-file-invoice-dollar text-slate-300 text-xs"></i>
+            </div>
+            <div class="p-0">
+                {% if payments %}
+                <table class="w-full text-left">
+                    <thead>
+                        <tr
+                            class="bg-white border-b border-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                            <th class="px-8 py-4">Transaction Quantum</th>
+                            <th class="px-8 py-4">System Verification</th>
+                            <th class="px-8 py-4">Contextual Description</th>
+                            <th class="px-8 py-4">Execution Date</th>
+                            <th class="px-8 py-4">Artifact</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50 text-[11px] font-bold text-slate-600">
+                        {% for payment in payments %}
+                        <tr class="hover:bg-slate-50/30 transition-colors">
+                            <td class="px-8 py-5">
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-black text-slate-900">${{ payment.get_amount_dollars()
+                                        }}</span>
+                                    <span class="text-[9px] text-slate-300 uppercase font-black tracking-widest">{{
+                                        payment.currency }}</span>
+                                </div>
+                            </td>
+                            <td class="px-8 py-5">
+                                <span class="px-3 py-1 rounded-full uppercase tracking-tighter text-[9px] font-black
+                                    {% if payment.status == 'succeeded' %}bg-emerald-50 text-emerald-600 border border-emerald-100
+                                    {% elif payment.status == 'failed' %}bg-rose-50 text-rose-600 border border-rose-100
+                                    {% else %}bg-slate-50 text-slate-400 border border-slate-100{% endif %}">
+                                    {{ payment.status }}
+                                </span>
+                            </td>
+                            <td class="px-8 py-5 text-slate-500 font-medium">
+                                {{ payment.description or 'Protocol Activation' }}
+                            </td>
+                            <td class="px-8 py-5 text-slate-400">
+                                {{ payment.created_at.strftime('%d %b %Y %H:%M') }}
+                            </td>
+                            <td class="px-8 py-5">
+                                {% if payment.receipt_url %}
+                                <a href="{{ payment.receipt_url }}" target="_blank"
+                                    class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                                    <i class="fas fa-arrow-up-right-from-square text-[10px]"></i>
+                                </a>
+                                {% else %}
+                                <span class="text-slate-200"><i class="fas fa-minus"></i></span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="p-20 text-center opacity-40">
+                    <i class="fas fa-receipt text-4xl mb-4 text-slate-300"></i>
+                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">No ledger entries
+                        recorded</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
-function cancelSubscription() {
-    const cancelImmediately = confirm('Do you want to cancel immediately? Click OK to cancel now, or Cancel to continue until the end of your billing period.');
-    
-    if (confirm('Are you sure you want to cancel your subscription?')) {
-        fetch('/subscription/cancel', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                cancel_immediately: cancelImmediately
+    function cancelSubscription() {
+        const immediate = confirm('Strategic Verification: Do you wish to terminate accessibility protocols immediately? Baseline restrictions will apply once confirmed.');
+        if (confirm('Verify Transaction: This action will restrict high-performance logic flows.')) {
+            fetch('/subscription/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cancel_immediately: immediate })
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            } else {
-                alert('Error canceling subscription: ' + data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while canceling the subscription.');
-        });
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) location.reload();
+                    else alert('Audit Error: ' + d.error);
+                })
+                .catch(() => alert('Network Link Fault'));
+        }
     }
-}
 </script>
+
+<style>
+    .card-premium {
+        @apply bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 transition-all duration-300;
+    }
+</style>
 {% endblock %}

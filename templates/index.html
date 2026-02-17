@@ -8,122 +8,132 @@
 
 {% block content %}
 
-  <!-- Hero Section -->
-  <section class="relative bg-primary text-white">
-    <div class="container mx-auto px-6 py-16 flex flex-col lg:flex-row items-center gap-12">
-      <!-- Left Content -->
-      <div class="lg:w-1/2">
-        <h1 class="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
-          PharmaDocs AI Platform
-        </h1>
-        <p class="text-lg md:text-xl mb-8 opacity-90">
-          Professional pharmaceutical documentation generation platform for regulatory compliance.
-          Create AMV, PV, Stability, and Degradation study documents with AI assistance.
+<!-- Hero Section -->
+<section class="relative bg-primary text-white">
+  <div class="container mx-auto px-6 py-16 flex flex-col lg:flex-row items-center gap-12">
+    <!-- Left Content -->
+    <div class="lg:w-1/2">
+      <h1 class="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
+        PharmaDocs AI Platform
+      </h1>
+      <p class="text-lg md:text-xl mb-8 opacity-90">
+        Professional pharmaceutical documentation generation platform for regulatory compliance.
+        Create AMV, PV, Stability, and Degradation study documents with AI assistance.
+      </p>
+      <div class="flex flex-wrap gap-4">
+        <a href="{{ url_for('auth.login') }}"
+          class="px-6 py-3 rounded-xl bg-white text-primary font-semibold shadow hover:shadow-lg transition">
+          <i class="fas fa-sign-in-alt mr-2"></i>Login
+        </a>
+        <a href="{{ url_for('auth.register') }}"
+          class="px-6 py-3 rounded-xl border border-white font-semibold hover:bg-white hover:text-primary transition">
+          <i class="fas fa-user-plus mr-2"></i>Register
+        </a>
+      </div>
+    </div>
+
+    <!-- Right Icon / Image -->
+    <div class="lg:w-1/2 flex justify-center">
+      <div class="bg-white/10 p-10 rounded-2xl shadow-lg text-center">
+        <i class="fas fa-flask text-6xl mb-4"></i>
+        <h3 class="text-xl font-semibold">Regulatory Compliance Made Simple</h3>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-16">
+  <div class="container mx-auto px-6 text-center">
+    <h2 class="text-3xl font-extrabold mb-4">Platform Features</h2>
+    <p class="text-gray-500 mb-12">Everything you need for pharmaceutical documentation</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+      <!-- Feature -->
+      <div class="p-6 rounded-2xl shadow hover:shadow-lg transition">
+        <div class="bg-primary text-white w-16 h-16 flex items-center justify-center rounded-full mx-auto mb-4">
+          <i class="fas fa-microscope text-2xl"></i>
+        </div>
+        <h5 class="font-semibold text-lg mb-2">AMV Documents</h5>
+        <p class="text-gray-600 text-sm">Analytical Method Validation protocols and reports with automated calculations.
         </p>
-        <div class="flex flex-wrap gap-4">
-          <a href="{{ url_for('auth.login') }}"
-             class="px-6 py-3 rounded-xl bg-white text-primary font-semibold shadow hover:shadow-lg transition">
-            <i class="fas fa-sign-in-alt mr-2"></i>Login
-          </a>
-          <a href="{{ url_for('auth.register') }}"
-             class="px-6 py-3 rounded-xl border border-white font-semibold hover:bg-white hover:text-primary transition">
-            <i class="fas fa-user-plus mr-2"></i>Register
-          </a>
-        </div>
       </div>
 
-      <!-- Right Icon / Image -->
-      <div class="lg:w-1/2 flex justify-center">
-        <div class="bg-white/10 p-10 rounded-2xl shadow-lg text-center">
-          <i class="fas fa-flask text-6xl mb-4"></i>
-          <h3 class="text-xl font-semibold">Regulatory Compliance Made Simple</h3>
+      <div class="p-6 rounded-2xl shadow hover:shadow-lg transition">
+        <div class="bg-green-500 text-white w-16 h-16 flex items-center justify-center rounded-full mx-auto mb-4">
+          <i class="fas fa-cogs text-2xl"></i>
         </div>
+        <h5 class="font-semibold text-lg mb-2">Process Validation</h5>
+        <p class="text-gray-600 text-sm">PV protocols for manufacturing process validation and qualification.</p>
       </div>
-    </div>
-  </section>
 
-  <!-- Features Section -->
-  <section class="py-16">
-    <div class="container mx-auto px-6 text-center">
-      <h2 class="text-3xl font-extrabold mb-4">Platform Features</h2>
-      <p class="text-gray-500 mb-12">Everything you need for pharmaceutical documentation</p>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-        <!-- Feature -->
-        <div class="p-6 rounded-2xl shadow hover:shadow-lg transition">
-          <div class="bg-primary text-white w-16 h-16 flex items-center justify-center rounded-full mx-auto mb-4">
-            <i class="fas fa-microscope text-2xl"></i>
-          </div>
-          <h5 class="font-semibold text-lg mb-2">AMV Documents</h5>
-          <p class="text-gray-600 text-sm">Analytical Method Validation protocols and reports with automated calculations.</p>
+      <div class="p-6 rounded-2xl shadow hover:shadow-lg transition">
+        <div class="bg-yellow-500 text-white w-16 h-16 flex items-center justify-center rounded-full mx-auto mb-4">
+          <i class="fas fa-chart-line text-2xl"></i>
         </div>
+        <h5 class="font-semibold text-lg mb-2">Stability Studies</h5>
+        <p class="text-gray-600 text-sm">Stability study protocols and data analysis for shelf-life determination.</p>
+      </div>
 
-        <div class="p-6 rounded-2xl shadow hover:shadow-lg transition">
-          <div class="bg-green-500 text-white w-16 h-16 flex items-center justify-center rounded-full mx-auto mb-4">
-            <i class="fas fa-cogs text-2xl"></i>
-          </div>
-          <h5 class="font-semibold text-lg mb-2">Process Validation</h5>
-          <p class="text-gray-600 text-sm">PV protocols for manufacturing process validation and qualification.</p>
+      <div class="p-6 rounded-2xl shadow hover:shadow-lg transition">
+        <div class="bg-red-500 text-white w-16 h-16 flex items-center justify-center rounded-full mx-auto mb-4">
+          <i class="fas fa-exclamation-triangle text-2xl"></i>
         </div>
-
-        <div class="p-6 rounded-2xl shadow hover:shadow-lg transition">
-          <div class="bg-yellow-500 text-white w-16 h-16 flex items-center justify-center rounded-full mx-auto mb-4">
-            <i class="fas fa-chart-line text-2xl"></i>
-          </div>
-          <h5 class="font-semibold text-lg mb-2">Stability Studies</h5>
-          <p class="text-gray-600 text-sm">Stability study protocols and data analysis for shelf-life determination.</p>
-        </div>
-
-        <div class="p-6 rounded-2xl shadow hover:shadow-lg transition">
-          <div class="bg-red-500 text-white w-16 h-16 flex items-center justify-center rounded-full mx-auto mb-4">
-            <i class="fas fa-exclamation-triangle text-2xl"></i>
-          </div>
-          <h5 class="font-semibold text-lg mb-2">Degradation Studies</h5>
-          <p class="text-gray-600 text-sm">Forced degradation study protocols for stress testing validation.</p>
-        </div>
+        <h5 class="font-semibold text-lg mb-2">Degradation Studies</h5>
+        <p class="text-gray-600 text-sm">Forced degradation study protocols for stress testing validation.</p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Workflow Section -->
-  <section class="py-16 bg-gray-50">
-    <div class="container mx-auto px-6 text-center">
-      <h2 class="text-3xl font-extrabold mb-4">Simple Workflow</h2>
-      <p class="text-gray-500 mb-12">Generate professional documents in 4 easy steps</p>
+<!-- Workflow Section -->
+<section class="py-16 bg-gray-50">
+  <div class="container mx-auto px-6 text-center">
+    <h2 class="text-3xl font-extrabold mb-4">Simple Workflow</h2>
+    <p class="text-gray-500 mb-12">Generate professional documents in 4 easy steps</p>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-        <div>
-          <div class="w-14 h-14 flex items-center justify-center bg-primary text-white rounded-full mx-auto mb-4 text-lg font-bold">1</div>
-          <h5 class="font-semibold mb-2">Upload STP & Data</h5>
-          <p class="text-gray-600 text-sm">Upload your Standard Testing Procedure and raw analytical data.</p>
-        </div>
-        <div>
-          <div class="w-14 h-14 flex items-center justify-center bg-primary text-white rounded-full mx-auto mb-4 text-lg font-bold">2</div>
-          <h5 class="font-semibold mb-2">AI Processing</h5>
-          <p class="text-gray-600 text-sm">Our AI engine maps your data to regulatory templates.</p>
-        </div>
-        <div>
-          <div class="w-14 h-14 flex items-center justify-center bg-primary text-white rounded-full mx-auto mb-4 text-lg font-bold">3</div>
-          <h5 class="font-semibold mb-2">Review & Edit</h5>
-          <p class="text-gray-600 text-sm">Preview and customize the generated documents as needed.</p>
-        </div>
-        <div>
-          <div class="w-14 h-14 flex items-center justify-center bg-primary text-white rounded-full mx-auto mb-4 text-lg font-bold">4</div>
-          <h5 class="font-semibold mb-2">Download</h5>
-          <p class="text-gray-600 text-sm">Download professional Word documents and Excel calculations.</p>
-        </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+      <div>
+        <div
+          class="w-14 h-14 flex items-center justify-center bg-primary text-white rounded-full mx-auto mb-4 text-lg font-bold">
+          1</div>
+        <h5 class="font-semibold mb-2">Upload STP & Data</h5>
+        <p class="text-gray-600 text-sm">Upload your Standard Testing Procedure and raw analytical data.</p>
+      </div>
+      <div>
+        <div
+          class="w-14 h-14 flex items-center justify-center bg-primary text-white rounded-full mx-auto mb-4 text-lg font-bold">
+          2</div>
+        <h5 class="font-semibold mb-2">AI Processing</h5>
+        <p class="text-gray-600 text-sm">Our AI engine maps your data to regulatory templates.</p>
+      </div>
+      <div>
+        <div
+          class="w-14 h-14 flex items-center justify-center bg-primary text-white rounded-full mx-auto mb-4 text-lg font-bold">
+          3</div>
+        <h5 class="font-semibold mb-2">Review & Edit</h5>
+        <p class="text-gray-600 text-sm">Preview and customize the generated documents as needed.</p>
+      </div>
+      <div>
+        <div
+          class="w-14 h-14 flex items-center justify-center bg-primary text-white rounded-full mx-auto mb-4 text-lg font-bold">
+          4</div>
+        <h5 class="font-semibold mb-2">Download</h5>
+        <p class="text-gray-600 text-sm">Download professional Word documents and Excel calculations.</p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- CTA Section -->
-  <section class="py-20 bg-primary text-white text-center">
-    <h2 class="text-3xl md:text-4xl font-extrabold mb-6">Ready to Get Started?</h2>
-    <p class="text-lg mb-8 opacity-90">Join pharmaceutical companies worldwide using PharmaDocs AI for regulatory compliance.</p>
-    <a href="{{ url_for('auth.register') }}"
-       class="px-8 py-4 bg-white text-primary font-semibold rounded-xl shadow hover:shadow-lg transition">
-      <i class="fas fa-rocket mr-2"></i>Start Free Trial
-    </a>
-  </section>
+<!-- CTA Section -->
+<section class="py-20 bg-primary text-white text-center">
+  <h2 class="text-3xl md:text-4xl font-extrabold mb-6">Ready to Get Started?</h2>
+  <p class="text-lg mb-8 opacity-90">Join pharmaceutical companies worldwide using PharmaDocs AI for regulatory
+    compliance.</p>
+  <a href="{{ url_for('auth.register') }}"
+    class="px-8 py-4 bg-white text-primary font-semibold rounded-xl shadow hover:shadow-lg transition">
+    <i class="fas fa-rocket mr-2"></i>Start Free Trial
+  </a>
+</section>
 
 {% endblock %}

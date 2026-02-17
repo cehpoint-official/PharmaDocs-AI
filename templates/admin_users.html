@@ -1,182 +1,208 @@
-<!--Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in> -->
-<!--All Rights Reserved-->
-
 {% extends "base.html" %}
 {% block title %}User Management - PharmaDocs AI Platform{% endblock %}
+
 {% block content %}
-  <div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="row mb-4">
-      <div class="col">
-        <nav aria-label="breadcrumb">
-          <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-              <a href="{{ url_for("admin.dashboard") }}">Admin</a>
-            </li>
-            <li class="breadcrumb-item active">User Management</li>
-          </ol>
-        </nav>
-        <h1 class="h3 mb-0">User Management</h1>
-        <p class="text-muted">Manage user accounts and permissions.</p>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+  <!-- Header Section -->
+  <div class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div>
+      <div class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+        <a href="{{ url_for('admin.dashboard') }}" class="hover:text-indigo-600 transition-colors">Admin Control</a>
+        <i class="fas fa-chevron-right text-[8px]"></i>
+        <span class="text-indigo-600">Access Management</span>
       </div>
+      <h1 class="text-3xl font-display font-black text-slate-900 tracking-tight">Identity & Access</h1>
+      <p class="text-sm font-medium text-slate-500 mt-2 max-w-2xl leading-relaxed">
+        Manage platform authorization, user roles, and organizational access. Monitor registration trends and maintain
+        system security protocols.
+      </p>
     </div>
-    <!-- Users Table -->
-    <div class="card shadow">
-      <div class="card-body">
-        {% if users.items %}
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <thead class="table-light">
-                <tr>
-                  <th>User</th>
-                  <th>Email</th>
-                  <th>Status</th>
-                  <th>Companies</th>
-                  <th>Documents</th>
-                  <th>Last Login</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for user_item in users.items %}
-                  <tr>
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <div class="user-avatar me-3">
-                          <i class="fas fa-user-circle fa-2x text-muted"></i>
-                        </div>
-                        <div>
-                          <div class="fw-bold">{{ user_item.name }}</div>
-                          <small class="text-muted">ID: {{ user_item.id }}</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{{ user_item.email }}</td>
-                    <td>
-                      {% if user_item.is_admin %}
-                        <span class="badge bg-danger">
-                          <i class="fas fa-crown me-1"></i>Admin
-                        </span>
-                      {% else %}
-                        <span class="badge bg-primary">
-                          <i class="fas fa-user me-1"></i>User
-                        </span>
-                      {% endif %}
-                    </td>
-                    <td>
-                      <span class="badge bg-info">{{ user_item.companies | length }}</span>
-                    </td>
-                    <td>
-                      <span class="badge bg-success">{{ user_item.documents | length }}</span>
-                    </td>
-                    <td>
-                      {% if user_item.last_login %}
-                        <small>{{ user_item.last_login.strftime("%d/%m/%Y %H:%M") }}</small>
-                      {% else %}
-                        <small class="text-muted">Never</small>
-                      {% endif %}
-                    </td>
-                    <td>
-                      {% if user_item.id != user.id %}
-                        <button class="btn btn-sm btn-outline-warning"
-                                onclick="toggleAdmin({{ user_item.id }}, {{ user_item.is_admin | lower }})"
-                                title="{{ 'Remove Admin' if user_item.is_admin else 'Make Admin' }}">
-                          {% if user_item.is_admin %}
-                            <i class="fas fa-user-minus"></i>
-                          {% else %}
-                            <i class="fas fa-user-plus"></i>
-                          {% endif %}
-                        </button>
-                      {% else %}
-                        <span class="text-muted">You</span>
-                      {% endif %}
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          <!-- Pagination -->
-          {% if users.pages > 1 %}
-            <nav aria-label="User pagination">
-              <ul class="pagination justify-content-center mt-4">
-                {% if users.has_prev %}
-                  <li class="page-item">
-                    <a class="page-link"
-                       href="{{ url_for('admin.manage_users', page=users.prev_num) }}">
-                      <i class="fas fa-chevron-left"></i>
-                    </a>
-                  </li>
-                {% endif %}
-                {% for page_num in users.iter_pages() %}
-                  {% if page_num %}
-                    {% if page_num != users.page %}
-                      <li class="page-item">
-                        <a class="page-link"
-                           href="{{ url_for('admin.manage_users', page=page_num) }}">{{ page_num }}</a>
-                      </li>
-                    {% else %}
-                      <li class="page-item active">
-                        <span class="page-link">{{ page_num }}</span>
-                      </li>
-                    {% endif %}
-                  {% else %}
-                    <li class="page-item disabled">
-                      <span class="page-link">...</span>
-                    </li>
-                  {% endif %}
-                {% endfor %}
-                {% if users.has_next %}
-                  <li class="page-item">
-                    <a class="page-link"
-                       href="{{ url_for('admin.manage_users', page=users.next_num) }}">
-                      <i class="fas fa-chevron-right"></i>
-                    </a>
-                  </li>
-                {% endif %}
-              </ul>
-            </nav>
-          {% endif %}
-        {% else %}
-          <!-- Empty State -->
-          <div class="text-center py-5">
-            <i class="fas fa-users fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">No Users Found</h5>
-            <p class="text-muted">No users have registered yet.</p>
-          </div>
-        {% endif %}
-      </div>
+
+    <div class="flex items-center gap-3">
+      <button class="btn-primary-saas px-6 py-2.5 shadow-lg shadow-indigo-100">
+        <i class="fas fa-plus mr-2"></i> New Admin
+      </button>
     </div>
   </div>
-{% endblock %}
-{% block scripts %}
-  <script>
-async function toggleAdmin(userId, isCurrentlyAdmin) {
-    const action = isCurrentlyAdmin ? 'remove admin privileges from' : 'grant admin privileges to';
 
-    if (!confirm(`Are you sure you want to ${action} this user?`)) {
-        return;
+  <!-- Users Directory -->
+  <section class="card-premium overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+      <h2 class="text-xs font-black text-slate-500 uppercase tracking-widest">User Directory</h2>
+      <span class="text-[10px] font-bold text-slate-400 uppercase">{{ users.total }} REGISTERED</span>
+    </div>
+
+    <div class="p-0">
+      {% if users.items %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50/30 border-b border-slate-100">
+              <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Profile Identity
+              </th>
+              <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact Info</th>
+              <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
+                Authorization</th>
+              <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Meta
+              </th>
+              <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            {% for user_item in users.items %}
+            <tr class="hover:bg-slate-50/30 transition-colors group">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-bold text-xs border border-indigo-100 group-hover:scale-110 transition-transform shadow-soft">
+                    <i class="fas fa-user"></i>
+                  </div>
+                  <div>
+                    <p class="text-sm font-black text-slate-900 leading-tight">{{ user_item.name }}</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">ID: #{{ user_item.id
+                      }}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-xs font-bold text-slate-600">
+                {{ user_item.email }}
+              </td>
+              <td class="px-6 py-4 text-center">
+                {% if user_item.is_admin %}
+                <span
+                  class="inline-flex px-2 py-0.5 bg-red-50 text-red-700 text-[9px] font-black uppercase rounded border border-red-100 items-center gap-1">
+                  <i class="fas fa-crown text-[8px]"></i>
+                  Administrator
+                </span>
+                {% else %}
+                <span
+                  class="inline-flex px-2 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-black uppercase rounded border border-slate-200">
+                  Standard User
+                </span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4">
+                <div class="flex flex-col items-center gap-1">
+                  <div class="flex gap-2">
+                    <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded"
+                      title="Companies">{{ user_item.companies|length }} C</span>
+                    <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded"
+                      title="Documents">{{ user_item.documents|length }} D</span>
+                  </div>
+                  <p class="text-[9px] font-bold text-slate-400 uppercase">
+                    {% if user_item.last_login %} Last Login: {{ user_item.last_login.strftime('%d %b') }}
+                    {% else %} Never Active {% endif %}
+                  </p>
+                </div>
+              </td>
+              <td class="px-6 py-4">
+                <div class="flex items-center justify-end gap-2">
+                  {% if user_item.id != user.id %}
+                  <button onclick="toggleAdmin({{ user_item.id }}, {{ user_item.is_admin | lower }})"
+                    class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                    title="{{ 'Revoke Admin' if user_item.is_admin else 'Grant Admin' }}">
+                    {% if user_item.is_admin %}
+                    <i class="fas fa-user-minus text-xs"></i>
+                    {% else %}
+                    <i class="fas fa-user-plus text-xs"></i>
+                    {% endif %}
+                  </button>
+                  <button class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                    title="Suspend Account">
+                    <i class="fas fa-ban text-xs"></i>
+                  </button>
+                  {% else %}
+                  <span
+                    class="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-3 py-1 bg-indigo-50 rounded-full">Current
+                    User</span>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if users.pages > 1 %}
+      <div class="px-6 py-6 border-t border-slate-50 flex items-center justify-center gap-2">
+        {% if users.has_prev %}
+        <a href="{{ url_for('admin.manage_users', page=users.prev_num) }}"
+          class="p-2 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-soft">
+          <i class="fas fa-chevron-left text-xs"></i>
+        </a>
+        {% endif %}
+
+        {% for page_num in users.iter_pages() %}
+        {% if page_num %}
+        {% if page_num != users.page %}
+        <a href="{{ url_for('admin.manage_users', page=page_num) }}"
+          class="w-10 h-10 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-400 hover:text-indigo-600 transition-all">{{
+          page_num }}</a>
+        {% else %}
+        <span
+          class="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-xl text-xs font-black shadow-lg shadow-indigo-100">{{
+          page_num }}</span>
+        {% endif %}
+        {% else %}
+        <span class="w-10 h-10 flex items-center justify-center text-slate-300">...</span>
+        {% endif %}
+        {% endfor %}
+
+        {% if users.has_next %}
+        <a href="{{ url_for('admin.manage_users', page=users.next_num) }}"
+          class="p-2 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-soft">
+          <i class="fas fa-chevron-right text-xs"></i>
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% else %}
+      <div class="p-20 text-center">
+        <div class="w-20 h-20 bg-slate-50 text-slate-200 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+          <i class="fas fa-users text-4xl"></i>
+        </div>
+        <h3 class="text-xl font-display font-black text-slate-900 tracking-tight">Access Directory Empty</h3>
+        <p class="text-slate-400 text-sm font-medium mt-2">No users have been registered in the system yet.</p>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function toggleAdmin(userId, isCurrentlyAdmin) {
+    const action = isCurrentlyAdmin ? 'revoke admin privileges from' : 'grant admin privileges to';
+
+    if (!confirm(`Confirm authorization change: ${action} this user?`)) {
+      return;
     }
 
     try {
-        const response = await fetch(`/admin/users/${userId}/toggle-admin`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            location.reload();
-        } else {
-            alert('Error: ' + (result.error || 'Failed to update user status'));
+      const response = await fetch(`/admin/users/${userId}/toggle-admin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         }
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        location.reload();
+      } else {
+        alert('Authorization Error: ' + (result.error || 'Update failed'));
+      }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to update user status');
+      console.error('Network error:', error);
+      alert('System failure during authorization update');
     }
-}
-  </script>
+  }
+</script>
 {% endblock %}

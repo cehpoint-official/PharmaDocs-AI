@@ -1,220 +1,373 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analytical Method Verification Protocol Generator</title>
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
+{% block title %}Protocol Generator - PharmaDocs AI Platform{% endblock %}
 
-<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-    <div class="max-w-6xl mx-auto">
-        <div class="bg-white rounded-lg shadow-xl p-8">
-            <div class="flex items-center mb-8">
-                <i class="fas fa-file-text w-10 h-10 text-indigo-600 mr-4"></i>
-                <h1 class="text-3xl font-bold text-gray-800">
-                    Analytical Method Verification Protocol Generator
-                </h1>
-                <button type="button" onclick="fillProtocolGeneratorDemo()"
-                    class="ml-auto px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 focus:ring-2 focus:ring-amber-400 font-semibold shadow-sm transition-all transform hover:scale-105 text-sm uppercase">
-                    <i class="fas fa-flask mr-2"></i>Fill Demo Data
-                </button>
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <!-- Header Section -->
+    <div class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+                <span class="text-indigo-600">Verification Intelligence</span>
             </div>
+            <h1 class="text-3xl font-display font-black text-slate-900 tracking-tight">Analytical Protocol Generator
+            </h1>
+            <p class="text-sm font-medium text-slate-500 mt-2 max-w-2xl leading-relaxed">
+                Automate the authorship of Analytical Method Verification protocols. Select your methodology, ingest the
+                source document, and let our AI structure the validation framework.
+            </p>
+        </div>
 
-            <div class="mb-8">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">
-                    Step 1: Select Analytical Method Type
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="method-buttons"></div>
-            </div>
-
-            <div class="mb-8" id="upload-section" style="display:none;">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">Step 2: Upload Method PDF Document</h2>
-                <div
-                    class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-indigo-400 transition-colors">
-                    <input type="file" accept=".pdf" class="hidden" id="file-upload">
-                    <label for="file-upload" class="cursor-pointer">
-                        <i class="fas fa-upload w-12 h-12 text-gray-400 mx-auto mb-4"></i>
-                        <p class="text-gray-600 mb-2">Click to upload or drag and drop</p>
-                        <p class="text-sm text-gray-500">PDF files only</p>
-                    </label>
-                    <div class="mt-4 flex items-center justify-center text-green-600 hidden" id="file-uploaded">
-                        <i class="fas fa-check-circle w-5 h-5 mr-2"></i>
-                        <span id="file-name"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mb-8 hidden" id="extracted-data-section">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">Step 3: Extracted Data Preview</h2>
-                <div class="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="extracted-data-grid"></div>
-                </div>
-            </div>
-
-            <div class="mb-8 hidden" id="parameters-section">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">Step 4: Auto-Selected Verification Parameters</h2>
-                <div class="bg-indigo-50 rounded-lg p-6 border border-indigo-200">
-                    <div class="flex flex-wrap gap-3" id="parameters-list"></div>
-                </div>
-            </div>
-
-            <div class="mb-8 hidden" id="generate-section">
-                <button id="generate-btn"
-                    class="w-full bg-indigo-600 text-white py-4 rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center">
-                    <i class="fas fa-file-text w-5 h-5 mr-2"></i>
-                    Generate Detailed Protocol
-                </button>
-            </div>
-
-            <div class="mb-8 hidden" id="protocol-preview">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xl font-semibold text-gray-700">Generated Protocol Preview</h2>
-                    <button id="download-btn"
-                        class="flex items-center bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
-                        <i class="fas fa-download w-5 h-5 mr-2"></i>
-                        Download Protocol
-                    </button>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-6 border border-gray-200 max-h-96 overflow-y-auto">
-                    <div class="space-y-6" id="protocol-content"></div>
-                </div>
-            </div>
+        <div>
+            <button type="button" onclick="fillProtocolGeneratorDemo()"
+                class="btn-secondary-saas px-6 py-2.5 shadow-soft border-amber-200 text-amber-700 hover:bg-amber-50">
+                <i class="fas fa-magic mr-2"></i> Sequence Prototype
+            </button>
         </div>
     </div>
 
-    <script>
-        let currentState = { selectedMethod: '', uploadedFile: null, extractedData: null, selectedParams: [], generatedProtocol: null };
+    <div class="space-y-12">
 
-        async function initializeMethods() {
-            const response = await fetch('/amv/protocol/api/methods');
-            const methods = await response.json();
-            const container = document.getElementById('method-buttons');
-            container.innerHTML = methods.map(method => `
-                <button onclick="selectMethod('${method.value}')" class="p-6 rounded-lg border-2 transition-all method-btn" id="method-${method.value}">
-                    <div class="text-center">
-                        <div class="text-4xl mb-3">${getMethodIcon(method.value)}</div>
-                        <i class="fas fa-check-circle w-6 h-6 mx-auto mb-2 text-gray-400"></i>
-                        <span class="font-semibold text-gray-800 text-sm">${method.label}</span>
-                    </div>
-                </button>
-            `).join('');
-        }
-
-        function getMethodIcon(method) {
-            const icons = { 'uv': '📊', 'aas': '⚛️', 'hplc': '🧪', 'uplc': '💧', 'gc': '🌡️', 'titration': '⚗️' };
-            return icons[method] || '🔬';
-        }
-
-        async function selectMethod(method) {
-            currentState.selectedMethod = method;
-            document.querySelectorAll('.method-btn').forEach(btn => { btn.classList.remove('border-indigo-600', 'bg-indigo-50', 'shadow-md'); btn.classList.add('border-gray-300', 'hover:border-indigo-400'); });
-            const selectedBtn = document.getElementById(`method-${method}`);
-            selectedBtn.classList.add('border-indigo-600', 'bg-indigo-50', 'shadow-md');
-            selectedBtn.classList.remove('border-gray-300', 'hover:border-indigo-400');
-            document.querySelectorAll('.method-btn i.fa-check-circle').forEach(icon => { icon.classList.add('text-gray-400'); icon.classList.remove('text-indigo-600'); });
-            selectedBtn.querySelector('i.fa-check-circle').classList.add('text-indigo-600');
-            selectedBtn.querySelector('i.fa-check-circle').classList.remove('text-gray-400');
-            document.getElementById('upload-section').style.display = 'block';
-            try { const response = await fetch(`/amv/protocol/api/parameters/${method}`); currentState.selectedParams = await response.json(); } catch (e) { console.error(e); }
-        }
-
-        document.getElementById('file-upload').addEventListener('change', async function (e) {
-            const file = e.target.files[0];
-            if (file && file.type === 'application/pdf') {
-                currentState.uploadedFile = file;
-                document.getElementById('file-name').textContent = file.name;
-                document.getElementById('file-uploaded').classList.remove('hidden');
-                await simulateDataExtraction();
-            } else { alert('Please upload a PDF file'); }
-        });
-
-        async function simulateDataExtraction() {
-            const response = await fetch('/amv/protocol/api/extract_data', { method: 'POST' });
-            currentState.extractedData = await response.json();
-            showExtractedData(); showParameters(); showGenerateButton();
-        }
-
-        function showExtractedData() {
-            const section = document.getElementById('extracted-data-section');
-            const grid = document.getElementById('extracted-data-grid');
-            const d = currentState.extractedData;
-            grid.innerHTML = `
-                <div><p class="text-sm text-gray-600">Product Name</p><p class="font-semibold text-gray-800">${d.productName}</p></div>
-                <div><p class="text-sm text-gray-600">Concentration</p><p class="font-semibold text-gray-800">${d.concentration}</p></div>
-                <div><p class="text-sm text-gray-600">Protocol Number</p><p class="font-semibold text-gray-800">${d.protocolNumber}</p></div>
-                <div><p class="text-sm text-gray-600">Methodology</p><p class="font-semibold text-gray-800">${d.methodology}</p></div>
-                <div><p class="text-sm text-gray-600">Wavelength</p><p class="font-semibold text-gray-800">${d.wavelength}</p></div>
-                <div><p class="text-sm text-gray-600">Acceptance Criteria</p><p class="font-semibold text-gray-800">${d.acceptanceCriteria}</p></div>
-            `;
-            section.classList.remove('hidden');
-        }
-
-        function showParameters() {
-            const section = document.getElementById('parameters-section');
-            const list = document.getElementById('parameters-list');
-            list.innerHTML = currentState.selectedParams.map(param => `
-                <div class="bg-white px-4 py-2 rounded-full border border-indigo-300 flex items-center">
-                    <i class="fas fa-check-circle w-4 h-4 text-indigo-600 mr-2"></i>
-                    <span class="text-sm font-medium text-gray-800">${param}</span>
+        <!-- Step 1: Methodology Selection -->
+        <section class="card-premium p-8">
+            <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center text-xs border border-indigo-100">
+                        01</div>
+                    <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">Select Analytical
+                        Methodology</h2>
                 </div>
-            `).join('');
-            section.classList.remove('hidden');
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" id="method-buttons">
+                <!-- Dynamically Injected Methods -->
+            </div>
+        </section>
+
+        <!-- Step 2: Document Ingestion -->
+        <section class="card-premium p-8 transition-all duration-500 hidden" id="upload-section">
+            <div class="flex items-center gap-3 mb-8">
+                <div
+                    class="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-xs border border-blue-100">
+                    02</div>
+                <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">Ingest Source Methodology (PDF)
+                </h2>
+            </div>
+
+            <div class="relative group">
+                <div
+                    class="w-full min-h-[180px] bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center p-8 transition-all hover:border-indigo-300 hover:bg-slate-50">
+                    <div
+                        class="w-14 h-14 bg-white border border-slate-100 rounded-2xl flex items-center justify-center text-indigo-600 shadow-soft group-hover:scale-110 group-hover:rotate-3 transition-transform mb-4">
+                        <i class="fas fa-file-upload text-xl"></i>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm font-black text-slate-900 leading-tight">Drop methodology PDF or <span
+                                class="text-indigo-600 hover:underline cursor-pointer">browse</span></p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Maximum file size:
+                            50MB</p>
+                    </div>
+                    <input type="file" accept=".pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        id="file-upload">
+                </div>
+
+                <div class="mt-4 flex items-center justify-center text-emerald-600 hidden gap-2 animate-in fade-in slide-in-from-top-2"
+                    id="file-uploaded">
+                    <i class="fas fa-check-circle text-sm"></i>
+                    <span id="file-name" class="text-[10px] font-black uppercase tracking-widest"></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 3: Intelligence Output Preview -->
+        <section class="card-premium overflow-hidden hidden" id="extracted-data-section">
+            <div class="px-8 py-5 border-b border-slate-100 bg-emerald-50/30 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-xs shadow-soft border border-emerald-200">
+                        03</div>
+                    <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">AI Extraction Preview</h2>
+                </div>
+                <i class="fas fa-brain text-emerald-600 text-xs"></i>
+            </div>
+            <div class="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="extracted-data-grid">
+                <!-- Extracted Keys -->
+            </div>
+        </section>
+
+        <!-- Step 4: Verification Matrix -->
+        <section class="card-premium overflow-hidden hidden" id="parameters-section">
+            <div class="px-8 py-5 border-b border-slate-100 bg-amber-50/30 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center text-xs shadow-soft border border-amber-200">
+                        04</div>
+                    <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">Auto-Selected Verification
+                        Parameters</h2>
+                </div>
+            </div>
+            <div class="p-8 flex flex-wrap gap-3" id="parameters-list">
+                <!-- Parameter Bubbles -->
+            </div>
+        </section>
+
+        <!-- Execution Hub -->
+        <div class="hidden pt-6" id="generate-section">
+            <button id="generate-btn"
+                class="w-full btn-primary-saas py-6 text-xs shadow-2xl shadow-indigo-200 flex items-center justify-center gap-3">
+                <i class="fas fa-wand-magic-sparkles"></i>
+                Synthesize Detailed Analytical Protocol
+            </button>
+        </div>
+
+        <!-- Final Protocol Output -->
+        <section class="card-premium overflow-hidden hidden" id="protocol-preview">
+            <div class="px-8 py-6 border-b border-slate-100 bg-slate-900 flex items-center justify-between">
+                <h2 class="text-[10px] font-black text-white uppercase tracking-[0.2em]">Generated Protocol Manifest
+                </h2>
+                <button id="download-btn"
+                    class="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg flex items-center gap-2">
+                    <i class="fas fa-download"></i>
+                    Retrive Manifest (.docx)
+                </button>
+            </div>
+            <div class="p-10 bg-slate-50 max-h-[600px] overflow-y-auto custom-scrollbar" id="protocol-content">
+                <!-- Dynamic Content -->
+            </div>
+        </section>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentState = { selectedMethod: '', uploadedFile: null, extractedData: null, selectedParams: [], generatedProtocol: null };
+
+    async function initializeMethods() {
+        const response = await fetch('/amv/protocol/api/methods');
+        const methods = await response.json();
+        const container = document.getElementById('method-buttons');
+        container.innerHTML = methods.map(method => `
+            <button onclick="selectMethod('${method.value}')" class="p-6 rounded-2xl border-2 border-slate-100 bg-white transition-all group method-btn relative overflow-hidden flex flex-col items-center gap-4 hover:border-indigo-200" id="method-${method.value}">
+                <span class="text-3xl filter grayscale group-hover:grayscale-0 transition-all duration-500">${getMethodIcon(method.value)}</span>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center group-hover:text-indigo-600 transition-colors">${method.label}</span>
+                <div class="absolute top-2 right-2 opacity-0 group-[.selected]:opacity-100 transition-opacity">
+                   <i class="fas fa-check-circle text-indigo-600 text-xs"></i>
+                </div>
+                <div class="absolute inset-x-0 bottom-0 h-1 bg-indigo-600 translate-y-1 group-[.selected]:translate-y-0 transition-transform"></div>
+            </button>
+        `).join('');
+    }
+
+    function getMethodIcon(method) {
+        const icons = { 'uv': '📊', 'aas': '⚛️', 'hplc': '🧪', 'uplc': '💧', 'gc': '🌡️', 'titration': '⚗️' };
+        return icons[method] || '🔬';
+    }
+
+    async function selectMethod(method) {
+        currentState.selectedMethod = method;
+        document.querySelectorAll('.method-btn').forEach(btn => btn.classList.remove('selected', 'border-indigo-600', 'bg-indigo-50/30', 'shadow-soft'));
+        const selectedBtn = document.getElementById(`method-${method}`);
+        selectedBtn.classList.add('selected', 'border-indigo-600', 'bg-indigo-50/30', 'shadow-soft');
+
+        const uploadSection = document.getElementById('upload-section');
+        uploadSection.classList.remove('hidden');
+        uploadSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        try {
+            const response = await fetch(`/amv/protocol/api/parameters/${method}`);
+            currentState.selectedParams = await response.json();
+        } catch (e) { console.error(e); }
+    }
+
+    document.getElementById('file-upload').addEventListener('change', async function (e) {
+        const file = e.target.files[0];
+        if (file && file.type === 'application/pdf') {
+            currentState.uploadedFile = file;
+            document.getElementById('file-name').textContent = file.name;
+            document.getElementById('file-uploaded').classList.remove('hidden');
+            await simulateDataExtraction();
+        } else { alert('GQP Restriction: Please upload a valid PDF method document.'); }
+    });
+
+    async function simulateDataExtraction() {
+        const response = await fetch('/amv/protocol/api/extract_data', { method: 'POST' });
+        currentState.extractedData = await response.json();
+        showExtractedData();
+        showParameters();
+        showGenerateButton();
+    }
+
+    function showExtractedData() {
+        const section = document.getElementById('extracted-data-section');
+        const grid = document.getElementById('extracted-data-grid');
+        const d = currentState.extractedData;
+        const fields = [
+            ['Product Identity', d.productName, 'indigo'],
+            ['Concentration', d.concentration, 'blue'],
+            ['Protocol Code', d.protocolNumber, 'purple'],
+            ['Methodology', d.methodology, 'emerald'],
+            ['Target Wavelength', d.wavelength, 'amber'],
+            ['Primary Acceptance', d.acceptanceCriteria, 'rose']
+        ];
+        grid.innerHTML = fields.map(([label, val, color]) => `
+           <div class="space-y-1 group">
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-indigo-600 transition-colors">${label}</p>
+              <p class="text-sm font-black text-slate-900 leading-tight">${val}</p>
+           </div>
+        `).join('');
+        section.classList.remove('hidden');
+        section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function showParameters() {
+        const section = document.getElementById('parameters-section');
+        const list = document.getElementById('parameters-list');
+        list.innerHTML = currentState.selectedParams.map(param => `
+            <div class="bg-white px-5 py-2.5 rounded-xl border border-amber-100 flex items-center shadow-soft group hover:border-amber-300 transition-all">
+                <i class="fas fa-check-double text-[10px] text-amber-500 mr-3"></i>
+                <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">${param}</span>
+            </div>
+        `).join('');
+        section.classList.remove('hidden');
+    }
+
+    function showGenerateButton() {
+        document.getElementById('generate-section').classList.remove('hidden');
+        document.getElementById('generate-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    document.getElementById('generate-btn').addEventListener('click', async function () {
+        const btn = this;
+        const originalContent = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-3"></i> Intelligence Engines Polishing Protocol...`;
+
+        try {
+            const response = await fetch('/amv/protocol/api/generate_protocol', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    extractedData: currentState.extractedData,
+                    selectedParams: currentState.selectedParams,
+                    selectedMethod: currentState.selectedMethod
+                })
+            });
+            const result = await response.json();
+            currentState.generatedProtocol = result.protocol;
+            showProtocolPreview();
+        } catch (e) {
+            console.error(e);
+            alert('Synthesis failed. Please verify source document integrity.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
         }
+    });
 
-        function showGenerateButton() { document.getElementById('generate-section').classList.remove('hidden'); }
+    function showProtocolPreview() {
+        const section = document.getElementById('protocol-preview');
+        const content = document.getElementById('protocol-content');
+        const p = currentState.generatedProtocol;
+        content.innerHTML = `
+            <div class="card-premium p-8 space-y-10 bg-white">
+               <div class="border-b border-slate-100 pb-8 text-center">
+                  <h3 class="text-2xl font-display font-black text-slate-900 tracking-tight mb-2">${p.header.title}</h3>
+                  <div class="flex justify-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                     <span>Code: ${p.header.protocolNumber}</span>
+                     <span>|</span>
+                     <span>Revision: ${p.header.effectiveDate}</span>
+                  </div>
+               </div>
+               
+               <div class="space-y-4">
+                  <h4 class="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                     <i class="fas fa-bullseye text-indigo-600"></i>
+                     Functional Objective
+                  </h4>
+                  <p class="text-sm font-medium text-slate-600 leading-relaxed pl-7">${p.objective.split('\n').slice(0, 4).join('<br>')}</p>
+               </div>
 
-        document.getElementById('generate-btn').addEventListener('click', async function () {
-            const btn = this; const original = btn.innerHTML; btn.disabled = true; btn.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>Generating Protocol...`;
-            try {
-                const response = await fetch('/amv/protocol/api/generate_protocol', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ extractedData: currentState.extractedData, selectedParams: currentState.selectedParams, selectedMethod: currentState.selectedMethod }) });
-                const result = await response.json(); currentState.generatedProtocol = result.protocol; showProtocolPreview();
-            } catch (e) { console.error(e); alert('Error generating protocol. Please try again.'); } finally { btn.disabled = false; btn.innerHTML = original; }
+               <div class="space-y-6">
+                  <h4 class="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                     <i class="fas fa-list-check text-emerald-600"></i>
+                     Verification Matrix Inclusion
+                  </h4>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pl-7">
+                     ${Object.keys(p.parameters).map(param => `
+                        <div class="flex items-center gap-3 text-xs font-bold text-slate-700">
+                           <i class="fas fa-circle-check text-emerald-400 text-[10px]"></i>
+                           ${param}
+                        </div>
+                     `).join('')}
+                  </div>
+               </div>
+
+               <div class="p-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl flex items-center gap-6">
+                  <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-emerald-500 shadow-soft shrink-0">
+                     <i class="fas fa-file-shield text-xl"></i>
+                  </div>
+                  <div>
+                     <p class="text-xs font-black text-slate-900 uppercase tracking-widest">System Ready</p>
+                     <p class="text-[11px] font-medium text-slate-600">Protocol synthesized with full GxP parameter mapping.</p>
+                  </div>
+               </div>
+            </div>
+        `;
+        section.classList.remove('hidden');
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.getElementById('download-btn').addEventListener('click', async function () {
+        const response = await fetch('/amv/protocol/api/download_protocol', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ protocol: currentState.generatedProtocol })
         });
+        if (!response.ok) { alert('Download encryption failed'); return; }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `AMV_Protocol_${currentState.extractedData.productName.replace(/\s+/g, '_')}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    });
 
-        function showProtocolPreview() {
-            const section = document.getElementById('protocol-preview');
-            const content = document.getElementById('protocol-content');
-            const p = currentState.generatedProtocol;
-            content.innerHTML = `
-                <div><h3 class=\"text-lg font-bold text-indigo-600 mb-2\">${p.header.title}</h3><p class=\"text-sm text-gray-600\">Protocol No: ${p.header.protocolNumber} | Date: ${p.header.effectiveDate}</p></div>
-                <div><h4 class=\"font-semibold text-gray-800 mb-2\">OBJECTIVE</h4><p class=\"text-sm text-gray-700 leading-relaxed\">${p.objective.substring(0, 300)}...</p></div>
-                <div><h4 class=\"font-semibold text-gray-800 mb-2\">PARAMETERS INCLUDED</h4><div class=\"grid grid-cols-2 gap-2\">${Object.keys(p.parameters).map(param => `<div class=\"text-sm text-gray-700 flex items-center\"><i class=\"fas fa-check-circle w-4 h-4 text-green-600 mr-2\"></i>${param}</div>`).join('')}</div></div>
-                <div class=\"bg-green-50 border border-green-200 rounded-lg p-4\"><div class=\"flex items-center\"><i class=\"fas fa-check-circle w-6 h-6 text-green-600 mr-3\"></i><div><p class=\"font-semibold text-green-800\">Protocol Generated Successfully</p><p class=\"text-sm text-green-700\">Complete documentation with all parameters ready for download</p></div></div></div>
-            `;
-            section.classList.remove('hidden');
-        }
+    async function fillProtocolGeneratorDemo() {
+        await selectMethod('hplc');
+        const response = await fetch('/amv/protocol/api/extract_data', { method: 'POST' });
+        currentState.extractedData = await response.json();
+        showExtractedData();
+        showParameters();
+        showGenerateButton();
+    }
 
-        document.getElementById('download-btn').addEventListener('click', async function () {
-            const response = await fetch('/amv/protocol/api/download_protocol', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ protocol: currentState.generatedProtocol }) });
-            if (!response.ok) { alert('Error downloading protocol'); return; }
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.style.display = 'none'; a.href = url; a.download = `AMV_Protocol_${currentState.extractedData.productName.replace(/\s+/g, '_')}.txt`;
-            document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); document.body.removeChild(a);
-        });
+    document.addEventListener('DOMContentLoaded', () => { initializeMethods(); });
+</script>
 
-        async function fillProtocolGeneratorDemo() {
-            // Select HPLC
-            await selectMethod('hplc');
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
 
-            // Simulate extraction
-            const response = await fetch('/amv/protocol/api/extract_data', { method: 'POST' });
-            currentState.extractedData = await response.json();
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
 
-            // Show sections
-            showExtractedData();
-            showParameters();
-            showGenerateButton();
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e2e8f0;
+        border-radius: 10px;
+    }
 
-            alert('Protocol Generator demo data filled! You can now click "Generate Detailed Protocol".');
-        }
-
-        document.addEventListener('DOMContentLoaded', () => { initializeMethods(); lucide.createIcons(); });
-    </script>
-</body>
-
-</html>
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #cbd5e1;
+    }
+</style>
+{% endblock %}

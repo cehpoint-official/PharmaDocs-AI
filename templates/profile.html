@@ -1,302 +1,372 @@
 {% extends "base.html" %}
-{% block title %}User Profile - PharmaDocs AI{% endblock %}
+{% block title %}User Account - PharmaDocs AI{% endblock %}
+
 {% block content %}
-<div class="px-6 py-6 max-w-4xl mx-auto">
-    <div class="bg-white rounded-xl shadow">
-        <div class="border-b px-6 py-4">
-            <h1 class="text-2xl font-bold text-gray-900">User Profile</h1>
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <!-- Profile Header / Cover -->
+    <div class="relative mb-10">
+        <div
+            class="h-40 bg-gradient-to-r from-indigo-600 via-indigo-500 to-blue-600 rounded-[2.5rem] shadow-2xl shadow-indigo-100 overflow-hidden relative">
+            <div class="absolute inset-0 opacity-10 pointer-events-none">
+                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" stroke-width="1" />
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#grid)" />
+                </svg>
+            </div>
         </div>
-        
-        <div class="p-6">
-            <!-- Personal Information -->
-            <div class="mb-8">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Personal Information</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <div class="absolute -bottom-10 left-10 flex items-end gap-6">
+            <div class="relative group">
+                <div
+                    class="w-32 h-32 bg-white rounded-[2rem] p-2 shadow-2xl border-4 border-white overflow-hidden flex items-center justify-center text-indigo-600">
+                    <i class="fas fa-user-circle text-6xl"></i>
+                </div>
+                <span
+                    class="absolute bottom-1 right-1 w-8 h-8 bg-emerald-500 border-4 border-white rounded-full flex items-center justify-center text-white text-[10px]">
+                    <i class="fas fa-check"></i>
+                </span>
+            </div>
+            <div class="pb-4">
+                <h1 class="text-3xl font-display font-black text-slate-900 tracking-tight leading-none mb-2">{{
+                    user.name }}</h1>
+                <div class="flex items-center gap-3">
+                    <span
+                        class="inline-flex px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-indigo-100">
+                        {{ user.subscription_plan or 'Analyst' }}
+                    </span>
+                    <span class="text-xs font-bold text-slate-400">UID: {{ user.id[:8] if user.id else 'PD-001'
+                        }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="absolute -bottom-6 right-10 flex gap-3">
+            <button onclick="openModal('editProfileModal')"
+                class="btn-primary-saas px-6 py-2.5 text-xs shadow-xl shadow-indigo-100 flex items-center gap-2">
+                <i class="fas fa-edit opacity-50"></i> Update Identity
+            </button>
+            <a href="#"
+                class="btn-secondary-saas px-6 py-2.5 text-xs border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+                <i class="fas fa-key opacity-50"></i> Credentials
+            </a>
+        </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-10 mt-20">
+
+        <!-- Sidebar: Account Maturity -->
+        <div class="space-y-8">
+            <section class="card-premium p-8">
+                <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-6">Subscription Pulse</h3>
+                {% set plan = (user.subscription_plan or 'free') %}
+                <div class="space-y-6">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-bold text-slate-500">Tier</span>
+                        <span class="text-sm font-black text-slate-900 capitalize">{{ plan }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-bold text-slate-500">Status</span>
+                        {% if user.subscription_expiry and user.subscription_expiry > now %}
+                        <span
+                            class="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 uppercase tracking-widest">Active</span>
+                        {% else %}
+                        <span
+                            class="text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100 uppercase tracking-widest">Free
+                            Mode</span>
+                        {% endif %}
+                    </div>
+                    {% if user.subscription_expiry %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-bold text-slate-500">Renewal</span>
+                        <span class="text-sm font-black text-slate-900">{{ user.subscription_expiry.strftime('%d %b %Y')
+                            }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="mt-8 pt-6 border-t border-slate-50">
+                    <a href="/subscription/plans"
+                        class="w-full btn-primary-saas py-3 text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-indigo-100 block text-center">
+                        Expand Capabilities
+                    </a>
+                </div>
+            </section>
+
+            <!-- Metadata Table -->
+            <section class="card-premium p-8">
+                <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-6">System Trace</h3>
+                <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                        <p class="text-gray-900">{{ user.name }}</p>
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Onboarding</p>
+                        <p class="text-xs font-bold text-slate-700">{{ user.created_at.strftime('%d %B %Y') }}</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                        <p class="text-gray-900">{{ user.email }}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Account Created</label>
-                        <p class="text-gray-900">{{ user.created_at.strftime('%d %B %Y') }}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Last Login</label>
-                        <p class="text-gray-900">
-                            {% if user.last_login %}
-                                {{ user.last_login.strftime('%d %B %Y %H:%M') }}
-                            {% else %}
-                                Never
-                            {% endif %}
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Last Access</p>
+                        <p class="text-xs font-bold text-slate-700">
+                            {{ user.last_login.strftime('%d %b, %H:%M') if user.last_login else 'Initial Session' }}
                         </p>
                     </div>
                 </div>
-            </div>
+            </section>
+        </div>
 
-            <!-- Subscription Information -->
-            <div class="mb-8">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Subscription Information</h2>
-                <div class="bg-gray-50 rounded-lg p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Current Plan</label>
-                            <div class="flex items-center">
-                                <span class="capitalize px-3 py-1 text-sm font-medium rounded-full
-                                    {% if user.subscription_plan == 'premium' %}bg-green-100 text-green-700
-                                    {% elif user.subscription_plan == 'basic' %}bg-blue-100 text-blue-700
-                                    {% else %}bg-gray-200 text-gray-800{% endif %}">
-                                    {{ user.subscription_plan or 'free' }}
-                                </span>
+        <!-- Main Content: Usage & Intelligence -->
+        <div class="lg:col-span-2 space-y-10">
+
+            <!-- Usage Metrics -->
+            {% if usage_stats %}
+            <section class="card-premium p-10 overflow-hidden relative">
+                <div class="absolute top-0 right-0 p-8 opacity-5">
+                    <i class="fas fa-chart-pie text-9xl"></i>
+                </div>
+                <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center gap-3">
+                    <i class="fas fa-microchip text-indigo-600"></i>
+                    Intelligence Utilization
+                </h2>
+
+                <div class="space-y-10">
+                    <!-- Docs Limit -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                                    <i class="fas fa-file-shield text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-slate-900">Document Synthesis</p>
+                                    <p class="text-[10px] font-bold text-slate-400">Monthly validation report generation
+                                    </p>
+                                </div>
                             </div>
+                            <span class="text-sm font-black text-slate-900">{{ usage_stats.documents.used }} / {{
+                                usage_stats.documents.limit if usage_stats.documents.limit > 0 else '∞' }}</span>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Subscription Status</label>
-                            <div class="flex items-center">
-                                {% if user.subscription_expiry and user.subscription_expiry > now %}
-                                    <span class="px-3 py-1 text-sm font-medium bg-green-100 text-green-700 rounded-full">Active</span>
-                                {% elif user.subscription_expiry and user.subscription_expiry <= now %}
-                                    <span class="px-3 py-1 text-sm font-medium bg-red-100 text-red-700 rounded-full">Expired</span>
-                                {% else %}
-                                    <span class="px-3 py-1 text-sm font-medium bg-gray-200 text-gray-700 rounded-full">Free Plan</span>
-                                {% endif %}
-                            </div>
+                        <div class="h-2 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                            <div class="h-full bg-blue-500 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                                style="width: {{ [usage_stats.documents.percentage, 100]|min }}%"></div>
                         </div>
-                        {% if user.subscription_expiry %}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
-                            <p class="text-gray-900">{{ user.subscription_expiry.strftime('%d %B %Y') }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Days Remaining</label>
-                            <p class="text-gray-900">
-                                {% if user.subscription_expiry > now %}
-                                    {{ (user.subscription_expiry - now).days }} days
-                                {% else %}
-                                    Expired
-                                {% endif %}
-                            </p>
-                        </div>
-                        {% endif %}
                     </div>
-                    
-                    <div class="mt-6 flex gap-3">
-                        <a href="/razorpay/plans" 
-                           class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">
-                            <i class="fas fa-crown mr-2"></i>Upgrade Plan
-                        </a>
-                        <a href="/user/subscriptions" 
-                           class="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg">
-                            <i class="fas fa-history mr-2"></i>View History
-                        </a>
+
+                    <!-- Storage -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                                    <i class="fas fa-database text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-slate-900">Archive Capacity</p>
+                                    <p class="text-[10px] font-bold text-slate-400">Cloud storage for analytical data
+                                    </p>
+                                </div>
+                            </div>
+                            <span class="text-sm font-black text-slate-900">{{ usage_stats.storage.used_mb }}MB / {{
+                                usage_stats.storage.limit_mb }}MB</span>
+                        </div>
+                        <div class="h-2 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                            <div class="h-full bg-emerald-500 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                                style="width: {{ [usage_stats.storage.percentage, 100]|min }}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- API -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
+                                    <i class="fas fa-bolt text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-slate-900">AI Logic Engines</p>
+                                    <p class="text-[10px] font-bold text-slate-400">Daily real-time extraction requests
+                                    </p>
+                                </div>
+                            </div>
+                            <span class="text-sm font-black text-slate-900">{{ usage_stats.api_requests.used_today }} /
+                                {{ usage_stats.api_requests.limit_daily }}</span>
+                        </div>
+                        <div class="h-2 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                            <div class="h-full bg-purple-500 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(139,92,246,0.5)]"
+                                style="width: {{ [usage_stats.api_requests.percentage, 100]|min }}%"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
+            {% endif %}
 
-            <!-- Account Actions -->
+            <!-- Transactional Audit -->
+            {% if recent_payments %}
+            <section class="card-premium overflow-hidden">
+                <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                    <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">Financial Ledger</h2>
+                    <i class="fas fa-receipt text-slate-300 text-xs"></i>
+                </div>
+                <div class="p-0">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr
+                                class="bg-white border-b border-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <th class="px-8 py-4">Transaction Details</th>
+                                <th class="px-8 py-4">Authentication</th>
+                                <th class="px-8 py-4">Verification Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            {% for payment in recent_payments %}
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="px-8 py-5">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-black text-slate-900">₹{{ payment.get_amount_dollars()
+                                            }}</span>
+                                        <span class="text-[10px] font-bold text-slate-400 capitalize">{{
+                                            payment.description or 'Account Top-up' }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <span class="inline-flex px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full 
+                                        {% if payment.status == 'succeeded' %}bg-emerald-50 text-emerald-600 border border-emerald-100
+                                        {% else %}bg-rose-50 text-rose-600 border border-rose-100{% endif %}">
+                                        {{ payment.status }}
+                                    </span>
+                                </td>
+                                <td class="px-8 py-5 text-xs font-bold text-slate-500">
+                                    {{ payment.created_at.strftime('%d %b %Y') }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Edit Identity Modal -->
+<div id="editProfileModal" class="modal-backdrop hidden">
+    <div class="modal-content-saas max-w-lg">
+        <div class="flex justify-between items-center p-8 border-b border-slate-50">
             <div>
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Account Actions</h2>
-                <div class="flex gap-3">
-                    <button onclick="openModal('editProfileModal')"
-                            class="px-4 py-2 bg-white border border-indigo-600 text-indigo-600 hover:bg-indigo-50 text-sm font-medium rounded-lg">
-                        <i class="fas fa-edit mr-2"></i>Edit Profile
-                    </button>
-                    <a href="#"
-                       class="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg">
-                        <i class="fas fa-key mr-2"></i>Change Password
-                    </a>
-                </div>
+                <h3 class="text-xl font-display font-black text-slate-900">Modify Identity</h3>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">GXP Compliant Profile
+                    Update</p>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Add usage statistics if available -->
-{% if usage_stats %}
-<div class="mb-8">
-    <h2 class="text-lg font-semibold text-gray-900 mb-4">Usage Statistics</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-blue-50 rounded-lg p-4">
-            <div class="flex items-center">
-                <div class="p-2 bg-blue-100 rounded-lg mr-3">
-                    <i class="fas fa-file-alt text-blue-600"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-600">Documents This Month</p>
-                    <p class="text-xl font-bold text-gray-900">
-                        {{ usage_stats.documents.used }}
-                        {% if usage_stats.documents.limit > 0 %}
-                            / {{ usage_stats.documents.limit }}
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="bg-green-50 rounded-lg p-4">
-            <div class="flex items-center">
-                <div class="p-2 bg-green-100 rounded-lg mr-3">
-                    <i class="fas fa-hdd text-green-600"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-600">Storage Used</p>
-                    <p class="text-xl font-bold text-gray-900">
-                        {{ usage_stats.storage.used_mb }} / {{ usage_stats.storage.limit_mb }} MB
-                    </p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="bg-purple-50 rounded-lg p-4">
-            <div class="flex items-center">
-                <div class="p-2 bg-purple-100 rounded-lg mr-3">
-                    <i class="fas fa-chart-line text-purple-600"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-600">API Requests Today</p>
-                    <p class="text-xl font-bold text-gray-900">
-                        {{ usage_stats.api_requests.used_today }} / {{ usage_stats.api_requests.limit_daily }}
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Recent Payments if available -->
-{% if recent_payments %}
-<div class="mb-8">
-    <h2 class="text-lg font-semibold text-gray-900 mb-4">Recent Payments</h2>
-    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for payment in recent_payments %}
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ₹{{ payment.get_amount_dollars() }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                {% if payment.status == 'succeeded' %}bg-green-100 text-green-800
-                                {% else %}bg-red-100 text-red-800{% endif %}">
-                                {{ payment.status }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ payment.created_at.strftime('%d %B %Y') }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Edit Profile Modal -->
-<div id="editProfileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold text-gray-900">Edit Profile</h3>
-            <button onclick="closeModal('editProfileModal')" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times"></i>
+            <button onclick="closeModal('editProfileModal')"
+                class="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl hover:bg-rose-50 hover:text-rose-500 flex items-center justify-center transition-colors">
+                <i class="fas fa-times text-xs"></i>
             </button>
         </div>
-        
-        <form id="editProfileForm" onsubmit="updateProfile(event)">
-            <div class="space-y-4">
-                <div>
-                    <label for="profileName" class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                    <input type="text" id="profileName" name="name" value="{{ user.name }}" 
-                           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" 
-                           required>
-                </div>
-                <div>
-                    <label for="profileEmail" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                    <input type="email" id="profileEmail" name="email" value="{{ user.email }}" 
-                           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" 
-                           required>
-                </div>
-                <div>
-                    <label for="profilePassword" class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                    <input type="password" id="profilePassword" name="password" value="" 
-                           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" 
-                           placeholder="Leave blank to keep current password">
-                </div>
+
+        <form id="editProfileForm" onsubmit="updateProfile(event)" class="p-8 space-y-6">
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Legal Designation
+                    <span class="text-rose-500">*</span></label>
+                <input type="text" name="name" value="{{ user.name }}" class="input-saas py-3 px-4" required>
             </div>
-            
-            <div class="flex justify-end gap-3 mt-6">
-                <button type="button" onclick="closeModal('editProfileModal')" 
-                        class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                    Cancel
-                </button>
-                <button type="submit" 
-                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-                    Update Profile
-                </button>
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Electronic Mail
+                    Registry <span class="text-rose-500">*</span></label>
+                <input type="email" name="email" value="{{ user.email }}" class="input-saas py-3 px-4" required>
+            </div>
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Authorization
+                    Credential</label>
+                <input type="password" name="password" class="input-saas py-3 px-4"
+                    placeholder="Leave blank to maintain current credentials">
+            </div>
+
+            <div class="pt-6 border-t border-slate-50 flex gap-4">
+                <button type="button" onclick="closeModal('editProfileModal')"
+                    class="flex-1 btn-secondary-saas py-3">Discard</button>
+                <button type="submit" class="flex-[2] btn-primary-saas py-3">Sync Global Identity</button>
             </div>
         </form>
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
-function openModal(modalId) {
-    document.getElementById(modalId).style.display = 'flex';
-}
+    // Logic preservation with aesthetic feedback
+    function updateProfile(event) {
+        event.preventDefault();
+        const btn = event.target.querySelector('button[type="submit"]');
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Propagating Identity...`;
 
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
+        const formData = new FormData(event.target);
+        const data = {
+            name: formData.get('name'),
+            email: formData.get('email')
+        };
+        if (formData.get('password')) data.password = formData.get('password');
 
-function updateProfile(event) {
-    event.preventDefault();
-    
-    const formData = new FormData(event.target);
-    const data = {
-        name: formData.get('name'),
-        email: formData.get('email')
-    };
-    
-    // Only include password if it's not empty
-    if (formData.get('password')) {
-        data.password = formData.get('password');
+        fetch('/user/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    location.reload();
+                } else {
+                    alert('Protocol Error: ' + d.error);
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                }
+            })
+            .catch(error => {
+                console.error('Core Error:', error);
+                alert('System Link Interrupted');
+                btn.disabled = false;
+                btn.innerHTML = original;
+            });
     }
-    
-    fetch('/user/update', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Profile updated successfully!');
-            closeModal('editProfileModal');
-            location.reload(); // Refresh to show updated info
-        } else {
-            alert('Error updating profile: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred while updating profile');
-    });
-}
+
+    // Modal handling (ensuring base.html consistency)
+    if (typeof openModal === 'undefined') {
+        window.openModal = id => {
+            const m = document.getElementById(id);
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        };
+        window.closeModal = id => {
+            const m = document.getElementById(id);
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+            document.body.style.overflow = 'auto';
+        };
+    }
 </script>
 
+<style>
+    .card-premium {
+        @apply bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 transition-all duration-300;
+    }
+
+    .modal-backdrop {
+        @apply bg-slate-900/60 backdrop-blur-sm fixed inset-0 z-50 items-center justify-center;
+    }
+
+    .modal-content-saas {
+        @apply bg-white rounded-[2.5rem] shadow-2xl w-full mx-4 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-300;
+    }
+
+    .input-saas {
+        @apply w-full bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 placeholder:text-slate-300 focus:bg-white focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 transition-all outline-none;
+    }
+</style>
 {% endblock %}

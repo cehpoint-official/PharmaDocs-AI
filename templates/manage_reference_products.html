@@ -1,131 +1,186 @@
-<!--Copyright (C) 2025 Soumyadeep Ghosh <soumyadeepghosh2004@zohomail.in> -->
-<!--All Rights Reserved-->
-
 {% extends "base.html" %}
 {% block title %}Manage Reference Products - PharmaDocs AI Platform{% endblock %}
+
 {% block content %}
-<div class="px-6 py-6 max-w-7xl mx-auto">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <!-- Header Section -->
+    <div class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Manage Reference Products</h1>
-            <p class="text-gray-600 mt-2">Add and manage reference standards for AMV reports.</p>
+            <div class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+                <a href="{{ url_for('dashboard.user_dashboard') }}"
+                    class="hover:text-indigo-600 transition-colors">App</a>
+                <i class="fas fa-chevron-right text-[8px]"></i>
+                <span class="text-indigo-600">Standard Repository</span>
+            </div>
+            <h1 class="text-3xl font-display font-black text-slate-900 tracking-tight">Reference Standards</h1>
+            <p class="text-sm font-medium text-slate-500 mt-2 max-w-2xl leading-relaxed">
+                Manage primary and secondary reference standards. Track potency levels and standardization due dates for
+                precision assay results.
+            </p>
         </div>
-        <a href="{{ url_for('amv_bp.create_amv_form') }}"
-            class="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow">
-            <i class="fas fa-arrow-left mr-2"></i>Back to Create AMV
-        </a>
+
+        <div class="flex items-center gap-3">
+            <a href="{{ url_for('amv_bp.create_amv_form') }}"
+                class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-all">
+                <i class="fas fa-arrow-left"></i> Back to Create AMV
+            </a>
+        </div>
     </div>
 
-    <!-- Add Reference Product Form -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-semibold text-gray-900 flex items-center">
-                <i class="fas fa-plus-circle text-yellow-600 mr-3"></i>
-                Add New Reference Product
-            </h2>
-            <button type="button" onclick="fillReferenceDemo()"
-                class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 focus:ring-2 focus:ring-amber-400 font-semibold shadow-sm transition-all transform hover:scale-105 text-sm uppercase">
-                <i class="fas fa-flask mr-2"></i>Fill Demo Data
-            </button>
+    <div class="grid lg:grid-cols-3 gap-10">
+
+        <!-- Left: Entry Form -->
+        <div class="lg:col-span-1">
+            <section class="card-premium sticky top-10">
+                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                    <h2 class="text-xs font-black text-slate-900 uppercase tracking-wider">New Standard</h2>
+                    <button type="button" onclick="fillReferenceDemo()"
+                        class="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:bg-indigo-50 px-2 py-1 rounded transition-colors">
+                        <i class="fas fa-magic mr-1"></i> Demo
+                    </button>
+                </div>
+
+                <form method="POST" class="p-6 space-y-5">
+                    <input type="hidden" name="action" value="add">
+
+                    <div class="space-y-1.5">
+                        <label class="label-saas">Standard Type <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <select name="standard_type" required class="input-saas appearance-none text-sm">
+                                <option value="Primary">Primary</option>
+                                <option value="Secondary" selected>Secondary</option>
+                                <option value="Working">Working</option>
+                            </select>
+                            <div
+                                class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                <i class="fas fa-chevron-down text-[10px]"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="label-saas">Standard Name <span class="text-red-500">*</span></label>
+                        <input type="text" name="standard_name" required class="input-saas text-sm"
+                            placeholder="e.g. Paracetamol WS">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="label-saas">Standard Code <span class="text-red-500">*</span></label>
+                        <input type="text" name="code" required class="input-saas text-sm"
+                            placeholder="e.g. RS-PARA-2025">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="label-saas">Potency (%) <span class="text-red-500">*</span></label>
+                        <input type="text" name="potency" required class="input-saas text-sm" placeholder="e.g. 99.85">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="label-saas">Due Date of Standardization <span
+                                class="text-red-500">*</span></label>
+                        <input type="date" name="due_date" required class="input-saas text-sm">
+                    </div>
+
+                    <button type="submit"
+                        class="w-full bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] uppercase tracking-widest py-3 rounded-xl shadow-lg shadow-amber-100 transition-all mt-2">
+                        <i class="fas fa-plus mr-2"></i> Register Standard
+                    </button>
+                </form>
+            </section>
         </div>
 
-        <form method="POST" class="space-y-6">
-            <input type="hidden" name="action" value="add">
+        <!-- Right: Repository -->
+        <div class="lg:col-span-2">
+            <section class="card-premium overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <h2 class="text-xs font-black text-slate-500 uppercase tracking-widest">Standard Collection</h2>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">{{ references|length }} ENTRIES</span>
+                </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Standard Type *</label>
-                    <select name="standard_type" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="Primary">Primary</option>
-                        <option value="Secondary" selected>Secondary</option>
-                        <option value="Working">Working</option>
-                    </select>
+                <div class="p-0">
+                    {% if references %}
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-slate-50 border-b border-slate-100">
+                                <tr>
+                                    <th
+                                        class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Standard Identity</th>
+                                    <th
+                                        class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
+                                        Type</th>
+                                    <th
+                                        class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Potency</th>
+                                    <th
+                                        class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Due Date</th>
+                                    <th class="px-6 py-4 w-12"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-50">
+                                {% for reference in references %}
+                                <tr class="hover:bg-slate-50/50 transition-colors group">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div
+                                                class="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-bold text-xs border border-amber-100 group-hover:scale-110 transition-transform">
+                                                <i class="fas fa-certificate"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-black text-slate-900 leading-tight">{{
+                                                    reference.standard_name }}</p>
+                                                <p
+                                                    class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">
+                                                    {{ reference.code }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase border
+                              {% if reference.standard_type == 'Primary' %}bg-red-50 text-red-700 border-red-100
+                              {% elif reference.standard_type == 'Secondary' %}bg-amber-50 text-amber-700 border-amber-100
+                              {% else %}bg-blue-50 text-blue-700 border-blue-100{% endif %}">
+                                            {{ reference.standard_type }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="text-xs font-black text-slate-900">{{ reference.potency }}%</span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                            <i class="far fa-clock text-slate-300"></i>
+                                            {{ reference.due_date }}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <button
+                                            class="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                                            <i class="fas fa-trash-alt text-xs"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="p-20 text-center">
+                        <div
+                            class="w-20 h-20 bg-slate-50 text-slate-200 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-certificate text-4xl"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-black text-slate-900 tracking-tight">No standards found
+                        </h3>
+                        <p class="text-slate-400 text-sm font-medium mt-2">Maintain your repository of primary and
+                            secondary reference standards.</p>
+                    </div>
+                    {% endif %}
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Standard Name *</label>
-                    <input type="text" name="standard_name" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Code *</label>
-                    <input type="text" name="code" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Potency (%) *</label>
-                    <input type="text" name="potency" required placeholder="e.g., 99.50"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Due Date of Standardization *</label>
-                    <input type="date" name="due_date" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-            </div>
-
-            <div class="flex justify-end">
-                <button type="submit"
-                    class="px-6 py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Add Reference Product
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Reference Products List -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-            <i class="fas fa-list text-yellow-600 mr-3"></i>
-            Existing Reference Products
-        </h2>
-
-        {% if references %}
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Potency</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due
-                            Date</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for reference in references %}
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                {% if reference.standard_type == 'Primary' %}bg-red-100 text-red-800
-                                {% elif reference.standard_type == 'Secondary' %}bg-yellow-100 text-yellow-800
-                                {% else %}bg-blue-100 text-blue-800{% endif %}">
-                                {{ reference.standard_type }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{
-                            reference.standard_name }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ reference.code }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ reference.potency }}%</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ reference.due_date }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            </section>
         </div>
-        {% else %}
-        <div class="text-center py-12">
-            <i class="fas fa-certificate text-gray-300 text-6xl mb-4"></i>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">No Reference Products Found</h3>
-            <p class="text-gray-500">Add your first reference product to get started.</p>
-        </div>
-        {% endif %}
+
     </div>
 </div>
 
@@ -140,18 +195,11 @@
         };
 
         for (const [key, value] of Object.entries(data)) {
-            const el = document.querySelector(`input[name="${key}"], select[name="${key}"]`);
+            const el = document.querySelector(`[name="${key}"]`);
             if (el) {
                 el.value = value;
-                el.style.backgroundColor = '#fffbeb'; // amber-50
-                el.style.transition = 'all 0.3s';
+                el.classList.add('bg-amber-50');
             }
-        }
-
-        if (typeof showNotification === 'function') {
-            showNotification('Reference product demo data filled!', 'success');
-        } else {
-            alert('Reference product demo data filled!');
         }
     }
 </script>
